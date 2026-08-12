@@ -192,13 +192,16 @@ namespace LevelEditor
                     break;
 
                 case EditorTool.DefinePatrol:
-                    if (_enemies.Count == 0)
+                    // Comprobamos si el objeto seleccionado actualmente es un enemigo
+                    if (_selectedEntity is EnemyData selectedEnemy)
                     {
-                        MessageBox.Show("Coloca al menos un enemigo antes de definir su patrulla.",
-                            "Sin enemigo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        break;
+                        selectedEnemy.PatrolRoute.Add(worldPos);
                     }
-                    _enemies[^1].PatrolRoute.Add(worldPos);
+                    else
+                    {
+                        MessageBox.Show("Por favor, selecciona primero un enemigo (con la herramienta 'Seleccionar / Editar') para añadirle puntos de patrulla.",
+                                        "Sin enemigo seleccionado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
                     break;
 
                 case EditorTool.Select:
