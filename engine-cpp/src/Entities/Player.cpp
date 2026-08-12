@@ -6,6 +6,11 @@
 Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     : Actor(position, maxHP), m_moveSpeed(speed), m_attackDamage(attackDamage) {
     SetupStates();
+    m_model = LoadModel("assets/models/player/personaje.glb");
+}
+
+Player::~Player() {
+    UnloadModel(m_model);
 }
 
 void Player::SetupStates() {
@@ -165,8 +170,17 @@ void Player::Update(float dt) {
 }
 
 void Player::Draw() const {
-    Color tint = m_fsm.Is(PlayerState::Hurt) ? Color{ 255, 60, 60, 255 } : BLUE;
-    DrawCube(m_position, m_halfExtents.x * 2.0f, m_halfExtents.y * 2.0f, m_halfExtents.z * 2.0f, tint);
+    float rotationAngle = 0.0f;
+    if (m_facingDirection.x != 0.0f || m_facingDirection.z != 0.0f) {
+        rotationAngle = atan2f(m_facingDirection.x, m_facingDirection.z) * (180.0f / PI);
+    }
+
+    Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f }; // Queremos que gire sobre el eje Y (el suelo)
+    Vector3 scale = { 0.01f, 0.011f, 0.01f };        
+
+    Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : WHITE;
+
+    DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 }
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {

@@ -8,6 +8,11 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
     : Actor(position, maxHP), m_patrolRoute(std::move(patrolRoute)), m_speed(speed),
       m_attackDamage(attackDamage), m_visionRadius(visionRadius) {
     SetupStates();
+    m_model = LoadModel("assets/models/enemy/robot.glb");
+}
+
+Enemy::~Enemy() {
+    UnloadModel(m_model);
 }
 
 void Enemy::SetupStates() {
@@ -55,6 +60,8 @@ void Enemy::UpdatePatrol(float dt) {
     Vector3 toTarget{ target.x - m_position.x, 0.0f, target.z - m_position.z };
     Vector3 dir = CollisionMath::Normalize2D(toTarget);
 
+    m_facingDirection = dir;
+
     Vector3 candidate = m_position;
     candidate.x += dir.x * m_speed * dt;
     candidate.z += dir.z * m_speed * dt;
@@ -76,6 +83,8 @@ void Enemy::UpdateChase(float dt) {
         m_lastKnownPlayerPosition.z - m_position.z
     };
     Vector3 dir = CollisionMath::Normalize2D(toPlayer);
+
+    m_facingDirection = dir;
 
     Vector3 candidate = m_position;
     candidate.x += dir.x * m_speed * dt;
@@ -147,13 +156,21 @@ void Enemy::Update(float dt) {
 }
 
 void Enemy::Draw() const {
-    Color tint = RED;
-    if (!IsAlive()) {
-        tint = GRAY;
-    } else if (m_fsm.Is(EnemyState::Hurt)) {
-        tint = Color{ 255, 150, 150, 255 }; // ya es rojo por defecto; el flash de daño usa un rojo más claro
+    // 1. Calcular rotación para que mire hacia donde camina
+    float rotationAngle = 0.0f;
+    if (m_facingDirection.x != 0.0f || m_facingDirection.z != 0.0f) {
+        rotationAngle = atan2f(m_facingDirection.x, m_facingDirection.z) * (180.0f / PI);
     }
-    DrawCube(m_position, m_halfExtents.x * 2.0f, m_halfExtents.y * 2.0f, m_halfExtents.z * 2.0f, tint);
+
+    // 2. Eje de rotación (Y) y Escala
+    Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
+    Vector3 scale = { 1.0f, 1.0f, 1.0f }; // Juega con esto si el robot es gigante o enano
+
+    // 3. Sistema de daño visual (Se pone rojo al recibir un golpe)
+    Color tint = m_fsm.Is(EnemyState::Hurt) ? RED : WHITE;
+
+    // 4. Dibujado final
+    DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 }
 
 void Enemy::TakeDamage(float amount, Vector3 knockbackDir) {

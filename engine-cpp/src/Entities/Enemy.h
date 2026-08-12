@@ -10,7 +10,7 @@ class Enemy : public Actor {
 public:
     Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, float visionRadius,
           float speed, float attackDamage);
-
+    ~Enemy();
     void Update(float dt) override;
     void Draw() const override;
     void TakeDamage(float amount, Vector3 knockbackDir) override;
@@ -31,7 +31,7 @@ private:
     Hitbox SpawnAttackHitbox() const;
 
     StateMachine<EnemyState> m_fsm;
-
+    Vector3 m_facingDirection = { 0.0f, 0.0f, 1.0f };
     std::vector<Vector3> m_patrolRoute;
     size_t m_currentPatrolIndex = 0;
 
@@ -50,4 +50,5 @@ private:
 
     Hitbox m_activeHitbox{};
     bool m_hitboxWindowOpen = false;
+    Model m_model;
 };

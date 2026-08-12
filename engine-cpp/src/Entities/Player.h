@@ -8,7 +8,7 @@ enum class PlayerState { Idle, Run, Attack, Hurt, Dash };
 class Player : public Actor {
 public:
     Player(Vector3 position, float maxHP, float speed, float attackDamage);
-
+    ~Player();
     void Update(float dt) override;
     void Draw() const override;
     void TakeDamage(float amount, Vector3 knockbackDir) override;
@@ -48,4 +48,6 @@ private:
 
     Hitbox m_activeHitbox{};
     bool m_hitboxWindowOpen = false;
+
+    Model m_model;
 };
