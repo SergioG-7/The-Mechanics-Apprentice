@@ -527,18 +527,27 @@ namespace LevelEditor
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
             string json = JsonSerializer.Serialize(level, options);
-            string outputPath = Path.Combine(AppContext.BaseDirectory, "test_export.json");
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "Archivos JSON (*.json)|*.json|Todos los archivos (*.*)|*.*";
+                saveFileDialog.Title = "Guardar nivel del motor C++";
+                saveFileDialog.FileName = "sample_level.json"; // Nombre esperado por el motor C++
 
-            try
-            {
-                File.WriteAllText(outputPath, json);
-                MessageBox.Show($"Nivel exportado a:\n{outputPath}", "Exportación completada",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"No se pudo exportar el nivel:\n{ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Si el usuario elige una ruta y hace clic en "Guardar"
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        File.WriteAllText(saveFileDialog.FileName, json);
+                        MessageBox.Show($"Nivel exportado a:\n{saveFileDialog.FileName}", "Exportación completada",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"No se pudo exportar el nivel:\n{ex.Message}", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
             }
         }
 
