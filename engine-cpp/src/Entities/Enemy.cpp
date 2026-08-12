@@ -8,7 +8,7 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
     : Actor(position, maxHP), m_patrolRoute(std::move(patrolRoute)), m_speed(speed),
       m_attackDamage(attackDamage), m_visionRadius(visionRadius) {
     SetupStates();
-    m_model = LoadModel("assets/models/enemy/robot.glb");
+    m_model = LoadModel("assets/models/enemy/scene.gltf");
 }
 
 Enemy::~Enemy() {

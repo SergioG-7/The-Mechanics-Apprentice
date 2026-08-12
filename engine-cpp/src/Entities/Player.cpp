@@ -6,7 +6,7 @@
 Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     : Actor(position, maxHP), m_moveSpeed(speed), m_attackDamage(attackDamage) {
     SetupStates();
-    m_model = LoadModel("assets/models/player/personaje.glb");
+    m_model = LoadModel("assets/models/player/personaje/scene.gltf");
 }
 
 Player::~Player() {

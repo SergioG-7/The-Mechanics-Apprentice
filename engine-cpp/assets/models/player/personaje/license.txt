@@ -1,0 +1,11 @@
+Model Information:
+* title:	Biped robot
+* source:	https://sketchfab.com/3d-models/biped-robot-801d2a245e4a4405a0c2152b35b5e486
+* author:	Willy Decarpentrie (https://sketchfab.com/skudgee)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Biped robot" (https://sketchfab.com/3d-models/biped-robot-801d2a245e4a4405a0c2152b35b5e486) by Willy Decarpentrie (https://sketchfab.com/skudgee) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
