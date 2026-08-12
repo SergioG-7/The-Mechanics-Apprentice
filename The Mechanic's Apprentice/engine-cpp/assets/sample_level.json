@@ -1,0 +1,35 @@
+{
+  "levelName": "arena_01",
+  "player": {
+    "spawn": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "maxHP": 100.0,
+    "speed": 4.0,
+    "attackDamage": 50
+  },
+  "obstacles": [
+    {
+      "position":    { "x": 3.0, "y": 0.5, "z": -2.0 },
+      "halfExtents": { "x": 0.5, "y": 0.5, "z": 0.5 }
+    }
+  ],
+  "enemies": [
+    {
+      "spawn": { "x": 5.0, "y": 0.0, "z": 5.0 },
+      "maxHP": 30.0,
+      "visionRadius": 6.0,
+      "speed": 2.5,
+      "attackDamage": 10,
+      "patrolRoute": [
+        { "x": 5.0, "y": 0.0, "z": 5.0 },
+        { "x": 5.0, "y": 0.0, "z": -5.0 }
+      ]
+    }
+  ],
+  "gears": [
+    { "position": { "x": 1.0, "y": 0.0, "z": 1.0 } }
+  ],
+  "door": {
+    "position": { "x": 0.0, "y": 0.0, "z": 8.0 },
+    "halfExtents": { "x": 1.5, "y": 1.0, "z": 0.3 }
+  }
+}
