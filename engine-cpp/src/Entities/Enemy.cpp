@@ -164,7 +164,7 @@ void Enemy::Draw() const {
 
     // 2. Eje de rotación (Y) y Escala
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
-    Vector3 scale = { 1.0f, 1.0f, 1.0f }; // Juega con esto si el robot es gigante o enano
+    Vector3 scale = { 2.0f, 2.0f, 2.0f }; // Juega con esto si el robot es gigante o enano
 
     // 3. Sistema de daño visual (Se pone rojo al recibir un golpe)
     Color tint = m_fsm.Is(EnemyState::Hurt) ? RED : WHITE;
