@@ -33,7 +33,6 @@ private:
     Vector3 m_facingDirection{ 0.0f, 0.0f, 1.0f };
     float m_moveSpeed;
     float m_attackDamage;
-
     float m_attackTimer = 0.0f;
     float m_hurtTimer = 0.0f;
     static constexpr float kAttackDuration = 0.35f;
@@ -41,6 +40,7 @@ private:
 
     // Dash: dirección congelada al entrar (ignora input mientras dura),
     // velocidad x3, sigue respetando colisión contra obstáculos.
+    float m_dashCooldown = 0.0f;
     float m_dashTimer = 0.0f;
     Vector3 m_dashDirection{};
     static constexpr float kDashDuration = 0.2f;

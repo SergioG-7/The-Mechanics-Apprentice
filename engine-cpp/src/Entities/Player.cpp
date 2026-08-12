@@ -60,6 +60,7 @@ void Player::UpdateRun(float dt) {
     }
 
     if (IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)) {
+        m_dashCooldown = 1.0f;
         m_fsm.ChangeState(PlayerState::Dash);
         return;
     }
@@ -156,6 +157,9 @@ void Player::UpdateHurt(float dt) {
 }
 
 void Player::Update(float dt) {
+    if (m_dashCooldown > 0.0f) {
+        m_dashCooldown -= dt;
+    }
     ApplyKnockback(dt);
     m_fsm.Update(dt);
 }
