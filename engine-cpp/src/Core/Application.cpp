@@ -33,7 +33,15 @@ void Application::LoadLevel() {
 }
 
 void Application::Update(float dt) {
-    UpdateCamera(&m_camera, CAMERA_ORBITAL);
+    if (m_level.player != nullptr) {
+        Vector3 playerPos = m_level.player->GetPosition();
+
+        // La cámara mira exactamente al centro del jugador
+        m_camera.target = playerPos;
+
+        // Offset isométrico: 15 unidades hacia arriba (Y) y 12 hacia atrás (Z)
+        m_camera.position = Vector3{ playerPos.x, playerPos.y + 15.0f, playerPos.z + 12.0f };
+    }
 
     switch (m_state) {
         case GameState::Gameplay:
@@ -144,7 +152,7 @@ void Application::DrawCenteredOverlay(const char* title, Color titleColor, const
 
 void Application::Draw() {
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    ClearBackground(Color{ 30, 30, 35, 255 }); // Un gris oscuro
 
     BeginMode3D(m_camera);
     m_testModel->Draw({ 0.0f, 0.0f, 0.0f }, 1.0f, WHITE);
