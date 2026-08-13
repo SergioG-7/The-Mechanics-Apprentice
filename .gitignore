@@ -36,3 +36,5 @@ obj/
 /level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.sourcelink.json
 /level-editor-csharp/obj/Release/net9.0-windows/LevelEditor.AssemblyInfo.cs
 /level-editor-csharp/obj/Release/net9.0-windows/LevelEditor.AssemblyInfoInputs.cache
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.assets.cache
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.GeneratedMSBuildEditorConfig.editorconfig
