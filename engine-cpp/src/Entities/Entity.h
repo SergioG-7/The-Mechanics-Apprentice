@@ -21,8 +21,9 @@ protected:
     // Intenta desplazar la entidad por delta (X y Z se resuelven por
     // separado a propósito: si un eje choca contra un Obstacle y el otro no,
     // el movimiento en el eje libre se sigue aplicando -> "desliza" a lo
-    // largo del obstáculo en vez de quedarse parado en seco). Usado por
-    // Player/Enemy en su Update(); Obstacle nunca lo llama.
+    // largo del obstáculo en vez de quedarse parado en seco). La llaman
+    // Player/Enemy a través de Actor::TryMoveAgainstObstacles(); Obstacle
+    // nunca la usa.
     void TryMove(Vector3 delta, const std::vector<std::unique_ptr<Entity>>& obstacles);
 
     Vector3 m_position{};

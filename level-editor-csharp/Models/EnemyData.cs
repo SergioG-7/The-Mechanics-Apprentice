@@ -17,7 +17,7 @@ namespace LevelEditor.Models
         public float Speed { get; set; } = 2.5f;
 
         [JsonPropertyName("attackDamage")]
-        public int AttackDamage { get; set; } = 10;
+        public float AttackDamage { get; set; } = 10.0f;
 
         [JsonPropertyName("patrolRoute")]
         public List<Vector3Data> PatrolRoute { get; set; } = new();

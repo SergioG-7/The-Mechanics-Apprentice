@@ -1,10 +1,7 @@
 #pragma once
 #include "raylib.h"
 #include "GameState.h"
-#include "../Renderer/GameModel.h"
-#include "../Renderer/ShaderManager.h"
 #include "../IO/LevelLoader.h"
-#include <memory>
 #include <string>
 
 class Application {
@@ -28,9 +25,7 @@ private:
 
     Camera3D m_camera{};
     GameState m_state = GameState::Gameplay;
-
-    std::unique_ptr<GameModel> m_testModel;
-    std::unique_ptr<ShaderManager> m_toonShader;
+    Music m_bgm{};
 
     LevelData m_level;
     int m_totalGears = 0; // fijado al cargar el nivel; m_level.gears.size() baja al recogerlos

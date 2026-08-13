@@ -22,10 +22,10 @@ public:
 protected:
     void ApplyKnockback(float dt);
 
-    // true si un AABB centrado en candidatePosition (con m_halfExtents de
-    // este Actor) solaparía con algún obstáculo. Player/Enemy la llaman antes
-    // de aplicar su movimiento; si da true, cancelan ese paso.
-    bool WouldCollideWithObstacles(Vector3 candidatePosition) const;
+    // Envuelve Entity::TryMove con la lista de obstáculos del nivel; Player y
+    // Enemy la llaman para moverse deslizando por las paredes en vez de
+    // quedarse parados en seco al chocar.
+    void TryMoveAgainstObstacles(Vector3 delta);
 
     float m_hp;
     float m_maxHP;

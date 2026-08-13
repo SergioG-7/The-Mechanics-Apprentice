@@ -7,6 +7,8 @@ void CombatSystem::ResolveMeleeAttack(Player& player, std::vector<std::unique_pt
     const Hitbox* hitbox = player.GetActiveHitbox();
     if (!hitbox) return;
 
+    // Un solo enemigo por golpe: para en el primer solape de la lista
+    // (orden de spawn, no distancia), no reparte daño en área.
     for (auto& enemy : enemies) {
         if (enemy->IsAlive() && CollisionMath::AABBIntersects(enemy->GetBoundingBox(), hitbox->box)) {
             enemy->TakeDamage(hitbox->damage, hitbox->knockbackDir);

@@ -8,6 +8,15 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     SetupStates();
 
     m_model = LoadModel("assets/models/player/personaje/scene.gltf");
+
+    // Mesh 3 = "Ground": el disco/pedestal circular que trae el modelo de
+    // Sketchfab para su visor, sin relación con el personaje. Se descarta
+    // la malla entera (no basta con un color transparente: DrawModelEx no
+    // hace alpha-blending en esta pasada) y se recorta meshCount para que
+    // ni el dibujado ni el UnloadModel del destructor vuelvan a tocarla.
+    UnloadMesh(m_model.meshes[3]);
+    m_model.meshCount = 3;
+
     // Sin texturas: estilo "prototipo sci-fi" a base de color sólido + tinte.
     // Sin resetear el color base, los materiales PBR originales del glTF
     // se ven negros en vez de responder al tinte de DrawModelEx.
@@ -19,11 +28,16 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     for (int i = 0; i < m_weaponModel.materialCount; i++) {
         m_weaponModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     }
+
+    m_attackSound = LoadSound("assets/audio/sfx/attack.wav");
+    m_hurtSound = LoadSound("assets/audio/sfx/hurt.wav");
 }
 
 Player::~Player() {
     UnloadModel(m_model);
     UnloadModel(m_weaponModel);
+    if (m_attackSound.frameCount > 0) UnloadSound(m_attackSound);
+    if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
 }
 
 void Player::SetupStates() {
@@ -86,13 +100,7 @@ void Player::UpdateRun(float dt) {
     Vector3 dir = CollisionMath::Normalize2D(input);
     m_facingDirection = dir;
 
-    Vector3 candidate = m_position;
-    candidate.x += dir.x * m_moveSpeed * dt;
-    candidate.z += dir.z * m_moveSpeed * dt;
-
-    if (!WouldCollideWithObstacles(candidate)) {
-        m_position = candidate;
-    }
+    TryMoveAgainstObstacles(Vector3{ dir.x * m_moveSpeed * dt, 0.0f, dir.z * m_moveSpeed * dt });
 
     if (IsKeyPressed(KEY_SPACE)) {
         m_fsm.ChangeState(PlayerState::Attack);
@@ -107,13 +115,11 @@ void Player::EnterDash() {
 void Player::UpdateDash(float dt) {
     m_dashTimer += dt;
 
-    Vector3 candidate = m_position;
-    candidate.x += m_dashDirection.x * m_moveSpeed * kDashSpeedMultiplier * dt;
-    candidate.z += m_dashDirection.z * m_moveSpeed * kDashSpeedMultiplier * dt;
-
-    if (!WouldCollideWithObstacles(candidate)) {
-        m_position = candidate;
-    }
+    TryMoveAgainstObstacles(Vector3{
+        m_dashDirection.x * m_moveSpeed * kDashSpeedMultiplier * dt,
+        0.0f,
+        m_dashDirection.z * m_moveSpeed * kDashSpeedMultiplier * dt
+    });
 
     if (m_dashTimer >= kDashDuration) {
         Vector3 input = ReadMovementInput();
@@ -123,6 +129,7 @@ void Player::UpdateDash(float dt) {
 
 void Player::EnterAttack() {
     std::cout << "[Combate] Golpe con llave inglesa gigante!" << std::endl;
+    if (m_attackSound.frameCount > 0) PlaySound(m_attackSound);
     m_attackTimer = 0.0f;
     m_activeHitbox = SpawnAttackHitbox();
     m_hitboxWindowOpen = true;
@@ -165,7 +172,10 @@ void Player::UpdateAttack(float dt) {
     }
 }
 
-void Player::EnterHurt() { m_hurtTimer = 0.0f; }
+void Player::EnterHurt() {
+    m_hurtTimer = 0.0f;
+    if (m_hurtSound.frameCount > 0) PlaySound(m_hurtSound);
+}
 
 void Player::UpdateHurt(float dt) {
     m_hurtTimer += dt;

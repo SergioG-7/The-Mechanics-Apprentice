@@ -160,7 +160,7 @@ namespace LevelEditor
             switch (_activeTool)
             {
                 case EditorTool.PlacePlayer:
-                    _player = new PlayerData { Spawn = worldPos, MaxHP = 100.0f, Speed = 4.0f, AttackDamage = 50 };
+                    _player = new PlayerData { Spawn = worldPos, MaxHP = 100.0f, Speed = 4.0f, AttackDamage = 50.0f };
                     break;
 
                 case EditorTool.PlaceEnemy:
@@ -170,7 +170,7 @@ namespace LevelEditor
                         MaxHP = 30.0f,
                         VisionRadius = 6.0f,
                         Speed = 2.5f,
-                        AttackDamage = 10,
+                        AttackDamage = 10.0f,
                         PatrolRoute = new List<Vector3Data>()
                     });
                     break;
@@ -307,9 +307,9 @@ namespace LevelEditor
             {
                 Location = new Point(10, InputY(2)), Width = 160,
                 Minimum = 1, Maximum = 500, DecimalPlaces = 0,
-                Value = player.AttackDamage
+                Value = (decimal)player.AttackDamage
             };
-            dmgInput.ValueChanged += (s, e) => player.AttackDamage = (int)dmgInput.Value;
+            dmgInput.ValueChanged += (s, e) => player.AttackDamage = (float)dmgInput.Value;
 
             _propertiesGroup.Controls.Add(new Label { Text = "HP máximo:", Location = new Point(10, LabelY(0)), AutoSize = true });
             _propertiesGroup.Controls.Add(hpInput);
@@ -349,9 +349,9 @@ namespace LevelEditor
             {
                 Location = new Point(10, InputY(3)), Width = 160,
                 Minimum = 1, Maximum = 500, DecimalPlaces = 0,
-                Value = enemy.AttackDamage
+                Value = (decimal)enemy.AttackDamage
             };
-            dmgInput.ValueChanged += (s, e) => enemy.AttackDamage = (int)dmgInput.Value;
+            dmgInput.ValueChanged += (s, e) => enemy.AttackDamage = (float)dmgInput.Value;
 
             _propertiesGroup.Controls.Add(new Label { Text = "HP máximo:", Location = new Point(10, LabelY(0)), AutoSize = true });
             _propertiesGroup.Controls.Add(hpInput);
@@ -536,7 +536,6 @@ namespace LevelEditor
                 saveFileDialog.Title = "Guardar nivel del motor C++";
                 saveFileDialog.FileName = "sample_level.json"; // Nombre esperado por el motor C++
 
-                // Si el usuario elige una ruta y hace clic en "Guardar"
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     try

@@ -16,10 +16,13 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
     for (int i = 0; i < m_model.materialCount; i++) {
         m_model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     }
+
+    m_hurtSound = LoadSound("assets/audio/sfx/hurt.wav");
 }
 
 Enemy::~Enemy() {
     UnloadModel(m_model);
+    if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
 }
 
 void Enemy::SetupStates() {
@@ -37,7 +40,10 @@ void Enemy::SetupStates() {
     m_fsm.RegisterState(EnemyState::Attack, attack);
 
     StateMachine<EnemyState>::StateCallbacks hurt;
-    hurt.onEnter = [this]() { m_hurtTimer = 0.0f; };
+    hurt.onEnter = [this]() {
+        m_hurtTimer = 0.0f;
+        if (m_hurtSound.frameCount > 0) PlaySound(m_hurtSound);
+    };
     hurt.onUpdate = [this](float dt) { UpdateHurt(dt); };
     m_fsm.RegisterState(EnemyState::Hurt, hurt);
 
@@ -69,13 +75,7 @@ void Enemy::UpdatePatrol(float dt) {
 
     m_facingDirection = dir;
 
-    Vector3 candidate = m_position;
-    candidate.x += dir.x * m_speed * dt;
-    candidate.z += dir.z * m_speed * dt;
-
-    if (!WouldCollideWithObstacles(candidate)) {
-        m_position = candidate;
-    }
+    TryMoveAgainstObstacles(Vector3{ dir.x * m_speed * dt, 0.0f, dir.z * m_speed * dt });
 }
 
 void Enemy::UpdateChase(float dt) {
@@ -93,23 +93,19 @@ void Enemy::UpdateChase(float dt) {
 
     m_facingDirection = dir;
 
-    Vector3 candidate = m_position;
-    candidate.x += dir.x * m_speed * dt;
-    candidate.z += dir.z * m_speed * dt;
-
-    if (!WouldCollideWithObstacles(candidate)) {
-        m_position = candidate;
-    }
+    TryMoveAgainstObstacles(Vector3{ dir.x * m_speed * dt, 0.0f, dir.z * m_speed * dt });
 }
 
 void Enemy::EnterAttack() {
-    // Ataca de inmediato al entrar (cooldown a 0), luego repite cada
-    // kAttackInterval mientras el Player siga en rango.
-    m_attackCooldown = 0.0f;
+    // No resetear m_attackCooldown aquí: si el jugador oscila en el borde de
+    // kAttackRange, el FSM re-entra en Attack varias veces por segundo y un
+    // reset a 0 dispararía un golpe instantáneo cada vez, saltándose kAttackInterval.
 }
 
 Hitbox Enemy::SpawnAttackHitbox() const {
-    constexpr float kKnockbackForce = 6.0f;
+    // Subido de 6.0f: da al jugador más distancia tras un golpe, con margen
+    // real para reaccionar con el Dash en vez de quedar pegado al enemigo.
+    constexpr float kKnockbackForce = 9.0f;
 
     Vector3 toPlayer{
         m_lastKnownPlayerPosition.x - m_position.x, 0.0f,
@@ -163,21 +159,23 @@ void Enemy::Update(float dt) {
 }
 
 void Enemy::Draw() const {
-    // 1. Calcular rotación para que mire hacia donde camina
     float rotationAngle = 0.0f;
     if (m_facingDirection.x != 0.0f || m_facingDirection.z != 0.0f) {
         rotationAngle = atan2f(m_facingDirection.x, m_facingDirection.z) * (180.0f / PI);
     }
 
-    // 2. Eje de rotación (Y) y Escala
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
-    Vector3 scale = { 3.0f, 3.0f, 3.0f }; // Juega con esto si el robot es gigante o enano
+    Vector3 scale = { 3.0f, 3.0f, 3.0f };
 
-    // 3. Sistema de daño visual (rojo oscuro al recibir un golpe, distinto
-    // del rojo base para que el impacto se note)
-    Color tint = m_fsm.Is(EnemyState::Hurt) ? MAROON : RED;
+    // Naranja al recibir un golpe (se lee mejor que rojo sobre rojo), óxido
+    // apagado cuando queda desactivado.
+    Color tint = RED;
+    if (m_fsm.Is(EnemyState::Hurt)) {
+        tint = ORANGE;
+    } else if (m_fsm.Is(EnemyState::Dead)) {
+        tint = Color{ 80, 20, 20, 255 };
+    }
 
-    // 4. Dibujado final
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 }
 

@@ -6,6 +6,7 @@
 Application::Application(int width, int height, const std::string& title) {
     InitWindow(width, height, title.c_str());
     SetTargetFPS(60);
+    InitAudioDevice();
 
     m_camera.position   = { 0.0f, 4.0f, 8.0f };
     m_camera.target     = { 0.0f, 1.0f, 0.0f };
@@ -13,14 +14,20 @@ Application::Application(int width, int height, const std::string& title) {
     m_camera.fovy       = 45.0f;
     m_camera.projection = CAMERA_PERSPECTIVE;
 
-    m_testModel  = std::make_unique<GameModel>("assets/test_model.glb");
-    m_toonShader = std::make_unique<ShaderManager>("shaders/toon.vs", "shaders/toon.fs");
-    m_testModel->SetShader(m_toonShader->Get());
+    m_bgm = LoadMusicStream("assets/audio/music/theme.ogg");
+    if (m_bgm.frameCount > 0) {
+        m_bgm.looping = true;
+        PlayMusicStream(m_bgm);
+    }
 
     LoadLevel();
 }
 
-Application::~Application() { CloseWindow(); }
+Application::~Application() {
+    if (m_bgm.frameCount > 0) UnloadMusicStream(m_bgm);
+    CloseAudioDevice();
+    CloseWindow();
+}
 
 void Application::LoadLevel() {
     m_level = LevelLoader::LoadFromFile("assets/sample_level.json");
@@ -33,10 +40,11 @@ void Application::LoadLevel() {
 }
 
 void Application::Update(float dt) {
+    if (m_bgm.frameCount > 0) UpdateMusicStream(m_bgm);
+
     if (m_level.player != nullptr) {
         Vector3 playerPos = m_level.player->GetPosition();
 
-        // La cámara mira exactamente al centro del jugador
         m_camera.target = playerPos;
 
         // Offset isométrico: 15 unidades hacia arriba (Y) y 12 hacia atrás (Z)
@@ -152,10 +160,9 @@ void Application::DrawCenteredOverlay(const char* title, Color titleColor, const
 
 void Application::Draw() {
     BeginDrawing();
-    ClearBackground(Color{ 30, 30, 35, 255 }); // Un gris oscuro
+    ClearBackground(Color{ 30, 30, 35, 255 });
 
     BeginMode3D(m_camera);
-    m_testModel->Draw({ 0.0f, 0.0f, 0.0f }, 1.0f, WHITE);
     DrawGrid(20, 1.0f);
 
     if (m_level.player) m_level.player->Draw();

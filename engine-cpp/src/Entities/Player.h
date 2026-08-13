@@ -52,4 +52,7 @@ private:
 
     Model m_model;
     Model m_weaponModel;
+
+    Sound m_attackSound{};
+    Sound m_hurtSound{};
 };
