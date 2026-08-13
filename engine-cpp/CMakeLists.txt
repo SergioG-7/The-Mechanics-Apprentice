@@ -31,6 +31,7 @@ add_executable(${PROJECT_NAME}
     src/Core/Application.cpp
     src/Renderer/GameModel.cpp
     src/Renderer/ShaderManager.cpp
+    src/Renderer/ModelUtils.cpp
     src/Combat/CollisionMath.cpp
     src/IO/LevelLoader.cpp
     src/Combat/CombatSystem.cpp

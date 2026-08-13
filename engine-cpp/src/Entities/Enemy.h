@@ -21,6 +21,10 @@ public:
     const Hitbox* GetActiveHitbox() const;
     void CloseAttackHitbox();
 
+    // Asigna el shader a los materiales del cuerpo. La llama Application
+    // tras construir el Enemy, una vez cargado el ShaderManager.
+    void SetShader(Shader shader);
+
 private:
     void SetupStates();
     void UpdatePatrol(float dt);

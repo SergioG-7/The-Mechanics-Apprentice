@@ -2,6 +2,8 @@
 #include "raylib.h"
 #include "GameState.h"
 #include "../IO/LevelLoader.h"
+#include "../Renderer/ShaderManager.h"
+#include <memory>
 #include <string>
 
 class Application {
@@ -28,6 +30,8 @@ private:
     GameState m_state = GameState::Gameplay;
     Music m_bgm{};
     static constexpr float kMusicVolume = 0.1f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
+
+    std::unique_ptr<ShaderManager> m_toonShader;
 
     LevelData m_level;
     int m_totalGears = 0; // fijado al cargar el nivel; m_level.gears.size() baja al recogerlos

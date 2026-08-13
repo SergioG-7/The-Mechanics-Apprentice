@@ -20,6 +20,8 @@ Application::Application(int width, int height, const std::string& title) {
         SetMusicVolume(m_bgm, kMusicVolume);
     }
 
+    m_toonShader = std::make_unique<ShaderManager>("shaders/toon.vs", "shaders/toon.fs");
+
     LoadLevel();
 }
 
@@ -32,8 +34,14 @@ Application::~Application() {
 void Application::LoadLevel() {
     m_level = LevelLoader::LoadFromFile("assets/sample_level.json");
 
-    if (m_level.player) m_level.player->SetObstacles(&m_level.obstacles);
-    for (auto& enemy : m_level.enemies) enemy->SetObstacles(&m_level.obstacles);
+    if (m_level.player) {
+        m_level.player->SetObstacles(&m_level.obstacles);
+        m_level.player->SetShader(m_toonShader->Get());
+    }
+    for (auto& enemy : m_level.enemies) {
+        enemy->SetObstacles(&m_level.obstacles);
+        enemy->SetShader(m_toonShader->Get());
+    }
 
     m_totalGears = static_cast<int>(m_level.gears.size());
     m_state = GameState::Gameplay;

@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "../Combat/CollisionMath.h"
+#include "../Renderer/ModelUtils.h"
 #include "raylib.h"
 #include <iostream>
 
@@ -7,22 +8,13 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     : Actor(position, maxHP), m_moveSpeed(speed), m_attackDamage(attackDamage) {
     SetupStates();
 
-    m_model = LoadModel("assets/models/player/personaje/scene.gltf");
-
-    // Mesh 3 = "Ground": el disco/pedestal circular que trae el modelo de
-    // Sketchfab para su visor, sin relación con el personaje. Se descarta
-    // la malla entera (no basta con un color transparente: DrawModelEx no
-    // hace alpha-blending en esta pasada) y se recorta meshCount para que
-    // ni el dibujado ni el UnloadModel del destructor vuelvan a tocarla.
-    UnloadMesh(m_model.meshes[3]);
-    m_model.meshCount = 3;
-
-    // Sin texturas: estilo "prototipo sci-fi" a base de color sólido + tinte.
-    // Sin resetear el color base, los materiales PBR originales del glTF
-    // se ven negros en vez de responder al tinte de DrawModelEx.
-    for (int i = 0; i < m_model.materialCount; i++) {
-        m_model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
-    }
+    // Modelo Kenney (blocky-characters, variante G): trae su propio atlas
+    // vía pbrMetallicRoughness.baseColorTexture, que raylib sí resuelve solo
+    // (a diferencia del workflow specular-glossiness de los modelos
+    // Sketchfab anteriores). No hace falta inyectar textura a mano ni tocar
+    // el color base del material -- ya nace en blanco, así el toon shader
+    // recibe el atlas sin teñir.
+    m_model = LoadModel("assets/models/kenney_blocky-characters_20/Models/GLB format/character-g.glb");
 
     m_weaponModel = LoadModel("assets/models/player/arma/scene.gltf");
     for (int i = 0; i < m_weaponModel.materialCount; i++) {
@@ -36,10 +28,21 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
 }
 
 Player::~Player() {
+    ModelUtils::UnloadOwnTextures(m_model);
+    ModelUtils::UnloadOwnTextures(m_weaponModel);
     UnloadModel(m_model);
     UnloadModel(m_weaponModel);
     if (m_attackSound.frameCount > 0) UnloadSound(m_attackSound);
     if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
+}
+
+void Player::SetShader(Shader shader) {
+    for (int i = 0; i < m_model.materialCount; i++) {
+        m_model.materials[i].shader = shader;
+    }
+    for (int i = 0; i < m_weaponModel.materialCount; i++) {
+        m_weaponModel.materials[i].shader = shader;
+    }
 }
 
 void Player::SetupStates() {
@@ -201,9 +204,12 @@ void Player::Draw() const {
     }
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f }; // Queremos que gire sobre el eje Y (el suelo)
-    Vector3 scale = { 0.02f, 0.02f, 0.02f };        
+    Vector3 scale = { 1.0f, 1.0f, 1.0f };        
 
-    Color tint = m_fsm.Is(PlayerState::Hurt) ? WHITE : BLUE;
+    // WHITE en normal para no teñir el atlas de Kenney (el toon shader ya
+    // procesa sus colores tal cual); el flash de daño pasa a RED, ya que
+    // WHITE dejaría de contrastar contra un tinte neutro.
+    Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : WHITE;
 
     // Sombra falsa: ancla al personaje al suelo sin necesitar un shader de
     // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
@@ -211,9 +217,10 @@ void Player::Draw() const {
 
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
-    if (m_fsm.Is(PlayerState::Attack)) {
-        DrawWeapon(rotationAngle);
-    }
+    // TEMPORAL para calibrar m_weaponScale/m_weaponOffset a ojo: se dibuja
+    // siempre, no solo en Attack. Volver al condicional de
+    // PlayerState::Attack en cuanto quede bien ajustada.
+    DrawWeapon(rotationAngle);
 }
 
 void Player::DrawWeapon(float rotationAngleDegrees) const {
@@ -221,14 +228,13 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
     float cosA = cosf(rotationRadians);
     float sinA = sinf(rotationRadians);
 
-    // Offset local fijo (mano derecha del personaje), rotado con el mismo
-    // ángulo que el cuerpo para que el arma acompañe hacia donde mira.
-    // No hay rigging: es un attachment por código, no un hueso real.
-    Vector3 localOffset{ 1.0f, 1.0f, 1.0f };
+    // m_weaponOffset es local a la mano del personaje; se rota con el mismo
+    // ángulo que el cuerpo para que el arma acompañe hacia donde mira. No
+    // hay rigging: es un attachment por código, no un hueso real.
     Vector3 worldOffset{
-        localOffset.x * cosA + localOffset.z * sinA,
-        localOffset.y,
-        -localOffset.x * sinA + localOffset.z * cosA
+        m_weaponOffset.x * cosA + m_weaponOffset.z * sinA,
+        m_weaponOffset.y,
+        -m_weaponOffset.x * sinA + m_weaponOffset.z * cosA
     };
 
     Vector3 weaponPosition{
@@ -238,9 +244,9 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
     };
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
-    Vector3 scale = { 5.1f, 5.1f, 5.1f };
 
-    DrawModelEx(m_weaponModel, weaponPosition, rotationAxis, rotationAngleDegrees, scale, YELLOW);
+    // YELLOW temporal para que se vea fácil mientras se calibra.
+    DrawModelEx(m_weaponModel, weaponPosition, rotationAxis, rotationAngleDegrees, m_weaponScale, YELLOW);
 }
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {

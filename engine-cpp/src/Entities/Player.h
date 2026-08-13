@@ -16,6 +16,16 @@ public:
     const Hitbox* GetActiveHitbox() const;
     void CloseAttackHitbox();
 
+    // Asigna el shader a los materiales del cuerpo y del arma. La llama
+    // Application tras construir el Player, una vez cargado el ShaderManager.
+    void SetShader(Shader shader);
+
+    // Públicas a propósito, para calibrar el arma a ojo mientras se prueba
+    // (ver Player::DrawWeapon). Cuando queden bien, esto puede volver a
+    // privado y a valores fijos.
+    Vector3 m_weaponScale = { 1.0f, 1.0f, 1.0f };
+    Vector3 m_weaponOffset = { 0.5f, 0.5f, 0.0f };
+
 private:
     void SetupStates();
     Vector3 ReadMovementInput() const;

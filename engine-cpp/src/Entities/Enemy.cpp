@@ -1,5 +1,6 @@
 #include "Enemy.h"
 #include "../Combat/CollisionMath.h"
+#include "../Renderer/ModelUtils.h"
 #include "raylib.h"
 #include <iostream>
 
@@ -9,19 +10,17 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
       m_attackDamage(attackDamage), m_visionRadius(visionRadius) {
     SetupStates();
 
-    m_model = LoadModel("assets/models/enemy/scene.gltf");
-    // Sin texturas: estilo "prototipo sci-fi" a base de color sólido + tinte.
-    // Sin resetear el color base, los materiales PBR originales del glTF
-    // se ven negros en vez de responder al tinte de DrawModelEx.
-    for (int i = 0; i < m_model.materialCount; i++) {
-        m_model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
-    }
+    // Modelo Kenney (blocky-characters, variante L / "zombie"): mismo caso
+    // que el Player, trae su atlas vía baseColorTexture y raylib lo resuelve
+    // solo. El color base del material ya nace en blanco.
+    m_model = LoadModel("assets/models/kenney_blocky-characters_20/Models/GLB format/character-l.glb");
 
     m_hurtSound = LoadSound("assets/audio/sfx/hurt.ogg");
     if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, kHurtSoundVolume);
 }
 
 Enemy::~Enemy() {
+    ModelUtils::UnloadOwnTextures(m_model);
     UnloadModel(m_model);
     if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
 }
@@ -166,14 +165,15 @@ void Enemy::Draw() const {
     }
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
-    Vector3 scale = { 3.0f, 3.0f, 3.0f };
+    Vector3 scale = { 4.0f, 4.0f, 4.0f };
 
-    // Flash blanco al recibir un golpe: el contraste extremo contra el rojo
-    // base se lee mucho mejor que un simple cambio de tono. Óxido apagado
+    // WHITE en normal (igual que el Player) para no teñir el material sobre
+    // el que trabaja el toon shader; el flash de daño pasa a RED, ya que
+    // WHITE dejaría de contrastar contra un tinte neutro. Óxido apagado
     // cuando queda desactivado.
-    Color tint = RED;
+    Color tint = WHITE;
     if (m_fsm.Is(EnemyState::Hurt)) {
-        tint = WHITE;
+        tint = RED;
     } else if (m_fsm.Is(EnemyState::Dead)) {
         tint = Color{ 80, 20, 20, 255 };
     }
@@ -203,3 +203,9 @@ const Hitbox* Enemy::GetActiveHitbox() const {
 }
 
 void Enemy::CloseAttackHitbox() { m_hitboxWindowOpen = false; }
+
+void Enemy::SetShader(Shader shader) {
+    for (int i = 0; i < m_model.materialCount; i++) {
+        m_model.materials[i].shader = shader;
+    }
+}
