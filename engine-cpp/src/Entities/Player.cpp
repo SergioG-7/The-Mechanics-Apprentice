@@ -6,11 +6,24 @@
 Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     : Actor(position, maxHP), m_moveSpeed(speed), m_attackDamage(attackDamage) {
     SetupStates();
+
     m_model = LoadModel("assets/models/player/personaje/scene.gltf");
+    // Sin texturas: estilo "prototipo sci-fi" a base de color sólido + tinte.
+    // Sin resetear el color base, los materiales PBR originales del glTF
+    // se ven negros en vez de responder al tinte de DrawModelEx.
+    for (int i = 0; i < m_model.materialCount; i++) {
+        m_model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
+    }
+
+    m_weaponModel = LoadModel("assets/models/player/arma/scene.gltf");
+    for (int i = 0; i < m_weaponModel.materialCount; i++) {
+        m_weaponModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
+    }
 }
 
 Player::~Player() {
     UnloadModel(m_model);
+    UnloadModel(m_weaponModel);
 }
 
 void Player::SetupStates() {
@@ -176,11 +189,42 @@ void Player::Draw() const {
     }
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f }; // Queremos que gire sobre el eje Y (el suelo)
-    Vector3 scale = { 0.01f, 0.011f, 0.01f };        
+    Vector3 scale = { 0.02f, 0.02f, 0.02f };        
 
-    Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : WHITE;
+    Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : BLUE;
 
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
+
+    if (m_fsm.Is(PlayerState::Attack)) {
+        DrawWeapon(rotationAngle);
+    }
+}
+
+void Player::DrawWeapon(float rotationAngleDegrees) const {
+    float rotationRadians = rotationAngleDegrees * (PI / 180.0f);
+    float cosA = cosf(rotationRadians);
+    float sinA = sinf(rotationRadians);
+
+    // Offset local fijo (mano derecha del personaje), rotado con el mismo
+    // ángulo que el cuerpo para que el arma acompañe hacia donde mira.
+    // No hay rigging: es un attachment por código, no un hueso real.
+    Vector3 localOffset{ 1.0f, 1.0f, 1.0f };
+    Vector3 worldOffset{
+        localOffset.x * cosA + localOffset.z * sinA,
+        localOffset.y,
+        -localOffset.x * sinA + localOffset.z * cosA
+    };
+
+    Vector3 weaponPosition{
+        m_position.x + worldOffset.x,
+        m_position.y + worldOffset.y,
+        m_position.z + worldOffset.z
+    };
+
+    Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
+    Vector3 scale = { 5.1f, 5.1f, 5.1f };
+
+    DrawModelEx(m_weaponModel, weaponPosition, rotationAxis, rotationAngleDegrees, scale, YELLOW);
 }
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {

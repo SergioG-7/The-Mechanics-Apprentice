@@ -8,7 +8,14 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
     : Actor(position, maxHP), m_patrolRoute(std::move(patrolRoute)), m_speed(speed),
       m_attackDamage(attackDamage), m_visionRadius(visionRadius) {
     SetupStates();
+
     m_model = LoadModel("assets/models/enemy/scene.gltf");
+    // Sin texturas: estilo "prototipo sci-fi" a base de color sólido + tinte.
+    // Sin resetear el color base, los materiales PBR originales del glTF
+    // se ven negros en vez de responder al tinte de DrawModelEx.
+    for (int i = 0; i < m_model.materialCount; i++) {
+        m_model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
+    }
 }
 
 Enemy::~Enemy() {
@@ -164,10 +171,11 @@ void Enemy::Draw() const {
 
     // 2. Eje de rotación (Y) y Escala
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
-    Vector3 scale = { 2.0f, 2.0f, 2.0f }; // Juega con esto si el robot es gigante o enano
+    Vector3 scale = { 3.0f, 3.0f, 3.0f }; // Juega con esto si el robot es gigante o enano
 
-    // 3. Sistema de daño visual (Se pone rojo al recibir un golpe)
-    Color tint = m_fsm.Is(EnemyState::Hurt) ? RED : WHITE;
+    // 3. Sistema de daño visual (rojo oscuro al recibir un golpe, distinto
+    // del rojo base para que el impacto se note)
+    Color tint = m_fsm.Is(EnemyState::Hurt) ? MAROON : RED;
 
     // 4. Dibujado final
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);

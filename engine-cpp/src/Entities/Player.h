@@ -28,6 +28,7 @@ private:
     void EnterDash();
     void UpdateDash(float dt);
     Hitbox SpawnAttackHitbox() const;
+    void DrawWeapon(float rotationAngleDegrees) const;
 
     StateMachine<PlayerState> m_fsm;
     Vector3 m_facingDirection{ 0.0f, 0.0f, 1.0f };
@@ -50,4 +51,5 @@ private:
     bool m_hitboxWindowOpen = false;
 
     Model m_model;
+    Model m_weaponModel;
 };
