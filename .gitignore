@@ -1,0 +1,38 @@
+# Ignorar la carpeta oculta de Visual Studio (Caché, Copilot, estado de ventanas)
+.vs/
+
+# Ignorar archivos de base de datos y cachés
+*.sqlite
+*.db
+*.VC.db
+*.suo
+
+# Ignorar configuraciones de usuario de CMake/Workspace que son locales
+CMakeWorkspaceSettings.json
+VSWorkspaceState.json
+ProjectSettings.json
+DocumentLayout.json
+DocumentLayout.backup.json
+workspaceFileList.bin
+
+# Directorios de compilación (opcional pero recomendado)
+out/
+build/
+bin/
+obj/
+/level-editor-csharp/bin/Debug/net9.0-windows/LevelEditor.dll
+/level-editor-csharp/bin/Debug/net9.0-windows/LevelEditor.exe
+/level-editor-csharp/bin/Debug/net9.0-windows/LevelEditor.pdb
+/level-editor-csharp/obj/Debug/net9.0-windows/ref/LevelEditor.dll
+/level-editor-csharp/obj/Debug/net9.0-windows/refint/LevelEditor.dll
+/level-editor-csharp/obj/Debug/net9.0-windows/apphost.exe
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.AssemblyInfo.cs
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.AssemblyInfoInputs.cache
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.csproj.CoreCompileInputs.cache
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.csproj.FileListAbsolute.txt
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.dll
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.genruntimeconfig.cache
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.pdb
+/level-editor-csharp/obj/Debug/net9.0-windows/LevelEditor.sourcelink.json
+/level-editor-csharp/obj/Release/net9.0-windows/LevelEditor.AssemblyInfo.cs
+/level-editor-csharp/obj/Release/net9.0-windows/LevelEditor.AssemblyInfoInputs.cache
