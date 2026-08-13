@@ -17,7 +17,7 @@ Application::Application(int width, int height, const std::string& title) {
     m_bgm = LoadMusicStream("assets/audio/music/theme.ogg");
     if (m_bgm.frameCount > 0) {
         m_bgm.looping = true;
-        PlayMusicStream(m_bgm);
+        SetMusicVolume(m_bgm, kMusicVolume);
     }
 
     LoadLevel();
@@ -37,6 +37,10 @@ void Application::LoadLevel() {
 
     m_totalGears = static_cast<int>(m_level.gears.size());
     m_state = GameState::Gameplay;
+
+    // Arranca (o reinicia desde el principio) la música al entrar en
+    // partida; se para en GameOver/Victory para dar un respiro.
+    if (m_bgm.frameCount > 0) PlayMusicStream(m_bgm);
 }
 
 void Application::Update(float dt) {
@@ -100,6 +104,7 @@ void Application::UpdateGameplay(float dt) {
     if (!m_level.player->IsAlive()) {
         TraceLog(LOG_INFO, "Application: GAME OVER");
         m_state = GameState::GameOver;
+        if (m_bgm.frameCount > 0) StopMusicStream(m_bgm);
         return;
     }
 
@@ -107,6 +112,7 @@ void Application::UpdateGameplay(float dt) {
         CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), m_level.door->GetBoundingBox())) {
         TraceLog(LOG_INFO, "Application: VICTORY");
         m_state = GameState::Victory;
+        if (m_bgm.frameCount > 0) StopMusicStream(m_bgm);
     }
 }
 
@@ -143,6 +149,22 @@ void Application::DrawHud() const {
     }
 }
 
+void Application::DrawGroundGrid() const {
+    // Cuadrícula holográfica estilo Tron en vez del DrawGrid gris por
+    // defecto de raylib -- raylib no define CYAN, así que se usa SKYBLUE
+    // (mismo sustituto ya usado para el contorno de Obstacle).
+    constexpr int slices = 20;
+    constexpr float spacing = 1.0f;
+    constexpr float halfSize = (slices * spacing) / 2.0f;
+    Color gridColor = Fade(SKYBLUE, 0.3f);
+
+    for (int i = -slices / 2; i <= slices / 2; i++) {
+        float offset = i * spacing;
+        DrawLine3D(Vector3{ offset, 0.0f, -halfSize }, Vector3{ offset, 0.0f, halfSize }, gridColor);
+        DrawLine3D(Vector3{ -halfSize, 0.0f, offset }, Vector3{ halfSize, 0.0f, offset }, gridColor);
+    }
+}
+
 void Application::DrawCenteredOverlay(const char* title, Color titleColor, const char* subtitle) const {
     int screenW = GetScreenWidth();
     int screenH = GetScreenHeight();
@@ -163,7 +185,7 @@ void Application::Draw() {
     ClearBackground(Color{ 30, 30, 35, 255 });
 
     BeginMode3D(m_camera);
-    DrawGrid(20, 1.0f);
+    DrawGroundGrid();
 
     if (m_level.player) m_level.player->Draw();
     for (auto& enemy : m_level.enemies) enemy->Draw();

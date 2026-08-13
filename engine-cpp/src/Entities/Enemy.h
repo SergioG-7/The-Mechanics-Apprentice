@@ -52,4 +52,5 @@ private:
     bool m_hitboxWindowOpen = false;
     Model m_model;
     Sound m_hurtSound{};
+    static constexpr float kHurtSoundVolume = 0.5f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
 };

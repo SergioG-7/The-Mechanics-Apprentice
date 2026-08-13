@@ -17,7 +17,8 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
         m_model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     }
 
-    m_hurtSound = LoadSound("assets/audio/sfx/hurt.wav");
+    m_hurtSound = LoadSound("assets/audio/sfx/hurt.ogg");
+    if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, kHurtSoundVolume);
 }
 
 Enemy::~Enemy() {
@@ -167,14 +168,19 @@ void Enemy::Draw() const {
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
     Vector3 scale = { 3.0f, 3.0f, 3.0f };
 
-    // Naranja al recibir un golpe (se lee mejor que rojo sobre rojo), óxido
-    // apagado cuando queda desactivado.
+    // Flash blanco al recibir un golpe: el contraste extremo contra el rojo
+    // base se lee mucho mejor que un simple cambio de tono. Óxido apagado
+    // cuando queda desactivado.
     Color tint = RED;
     if (m_fsm.Is(EnemyState::Hurt)) {
-        tint = ORANGE;
+        tint = WHITE;
     } else if (m_fsm.Is(EnemyState::Dead)) {
         tint = Color{ 80, 20, 20, 255 };
     }
+
+    // Sombra falsa: ancla al robot al suelo sin necesitar un shader de
+    // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
+    DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f, 0.6f, 0.01f, 15, Color{ 0, 0, 0, 100 });
 
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 }

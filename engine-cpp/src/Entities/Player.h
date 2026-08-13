@@ -55,4 +55,6 @@ private:
 
     Sound m_attackSound{};
     Sound m_hurtSound{};
+    static constexpr float kAttackSoundVolume = 0.5f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
+    static constexpr float kHurtSoundVolume = 0.5f;
 };

@@ -29,8 +29,10 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
         m_weaponModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     }
 
-    m_attackSound = LoadSound("assets/audio/sfx/attack.wav");
-    m_hurtSound = LoadSound("assets/audio/sfx/hurt.wav");
+    m_attackSound = LoadSound("assets/audio/sfx/attack.ogg");
+    m_hurtSound = LoadSound("assets/audio/sfx/hurt.ogg");
+    if (m_attackSound.frameCount > 0) SetSoundVolume(m_attackSound, kAttackSoundVolume);
+    if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, kHurtSoundVolume);
 }
 
 Player::~Player() {
@@ -201,7 +203,11 @@ void Player::Draw() const {
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f }; // Queremos que gire sobre el eje Y (el suelo)
     Vector3 scale = { 0.02f, 0.02f, 0.02f };        
 
-    Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : BLUE;
+    Color tint = m_fsm.Is(PlayerState::Hurt) ? WHITE : BLUE;
+
+    // Sombra falsa: ancla al personaje al suelo sin necesitar un shader de
+    // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
+    DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f, 0.6f, 0.01f, 15, Color{ 0, 0, 0, 100 });
 
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
