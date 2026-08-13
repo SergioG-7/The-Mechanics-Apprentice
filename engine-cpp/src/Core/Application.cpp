@@ -140,7 +140,7 @@ void Application::DrawHud() const {
 
     // --- Barra de HP flotante sobre cada Enemy dañado ---
     for (auto& enemy : m_level.enemies) {
-        if (!enemy->IsAlive()) continue;               // un robot desactivado no necesita barra
+        if (!enemy->IsAlive()) continue;               // un zombie derrotado no necesita barra
         if (enemy->GetHP() >= enemy->GetMaxHP()) continue; // solo tras el primer golpe, para no saturar
 
         Vector3 worldPos = enemy->GetPosition();

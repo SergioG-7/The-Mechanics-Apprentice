@@ -29,7 +29,6 @@ FetchContent_MakeAvailable(json)
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/Core/Application.cpp
-    src/Renderer/GameModel.cpp
     src/Renderer/ShaderManager.cpp
     src/Renderer/ModelUtils.cpp
     src/Combat/CollisionMath.cpp
@@ -46,6 +45,7 @@ add_executable(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib nlohmann_json::nlohmann_json)
+target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 
 # Copia shaders/assets junto al ejecutable en cada build. VS2022 depura con
 # el "working directory" apuntando por defecto a la carpeta del propio .exe,

@@ -7,6 +7,6 @@ class Gear : public Entity {
 public:
     explicit Gear(Vector3 position);
 
-    void Update(float dt) override {}
+    void Update(float) override {}
     void Draw() const override;
 };

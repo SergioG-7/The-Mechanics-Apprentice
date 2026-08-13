@@ -20,10 +20,9 @@ public:
     // Application tras construir el Player, una vez cargado el ShaderManager.
     void SetShader(Shader shader);
 
-    // Públicas a propósito, para calibrar el arma a ojo mientras se prueba
-    // (ver Player::DrawWeapon). Cuando queden bien, esto puede volver a
-    // privado y a valores fijos.
-    Vector3 m_weaponScale = { 1.0f, 1.0f, 1.0f };
+    // Valores finales de calibración del arma (ver Player::DrawWeapon).
+    // Públicas por si hace falta retocarlas a ojo más adelante.
+    Vector3 m_weaponScale = { 200.0f, 200.0f, 200.0f };
     Vector3 m_weaponOffset = { 0.5f, 0.5f, 0.0f };
 
 private:

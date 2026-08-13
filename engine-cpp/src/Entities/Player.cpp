@@ -14,7 +14,7 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     // Sketchfab anteriores). No hace falta inyectar textura a mano ni tocar
     // el color base del material -- ya nace en blanco, así el toon shader
     // recibe el atlas sin teñir.
-    m_model = LoadModel("assets/models/kenney_blocky-characters_20/Models/GLB format/character-g.glb");
+    m_model = LoadModel("assets/models/player/character_g.glb");
 
     m_weaponModel = LoadModel("assets/models/player/arma/scene.gltf");
     for (int i = 0; i < m_weaponModel.materialCount; i++) {
@@ -81,7 +81,7 @@ Vector3 Player::ReadMovementInput() const {
     return dir;
 }
 
-void Player::UpdateIdle(float dt) {
+void Player::UpdateIdle(float) {
     Vector3 input = ReadMovementInput();
     if (input.x != 0.0f || input.z != 0.0f) {
         m_fsm.ChangeState(PlayerState::Run);
@@ -217,10 +217,9 @@ void Player::Draw() const {
 
     DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
-    // TEMPORAL para calibrar m_weaponScale/m_weaponOffset a ojo: se dibuja
-    // siempre, no solo en Attack. Volver al condicional de
-    // PlayerState::Attack en cuanto quede bien ajustada.
-    DrawWeapon(rotationAngle);
+    if (m_fsm.Is(PlayerState::Attack)) {
+        DrawWeapon(rotationAngle);
+    }
 }
 
 void Player::DrawWeapon(float rotationAngleDegrees) const {
@@ -245,8 +244,7 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
 
-    // YELLOW temporal para que se vea fácil mientras se calibra.
-    DrawModelEx(m_weaponModel, weaponPosition, rotationAxis, rotationAngleDegrees, m_weaponScale, YELLOW);
+    DrawModelEx(m_weaponModel, weaponPosition, rotationAxis, rotationAngleDegrees, m_weaponScale, LIGHTGRAY);
 }
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {

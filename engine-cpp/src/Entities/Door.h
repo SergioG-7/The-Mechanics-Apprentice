@@ -7,6 +7,6 @@ class Door : public Entity {
 public:
     Door(Vector3 position, Vector3 halfExtents);
 
-    void Update(float dt) override {}
+    void Update(float) override {}
     void Draw() const override;
 };

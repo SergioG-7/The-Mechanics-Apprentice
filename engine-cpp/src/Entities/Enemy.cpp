@@ -13,7 +13,7 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
     // Modelo Kenney (blocky-characters, variante L / "zombie"): mismo caso
     // que el Player, trae su atlas vía baseColorTexture y raylib lo resuelve
     // solo. El color base del material ya nace en blanco.
-    m_model = LoadModel("assets/models/kenney_blocky-characters_20/Models/GLB format/character-l.glb");
+    m_model = LoadModel("assets/models/enemy/character_l.glb");
 
     m_hurtSound = LoadSound("assets/audio/sfx/hurt.ogg");
     if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, kHurtSoundVolume);
@@ -48,7 +48,7 @@ void Enemy::SetupStates() {
     m_fsm.RegisterState(EnemyState::Hurt, hurt);
 
     StateMachine<EnemyState>::StateCallbacks dead;
-    dead.onEnter = [this]() { std::cout << "[Combate] Robot averiado desactivado." << std::endl; };
+    dead.onEnter = [this]() { std::cout << "[Combate] Zombie derrotado." << std::endl; };
     m_fsm.RegisterState(EnemyState::Dead, dead);
 
     m_fsm.ChangeState(EnemyState::Patrol);
@@ -165,12 +165,12 @@ void Enemy::Draw() const {
     }
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
-    Vector3 scale = { 4.0f, 4.0f, 4.0f };
+    Vector3 scale = { 1.0f, 1.0f, 1.0f };
 
     // WHITE en normal (igual que el Player) para no teñir el material sobre
     // el que trabaja el toon shader; el flash de daño pasa a RED, ya que
-    // WHITE dejaría de contrastar contra un tinte neutro. Óxido apagado
-    // cuando queda desactivado.
+    // WHITE dejaría de contrastar contra un tinte neutro. Tono sangre seca
+    // cuando cae derrotado.
     Color tint = WHITE;
     if (m_fsm.Is(EnemyState::Hurt)) {
         tint = RED;
@@ -178,7 +178,7 @@ void Enemy::Draw() const {
         tint = Color{ 80, 20, 20, 255 };
     }
 
-    // Sombra falsa: ancla al robot al suelo sin necesitar un shader de
+    // Sombra falsa: ancla al zombie al suelo sin necesitar un shader de
     // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
     DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f, 0.6f, 0.01f, 15, Color{ 0, 0, 0, 100 });
 
