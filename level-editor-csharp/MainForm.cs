@@ -36,6 +36,18 @@ namespace LevelEditor
         private EditorTool _activeTool = EditorTool.PlacePlayer;
         private object? _selectedEntity;
 
+        // Nombre lógico del nivel (campo "levelName" del JSON). Se conserva
+        // al abrir un nivel existente para no perderlo al reexportar.
+        private string _levelName = "arena_editor";
+
+        // Ruta del último archivo abierto/exportado (null = nivel nuevo, nunca guardado)
+        // y si hay cambios desde esa operación. Se reflejan en el título de la ventana.
+        private string? _currentFilePath;
+        private bool _isDirty;
+
+        // Entidad que se está arrastrando con el botón izquierdo (herramienta Seleccionar), o null.
+        private object? _draggingEntity;
+
         // --- Controles ---
         private readonly Panel _canvasPanel;
         private readonly GroupBox _propertiesGroup;
@@ -43,7 +55,6 @@ namespace LevelEditor
 
         public MainForm()
         {
-            Text = "LEVEL-5 Portfolio - Editor de Niveles";
             ClientSize = new Size(CanvasSize + 240, 700);
             StartPosition = FormStartPosition.CenterScreen;
 
@@ -57,6 +68,9 @@ namespace LevelEditor
             };
             _canvasPanel.Paint += OnCanvasPaint;
             _canvasPanel.MouseClick += OnCanvasMouseClick;
+            _canvasPanel.MouseDown += OnCanvasMouseDown;
+            _canvasPanel.MouseMove += OnCanvasMouseMove;
+            _canvasPanel.MouseUp += OnCanvasMouseUp;
             Controls.Add(_canvasPanel);
 
             int toolsX = _canvasPanel.Right + 20;
@@ -94,11 +108,29 @@ namespace LevelEditor
             toolsGroup.Controls.Add(selectRadio);
             Controls.Add(toolsGroup);
 
-            // --- Exportar ---
+            var hintLabel = new Label
+            {
+                Text = "Click derecho: borrar entidad\n(o punto de patrulla más cercano)",
+                Location = new Point(toolsX, toolsGroup.Bottom + 5),
+                Size = new Size(190, 30),
+                ForeColor = Color.DimGray
+            };
+            Controls.Add(hintLabel);
+
+            // --- Abrir / Exportar ---
+            var openButton = new Button
+            {
+                Text = "Abrir Nivel",
+                Location = new Point(toolsX, hintLabel.Bottom + 10),
+                AutoSize = true
+            };
+            openButton.Click += OnOpenButtonClick;
+            Controls.Add(openButton);
+
             var exportButton = new Button
             {
                 Text = "Exportar Nivel",
-                Location = new Point(toolsX, toolsGroup.Bottom + 20),
+                Location = new Point(toolsX, openButton.Bottom + 10),
                 AutoSize = true
             };
             exportButton.Click += OnExportButtonClick;
@@ -122,6 +154,22 @@ namespace LevelEditor
                 Text = BuildStatusText()
             };
             Controls.Add(_statusLabel);
+
+            UpdateTitle();
+        }
+
+        // --- Título / estado de guardado ---
+
+        private void UpdateTitle()
+        {
+            string fileLabel = _currentFilePath is null ? "sin guardar" : Path.GetFileName(_currentFilePath);
+            Text = $"LEVEL-5 Portfolio - Editor de Niveles — {fileLabel}{(_isDirty ? " *" : "")}";
+        }
+
+        private void MarkDirty()
+        {
+            _isDirty = true;
+            UpdateTitle();
         }
 
         // --- Conversión de coordenadas ---
@@ -155,12 +203,21 @@ namespace LevelEditor
 
         private void OnCanvasMouseClick(object? sender, MouseEventArgs e)
         {
+            if (e.Button == MouseButtons.Right)
+            {
+                HandleRightClick(e.Location);
+                _statusLabel.Text = BuildStatusText();
+                _canvasPanel.Invalidate();
+                return;
+            }
+
             Vector3Data worldPos = ScreenToWorld(e.Location);
 
             switch (_activeTool)
             {
                 case EditorTool.PlacePlayer:
                     _player = new PlayerData { Spawn = worldPos, MaxHP = 100.0f, Speed = 4.0f, AttackDamage = 50.0f };
+                    MarkDirty();
                     break;
 
                 case EditorTool.PlaceEnemy:
@@ -173,6 +230,7 @@ namespace LevelEditor
                         AttackDamage = 10.0f,
                         PatrolRoute = new List<Vector3Data>()
                     });
+                    MarkDirty();
                     break;
 
                 case EditorTool.PlaceObstacle:
@@ -181,14 +239,17 @@ namespace LevelEditor
                         Position = worldPos,
                         HalfExtents = new Vector3Data(0.5f, 0.5f, 0.5f)
                     });
+                    MarkDirty();
                     break;
 
                 case EditorTool.PlaceGear:
                     _gears.Add(new GearData { Position = worldPos });
+                    MarkDirty();
                     break;
 
                 case EditorTool.PlaceDoor:
                     _door = new DoorData { Position = worldPos, HalfExtents = new Vector3Data(1.0f, 1.0f, 1.0f) };
+                    MarkDirty();
                     break;
 
                 case EditorTool.DefinePatrol:
@@ -196,10 +257,11 @@ namespace LevelEditor
                     if (_selectedEntity is EnemyData selectedEnemy)
                     {
                         selectedEnemy.PatrolRoute.Add(worldPos);
+                        MarkDirty();
                     }
                     else
                     {
-                        MessageBox.Show("Por favor, selecciona primero un enemigo (con la herramienta 'Seleccionar / Editar') para añadirle puntos de patrulla.",
+                        MessageBox.Show("Por favor, selecciona primero un enemigo (con la herramienta 'Seleccionar / Editar') para añadirle puntos de patrulla.\n\nClick izquierdo: añade un punto. Click derecho: quita el punto más cercano.",
                                         "Sin enemigo seleccionado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                     break;
@@ -244,6 +306,105 @@ namespace LevelEditor
             int dx = point.X - markerCenter.X;
             int dy = point.Y - markerCenter.Y;
             return (dx * dx + dy * dy) <= (MarkerRadius * MarkerRadius);
+        }
+
+        // --- Arrastrar para mover (herramienta Seleccionar, botón izquierdo) ---
+
+        private void OnCanvasMouseDown(object? sender, MouseEventArgs e)
+        {
+            if (_activeTool != EditorTool.Select || e.Button != MouseButtons.Left) return;
+
+            object? entity = FindEntityAt(e.Location);
+            if (entity is null) return;
+
+            _draggingEntity = entity;
+            _selectedEntity = entity;
+            RefreshPropertiesPanel();
+            _canvasPanel.Invalidate();
+        }
+
+        private void OnCanvasMouseMove(object? sender, MouseEventArgs e)
+        {
+            if (_draggingEntity is null) return;
+
+            SetEntityPosition(_draggingEntity, ScreenToWorld(e.Location));
+            _canvasPanel.Invalidate();
+        }
+
+        private void OnCanvasMouseUp(object? sender, MouseEventArgs e)
+        {
+            if (_draggingEntity is null) return;
+
+            _draggingEntity = null;
+            MarkDirty();
+            _statusLabel.Text = BuildStatusText();
+        }
+
+        private static void SetEntityPosition(object entity, Vector3Data worldPos)
+        {
+            switch (entity)
+            {
+                case PlayerData player: player.Spawn = worldPos; break;
+                case EnemyData enemy: enemy.Spawn = worldPos; break;
+                case ObstacleData obstacle: obstacle.Position = worldPos; break;
+                case GearData gear: gear.Position = worldPos; break;
+                case DoorData door: door.Position = worldPos; break;
+            }
+        }
+
+        // --- Borrado (click derecho) ---
+
+        private void HandleRightClick(Point screenPoint)
+        {
+            if (_activeTool == EditorTool.DefinePatrol)
+            {
+                if (_selectedEntity is EnemyData selectedEnemy && RemoveNearestPatrolPoint(selectedEnemy, screenPoint))
+                {
+                    MarkDirty();
+                }
+                return;
+            }
+
+            object? entity = FindEntityAt(screenPoint);
+            if (entity is not null && DeleteEntity(entity)) MarkDirty();
+        }
+
+        private bool DeleteEntity(object entity)
+        {
+            if (ReferenceEquals(entity, _player)) _player = null;
+            else if (ReferenceEquals(entity, _door)) _door = null;
+            else if (entity is EnemyData enemy) { if (!_enemies.Remove(enemy)) return false; }
+            else if (entity is ObstacleData obstacle) { if (!_obstacles.Remove(obstacle)) return false; }
+            else if (entity is GearData gear) { if (!_gears.Remove(gear)) return false; }
+            else return false;
+
+            if (ReferenceEquals(_selectedEntity, entity))
+            {
+                _selectedEntity = null;
+                RefreshPropertiesPanel();
+            }
+            return true;
+        }
+
+        private static bool RemoveNearestPatrolPoint(EnemyData enemy, Point screenPoint)
+        {
+            int bestIndex = -1;
+            int bestDistSq = int.MaxValue;
+            for (int i = 0; i < enemy.PatrolRoute.Count; i++)
+            {
+                Point p = WorldToScreen(enemy.PatrolRoute[i]);
+                int dx = screenPoint.X - p.X;
+                int dy = screenPoint.Y - p.Y;
+                int distSq = dx * dx + dy * dy;
+                if (distSq <= MarkerRadius * MarkerRadius && distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    bestIndex = i;
+                }
+            }
+            if (bestIndex < 0) return false;
+            enemy.PatrolRoute.RemoveAt(bestIndex);
+            return true;
         }
 
         // --- Panel de propiedades ---
@@ -293,7 +454,7 @@ namespace LevelEditor
                 Minimum = 1, Maximum = 1000, DecimalPlaces = 0,
                 Value = (decimal)player.MaxHP
             };
-            hpInput.ValueChanged += (s, e) => player.MaxHP = (float)hpInput.Value;
+            hpInput.ValueChanged += (s, e) => { player.MaxHP = (float)hpInput.Value; MarkDirty(); };
 
             var speedInput = new NumericUpDown
             {
@@ -301,7 +462,7 @@ namespace LevelEditor
                 Minimum = 0.5m, Maximum = 20, DecimalPlaces = 1, Increment = 0.5m,
                 Value = (decimal)player.Speed
             };
-            speedInput.ValueChanged += (s, e) => player.Speed = (float)speedInput.Value;
+            speedInput.ValueChanged += (s, e) => { player.Speed = (float)speedInput.Value; MarkDirty(); };
 
             var dmgInput = new NumericUpDown
             {
@@ -309,7 +470,7 @@ namespace LevelEditor
                 Minimum = 1, Maximum = 500, DecimalPlaces = 0,
                 Value = (decimal)player.AttackDamage
             };
-            dmgInput.ValueChanged += (s, e) => player.AttackDamage = (float)dmgInput.Value;
+            dmgInput.ValueChanged += (s, e) => { player.AttackDamage = (float)dmgInput.Value; MarkDirty(); };
 
             _propertiesGroup.Controls.Add(new Label { Text = "HP máximo:", Location = new Point(10, LabelY(0)), AutoSize = true });
             _propertiesGroup.Controls.Add(hpInput);
@@ -327,7 +488,7 @@ namespace LevelEditor
                 Minimum = 1, Maximum = 1000, DecimalPlaces = 0,
                 Value = (decimal)enemy.MaxHP
             };
-            hpInput.ValueChanged += (s, e) => enemy.MaxHP = (float)hpInput.Value;
+            hpInput.ValueChanged += (s, e) => { enemy.MaxHP = (float)hpInput.Value; MarkDirty(); };
 
             var visionInput = new NumericUpDown
             {
@@ -335,7 +496,7 @@ namespace LevelEditor
                 Minimum = 0, Maximum = 50, DecimalPlaces = 1, Increment = 0.5m,
                 Value = (decimal)enemy.VisionRadius
             };
-            visionInput.ValueChanged += (s, e) => enemy.VisionRadius = (float)visionInput.Value;
+            visionInput.ValueChanged += (s, e) => { enemy.VisionRadius = (float)visionInput.Value; MarkDirty(); };
 
             var speedInput = new NumericUpDown
             {
@@ -343,7 +504,7 @@ namespace LevelEditor
                 Minimum = 0.5m, Maximum = 20, DecimalPlaces = 1, Increment = 0.5m,
                 Value = (decimal)enemy.Speed
             };
-            speedInput.ValueChanged += (s, e) => enemy.Speed = (float)speedInput.Value;
+            speedInput.ValueChanged += (s, e) => { enemy.Speed = (float)speedInput.Value; MarkDirty(); };
 
             var dmgInput = new NumericUpDown
             {
@@ -351,7 +512,7 @@ namespace LevelEditor
                 Minimum = 1, Maximum = 500, DecimalPlaces = 0,
                 Value = (decimal)enemy.AttackDamage
             };
-            dmgInput.ValueChanged += (s, e) => enemy.AttackDamage = (float)dmgInput.Value;
+            dmgInput.ValueChanged += (s, e) => { enemy.AttackDamage = (float)dmgInput.Value; MarkDirty(); };
 
             _propertiesGroup.Controls.Add(new Label { Text = "HP máximo:", Location = new Point(10, LabelY(0)), AutoSize = true });
             _propertiesGroup.Controls.Add(hpInput);
@@ -372,7 +533,7 @@ namespace LevelEditor
                 Minimum = 0.1m, Maximum = 10, DecimalPlaces = 2, Increment = 0.1m,
                 Value = (decimal)halfExtents.X
             };
-            xInput.ValueChanged += (s, e) => { halfExtents.X = (float)xInput.Value; _canvasPanel.Invalidate(); };
+            xInput.ValueChanged += (s, e) => { halfExtents.X = (float)xInput.Value; MarkDirty(); _canvasPanel.Invalidate(); };
 
             var zInput = new NumericUpDown
             {
@@ -380,7 +541,7 @@ namespace LevelEditor
                 Minimum = 0.1m, Maximum = 10, DecimalPlaces = 2, Increment = 0.1m,
                 Value = (decimal)halfExtents.Z
             };
-            zInput.ValueChanged += (s, e) => { halfExtents.Z = (float)zInput.Value; _canvasPanel.Invalidate(); };
+            zInput.ValueChanged += (s, e) => { halfExtents.Z = (float)zInput.Value; MarkDirty(); _canvasPanel.Invalidate(); };
 
             _propertiesGroup.Controls.Add(new Label { Text = "HalfExtents X:", Location = new Point(10, LabelY(0)), AutoSize = true });
             _propertiesGroup.Controls.Add(xInput);
@@ -441,6 +602,8 @@ namespace LevelEditor
             g.FillRectangle(Brushes.Green, GetBoxScreenRect(_door.Position, _door.HalfExtents));
         }
 
+        private const int PatrolPointRadius = 4;
+
         private void DrawPatrolRoutes(Graphics g)
         {
             using var routePen = new Pen(Color.OrangeRed, 2.0f) { DashStyle = DashStyle.Dash };
@@ -450,6 +613,16 @@ namespace LevelEditor
                 for (int i = 0; i < enemy.PatrolRoute.Count - 1; i++)
                 {
                     g.DrawLine(routePen, WorldToScreen(enemy.PatrolRoute[i]), WorldToScreen(enemy.PatrolRoute[i + 1]));
+                }
+            }
+
+            // Puntos visibles para poder apuntar el borrado con click derecho.
+            foreach (var enemy in _enemies)
+            {
+                foreach (var point in enemy.PatrolRoute)
+                {
+                    Point p = WorldToScreen(point);
+                    g.FillEllipse(Brushes.OrangeRed, p.X - PatrolPointRadius, p.Y - PatrolPointRadius, PatrolPointRadius * 2, PatrolPointRadius * 2);
                 }
             }
         }
@@ -499,6 +672,58 @@ namespace LevelEditor
             g.FillEllipse(brush, p.X - MarkerRadius, p.Y - MarkerRadius, MarkerRadius * 2, MarkerRadius * 2);
         }
 
+        // --- Abrir ---
+
+        private void OnOpenButtonClick(object? sender, EventArgs e)
+        {
+            if (_isDirty)
+            {
+                DialogResult confirm = MessageBox.Show(
+                    "Hay cambios sin exportar en el nivel actual. Si abres otro nivel se perderán.\n\n¿Continuar de todas formas?",
+                    "Cambios sin guardar", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (confirm != DialogResult.Yes) return;
+            }
+
+            using var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Archivos JSON (*.json)|*.json|Todos los archivos (*.*)|*.*",
+                Title = "Abrir nivel del motor C++"
+            };
+
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
+
+            try
+            {
+                string json = File.ReadAllText(openFileDialog.FileName);
+                LevelData? level = JsonSerializer.Deserialize<LevelData>(json)
+                    ?? throw new InvalidDataException("El archivo no contiene un nivel válido.");
+
+                _levelName = level.LevelName;
+                _player = level.Player;
+                _enemies.Clear();
+                _enemies.AddRange(level.Enemies);
+                _obstacles.Clear();
+                _obstacles.AddRange(level.Obstacles);
+                _gears.Clear();
+                _gears.AddRange(level.Gears);
+                _door = level.Door;
+
+                _selectedEntity = null;
+                RefreshPropertiesPanel();
+                _statusLabel.Text = BuildStatusText();
+                _canvasPanel.Invalidate();
+
+                _currentFilePath = openFileDialog.FileName;
+                _isDirty = false;
+                UpdateTitle();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo abrir el nivel:\n{ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         // --- Exportar ---
 
         private void OnExportButtonClick(object? sender, EventArgs e)
@@ -512,7 +737,7 @@ namespace LevelEditor
 
             var level = new LevelData
             {
-                LevelName = "arena_editor",
+                LevelName = _levelName,
                 Player = _player,
                 Obstacles = _obstacles,
                 Enemies = _enemies,
@@ -541,6 +766,9 @@ namespace LevelEditor
                     try
                     {
                         File.WriteAllText(saveFileDialog.FileName, json);
+                        _currentFilePath = saveFileDialog.FileName;
+                        _isDirty = false;
+                        UpdateTitle();
                         MessageBox.Show($"Nivel exportado a:\n{saveFileDialog.FileName}", "Exportación completada",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
