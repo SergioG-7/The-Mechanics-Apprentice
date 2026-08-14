@@ -29,7 +29,7 @@ private:
     Camera3D m_camera{};
     GameState m_state = GameState::Gameplay;
     Music m_bgm{};
-    static constexpr float kMusicVolume = 0.1f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
+    static constexpr float kMusicVolume = 0.03f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
 
     std::unique_ptr<ShaderManager> m_toonShader;
 
