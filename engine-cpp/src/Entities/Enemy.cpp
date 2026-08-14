@@ -80,8 +80,20 @@ void Enemy::UpdatePatrol(float dt) {
 
 void Enemy::UpdateChase(float dt) {
     float distSq = CollisionMath::DistanceSquared(m_position, m_lastKnownPlayerPosition);
-    if (distSq <= kAttackRange * kAttackRange) {
+
+    if (m_playerVisible && distSq <= kAttackRange * kAttackRange) {
         m_fsm.ChangeState(EnemyState::Attack);
+        return;
+    }
+
+    // El jugador salió de rango de visión: m_lastKnownPlayerPosition queda
+    // congelada en el último punto visto. Al llegar ahí sin recuperar
+    // visibilidad, no queda rastro que seguir -- volver a patrullar en vez
+    // de quedarse plantado (o, antes de este fix, reentrar en Attack contra
+    // una posición vacía y no volver a moverse nunca).
+    constexpr float kGiveUpThreshold = 0.1f;
+    if (!m_playerVisible && distSq <= kGiveUpThreshold * kGiveUpThreshold) {
+        m_fsm.ChangeState(EnemyState::Patrol);
         return;
     }
 

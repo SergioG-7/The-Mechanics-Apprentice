@@ -14,6 +14,3 @@ ShaderManager::~ShaderManager() {
     }
 }
 
-int ShaderManager::GetLocation(const std::string& uniformName) const {
-    return GetShaderLocation(m_shader, uniformName.c_str());
-}

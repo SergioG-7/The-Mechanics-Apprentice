@@ -22,7 +22,7 @@ public:
 
     // Valores finales de calibración del arma (ver Player::DrawWeapon).
     // Públicas por si hace falta retocarlas a ojo más adelante.
-    Vector3 m_weaponScale = { 200.0f, 200.0f, 200.0f };
+    Vector3 m_weaponScale = { 250.0f, 250.0f, 250.0f };
     Vector3 m_weaponOffset = { 0.5f, 0.5f, 0.0f };
 
 private:

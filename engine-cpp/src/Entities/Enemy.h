@@ -49,7 +49,7 @@ private:
     float m_attackCooldown = 0.0f;
     float m_hurtTimer = 0.0f;
     static constexpr float kAttackRange = 1.2f;
-    static constexpr float kAttackInterval = 1.5f;
+    static constexpr float kAttackInterval = 1.0f;
     static constexpr float kHurtDuration = 0.6f;
 
     Hitbox m_activeHitbox{};

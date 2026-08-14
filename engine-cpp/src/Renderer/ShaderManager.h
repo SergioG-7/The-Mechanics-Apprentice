@@ -13,7 +13,6 @@ public:
     ShaderManager& operator=(const ShaderManager&) = delete;
 
     Shader Get() const { return m_shader; }
-    int GetLocation(const std::string& uniformName) const;
 
 private:
     Shader m_shader{};
