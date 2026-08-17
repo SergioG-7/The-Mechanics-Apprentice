@@ -10,6 +10,10 @@ void Actor::TakeDamage(float amount, Vector3 knockbackDir) {
     m_knockbackVelocity = knockbackDir;
 }
 
+void Actor::Heal(float amount) {
+    m_hp = std::min(m_maxHP, m_hp + amount);
+}
+
 void Actor::ApplyKnockback(float dt) {
     TryMoveAgainstObstacles(Vector3{ m_knockbackVelocity.x * dt, 0.0f, m_knockbackVelocity.z * dt });
     m_position.y += m_knockbackVelocity.y * dt;

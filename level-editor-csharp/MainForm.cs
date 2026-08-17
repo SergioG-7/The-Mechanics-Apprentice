@@ -15,10 +15,18 @@ namespace LevelEditor
             PlaceEnemy,
             PlaceObstacle,
             PlaceGear,
+            PlaceHealthKit,
+            PlaceBarrel,
             PlaceDoor,
+            PlaceSpawner,
             DefinePatrol,
             Select
         }
+
+        // Arquetipos disponibles para el ComboBox de variante y para el tipo
+        // de enemigo de un Spawner. "Default" es el único que NO pasa por
+        // EnemyFactory en el motor C++: usa los stats propios del EnemyData.
+        private static readonly string[] EnemyVariantNames = { "Default", "Tank", "Runner", "Spitter", "Kamikaze" };
 
         // --- Grid / conversión de coordenadas ---
         private const int CellSize = 30;
@@ -31,10 +39,25 @@ namespace LevelEditor
         private readonly List<EnemyData> _enemies = new();
         private readonly List<ObstacleData> _obstacles = new();
         private readonly List<GearData> _gears = new();
+        private readonly List<SpawnerData> _spawners = new();
+        private readonly List<HealthKitData> _healthKits = new();
+        private readonly List<BarrelData> _barrels = new();
         private DoorData? _door; // singular, como el Player: colocarla de nuevo reemplaza la anterior
 
         private EditorTool _activeTool = EditorTool.PlacePlayer;
         private object? _selectedEntity;
+
+        // Todos los RadioButton de herramienta, repartidos entre el
+        // TabControl y el GroupBox de Edición (dos contenedores distintos,
+        // así que WinForms no los agrupa solo por sí mismo): SelectTool los
+        // recorre para que solo uno quede marcado a la vez sin importar en
+        // qué pestaña o grupo esté.
+        private readonly List<RadioButton> _toolRadios = new();
+
+        // Variante activa en el ComboBox de "Variante de enemigo": se aplica
+        // tanto a un EnemyData nuevo (PlaceEnemy) como al EnemyType de un
+        // SpawnerData nuevo (PlaceSpawner) -- un solo selector para ambos.
+        private string _selectedVariant = "Default";
 
         // Nombre lógico del nivel (campo "levelName" del JSON). Se conserva
         // al abrir un nivel existente para no perderlo al reexportar.
@@ -57,6 +80,12 @@ namespace LevelEditor
         {
             ClientSize = new Size(CanvasSize + 240, 700);
             StartPosition = FormStartPosition.CenterScreen;
+            // El panel derecho ya se salía de los 700px de alto antes de esta
+            // fase (propertiesGroup solo mide 300px de sus 260 originales) y
+            // la reorganización en pestañas lo alarga un poco más -- en vez
+            // de perseguir un número de píxeles exacto cada vez que se añade
+            // una herramienta, el formulario hace scroll si hace falta.
+            AutoScroll = true;
 
             // --- Lienzo ---
             _canvasPanel = new Panel
@@ -75,43 +104,73 @@ namespace LevelEditor
 
             int toolsX = _canvasPanel.Right + 20;
 
-            // --- Herramientas ---
-            var toolsGroup = new GroupBox
+            // --- Herramientas: categorizadas en pestañas para que no crezcan
+            // indefinidamente en vertical (Fase 5). Un RadioButton por pestaña
+            // se agrupa solo con los de su MISMA pestaña por defecto en
+            // WinForms -- SelectTool (más abajo) fuerza la exclusión mutua a
+            // mano entre TODAS las herramientas, tabs y grupo de Edición
+            // incluidos, para que solo una quede activa a la vez.
+            var toolTabs = new TabControl
             {
-                Text = "Herramienta activa",
                 Location = new Point(toolsX, 20),
-                Size = new Size(190, 250)
+                Size = new Size(190, 190)
             };
 
-            var playerRadio = new RadioButton { Text = "Colocar Jugador", Location = new Point(10, 25), AutoSize = true, Checked = true };
-            var enemyRadio = new RadioButton { Text = "Colocar Enemigo", Location = new Point(10, 55), AutoSize = true };
-            var obstacleRadio = new RadioButton { Text = "Colocar Obstáculo", Location = new Point(10, 85), AutoSize = true };
-            var gearRadio = new RadioButton { Text = "Colocar Engranaje", Location = new Point(10, 115), AutoSize = true };
-            var doorRadio = new RadioButton { Text = "Colocar Puerta", Location = new Point(10, 145), AutoSize = true };
-            var patrolRadio = new RadioButton { Text = "Definir Patrulla", Location = new Point(10, 175), AutoSize = true };
-            var selectRadio = new RadioButton { Text = "Seleccionar / Editar", Location = new Point(10, 205), AutoSize = true };
+            var entitiesTab = new TabPage("Entidades");
+            CreateToolRadio("Colocar Jugador", 10, EditorTool.PlacePlayer, entitiesTab, startChecked: true);
+            CreateToolRadio("Colocar Enemigo", 40, EditorTool.PlaceEnemy, entitiesTab);
+            CreateToolRadio("Colocar Obstáculo", 70, EditorTool.PlaceObstacle, entitiesTab);
+            CreateToolRadio("Colocar Puerta", 100, EditorTool.PlaceDoor, entitiesTab);
+            toolTabs.TabPages.Add(entitiesTab);
 
-            playerRadio.CheckedChanged += (s, e) => { if (playerRadio.Checked) _activeTool = EditorTool.PlacePlayer; };
-            enemyRadio.CheckedChanged += (s, e) => { if (enemyRadio.Checked) _activeTool = EditorTool.PlaceEnemy; };
-            obstacleRadio.CheckedChanged += (s, e) => { if (obstacleRadio.Checked) _activeTool = EditorTool.PlaceObstacle; };
-            gearRadio.CheckedChanged += (s, e) => { if (gearRadio.Checked) _activeTool = EditorTool.PlaceGear; };
-            doorRadio.CheckedChanged += (s, e) => { if (doorRadio.Checked) _activeTool = EditorTool.PlaceDoor; };
-            patrolRadio.CheckedChanged += (s, e) => { if (patrolRadio.Checked) _activeTool = EditorTool.DefinePatrol; };
-            selectRadio.CheckedChanged += (s, e) => { if (selectRadio.Checked) _activeTool = EditorTool.Select; };
+            var objectsTab = new TabPage("Objetos");
+            CreateToolRadio("Colocar Engranaje", 10, EditorTool.PlaceGear, objectsTab);
+            CreateToolRadio("Colocar Cura", 40, EditorTool.PlaceHealthKit, objectsTab);
+            CreateToolRadio("Colocar Barril", 70, EditorTool.PlaceBarrel, objectsTab);
+            toolTabs.TabPages.Add(objectsTab);
 
-            toolsGroup.Controls.Add(playerRadio);
-            toolsGroup.Controls.Add(enemyRadio);
-            toolsGroup.Controls.Add(obstacleRadio);
-            toolsGroup.Controls.Add(gearRadio);
-            toolsGroup.Controls.Add(doorRadio);
-            toolsGroup.Controls.Add(patrolRadio);
-            toolsGroup.Controls.Add(selectRadio);
-            Controls.Add(toolsGroup);
+            var systemTab = new TabPage("Sistema");
+            CreateToolRadio("Colocar Spawner", 10, EditorTool.PlaceSpawner, systemTab);
+            toolTabs.TabPages.Add(systemTab);
+
+            Controls.Add(toolTabs);
+
+            // --- Edición: modales que actúan sobre la selección, no
+            // "colocan" nada -- fuera de las pestañas a propósito, siempre
+            // visibles sea cual sea la categoría activa. ---
+            var editGroup = new GroupBox
+            {
+                Text = "Edición",
+                Location = new Point(toolsX, toolTabs.Bottom + 10),
+                Size = new Size(190, 90)
+            };
+            CreateToolRadio("Definir Patrulla", 25, EditorTool.DefinePatrol, editGroup);
+            CreateToolRadio("Seleccionar / Editar", 55, EditorTool.Select, editGroup);
+            Controls.Add(editGroup);
+
+            // --- Variante de enemigo (se aplica al colocar Enemigo o Spawner) ---
+            var variantGroup = new GroupBox
+            {
+                Text = "Variante de enemigo",
+                Location = new Point(toolsX, editGroup.Bottom + 10),
+                Size = new Size(190, 55)
+            };
+            var variantCombo = new ComboBox
+            {
+                Location = new Point(10, 20),
+                Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            variantCombo.Items.AddRange(EnemyVariantNames);
+            variantCombo.SelectedIndex = 0;
+            variantCombo.SelectedIndexChanged += (s, e) => _selectedVariant = (string)variantCombo.SelectedItem!;
+            variantGroup.Controls.Add(variantCombo);
+            Controls.Add(variantGroup);
 
             var hintLabel = new Label
             {
                 Text = "Click derecho: borrar entidad\n(o punto de patrulla más cercano)",
-                Location = new Point(toolsX, toolsGroup.Bottom + 5),
+                Location = new Point(toolsX, variantGroup.Bottom + 5),
                 Size = new Size(190, 30),
                 ForeColor = Color.DimGray
             };
@@ -141,7 +200,7 @@ namespace LevelEditor
             {
                 Text = "Propiedades",
                 Location = new Point(toolsX, exportButton.Bottom + 20),
-                Size = new Size(190, 260),
+                Size = new Size(190, 300), // 300, no 260: BuildEnemyProperties tiene 5 filas desde que se añadió el ComboBox de Type
                 Visible = false
             };
             Controls.Add(_propertiesGroup);
@@ -150,12 +209,45 @@ namespace LevelEditor
             _statusLabel = new Label
             {
                 Location = new Point(toolsX, _propertiesGroup.Bottom + 20),
-                Size = new Size(190, 100),
+                Size = new Size(190, 130), // 130, no 100: BuildStatusText tiene 7 líneas desde Curas/Barriles
                 Text = BuildStatusText()
             };
             Controls.Add(_statusLabel);
 
             UpdateTitle();
+        }
+
+        // Crea un RadioButton de herramienta, lo añade al contenedor dado
+        // (una TabPage o el GroupBox de Edición) y lo registra en
+        // _toolRadios para que SelectTool pueda desmarcar los demás sea cual
+        // sea su contenedor.
+        private RadioButton CreateToolRadio(string text, int y, EditorTool tool, Control container, bool startChecked = false)
+        {
+            var radio = new RadioButton
+            {
+                Text = text,
+                Location = new Point(10, y),
+                AutoSize = true,
+                Checked = startChecked
+            };
+            radio.Click += (s, e) => SelectTool(radio, tool);
+            container.Controls.Add(radio);
+            _toolRadios.Add(radio);
+            return radio;
+        }
+
+        // Única fuente de verdad de qué herramienta está activa. Los radios
+        // están repartidos en varios contenedores (TabPages + GroupBox de
+        // Edición), así que WinForms NO los agrupa por sí solo -- de ahí que
+        // cada radio dispare esto en Click (no CheckedChanged) y aquí se
+        // desmarquen a mano todos los demás.
+        private void SelectTool(RadioButton chosen, EditorTool tool)
+        {
+            foreach (var radio in _toolRadios)
+            {
+                radio.Checked = ReferenceEquals(radio, chosen);
+            }
+            _activeTool = tool;
         }
 
         // --- Título / estado de guardado ---
@@ -224,6 +316,7 @@ namespace LevelEditor
                     _enemies.Add(new EnemyData
                     {
                         Spawn = worldPos,
+                        Type = _selectedVariant,
                         MaxHP = 30.0f,
                         VisionRadius = 6.0f,
                         Speed = 2.5f,
@@ -247,8 +340,33 @@ namespace LevelEditor
                     MarkDirty();
                     break;
 
+                case EditorTool.PlaceHealthKit:
+                    _healthKits.Add(new HealthKitData { Position = worldPos });
+                    MarkDirty();
+                    break;
+
+                case EditorTool.PlaceBarrel:
+                    _barrels.Add(new BarrelData { Position = worldPos });
+                    MarkDirty();
+                    break;
+
                 case EditorTool.PlaceDoor:
                     _door = new DoorData { Position = worldPos, HalfExtents = new Vector3Data(1.0f, 1.0f, 1.0f) };
+                    MarkDirty();
+                    break;
+
+                case EditorTool.PlaceSpawner:
+                    _spawners.Add(new SpawnerData
+                    {
+                        Position = worldPos,
+                        // "Default" no es una variante real de EnemyFactory (solo
+                        // tiene sentido para un EnemyData suelto, con sus propios
+                        // stats) -- un Spawner con ese tipo no generaría nunca
+                        // nada. Cae a "Runner" en ese caso.
+                        EnemyType = _selectedVariant == "Default" ? "Runner" : _selectedVariant,
+                        Interval = 4.0f,
+                        MaxEnemies = 3
+                    });
                     MarkDirty();
                     break;
 
@@ -277,7 +395,8 @@ namespace LevelEditor
         }
 
         // Orden inverso al de dibujado (lo último dibujado, arriba del todo,
-        // se prueba primero): Player, Enemies, Gears, Door, Obstacles.
+        // se prueba primero): Player, Enemies, Spawners, Barrels, HealthKits,
+        // Gears, Door, Obstacles.
         private object? FindEntityAt(Point screenPoint)
         {
             if (_player is not null && IsPointNearMarker(screenPoint, WorldToScreen(_player.Spawn)))
@@ -286,6 +405,18 @@ namespace LevelEditor
             for (int i = _enemies.Count - 1; i >= 0; i--)
                 if (IsPointNearMarker(screenPoint, WorldToScreen(_enemies[i].Spawn)))
                     return _enemies[i];
+
+            for (int i = _spawners.Count - 1; i >= 0; i--)
+                if (IsPointNearMarker(screenPoint, WorldToScreen(_spawners[i].Position)))
+                    return _spawners[i];
+
+            for (int i = _barrels.Count - 1; i >= 0; i--)
+                if (IsPointNearMarker(screenPoint, WorldToScreen(_barrels[i].Position)))
+                    return _barrels[i];
+
+            for (int i = _healthKits.Count - 1; i >= 0; i--)
+                if (IsPointNearMarker(screenPoint, WorldToScreen(_healthKits[i].Position)))
+                    return _healthKits[i];
 
             for (int i = _gears.Count - 1; i >= 0; i--)
                 if (IsPointNearMarker(screenPoint, WorldToScreen(_gears[i].Position)))
@@ -349,6 +480,9 @@ namespace LevelEditor
                 case ObstacleData obstacle: obstacle.Position = worldPos; break;
                 case GearData gear: gear.Position = worldPos; break;
                 case DoorData door: door.Position = worldPos; break;
+                case SpawnerData spawner: spawner.Position = worldPos; break;
+                case HealthKitData healthKit: healthKit.Position = worldPos; break;
+                case BarrelData barrel: barrel.Position = worldPos; break;
             }
         }
 
@@ -376,6 +510,9 @@ namespace LevelEditor
             else if (entity is EnemyData enemy) { if (!_enemies.Remove(enemy)) return false; }
             else if (entity is ObstacleData obstacle) { if (!_obstacles.Remove(obstacle)) return false; }
             else if (entity is GearData gear) { if (!_gears.Remove(gear)) return false; }
+            else if (entity is SpawnerData spawner) { if (!_spawners.Remove(spawner)) return false; }
+            else if (entity is HealthKitData healthKit) { if (!_healthKits.Remove(healthKit)) return false; }
+            else if (entity is BarrelData barrel) { if (!_barrels.Remove(barrel)) return false; }
             else return false;
 
             if (ReferenceEquals(_selectedEntity, entity))
@@ -438,6 +575,11 @@ namespace LevelEditor
                     BuildHalfExtentsProperties(door.HalfExtents);
                     break;
 
+                case SpawnerData spawner:
+                    _propertiesGroup.Visible = true;
+                    BuildSpawnerProperties(spawner);
+                    break;
+
                 default:
                     // Gear seleccionado (sin propiedades editables todavía,
                     // solo posición), o nada seleccionado.
@@ -482,9 +624,23 @@ namespace LevelEditor
 
         private void BuildEnemyProperties(EnemyData enemy)
         {
-            var hpInput = new NumericUpDown
+            // Fila 0: Type. Determina si el motor construye este enemigo con
+            // los stats de abajo tal cual ("Default") o los ignora y usa
+            // EnemyFactory con los del arquetipo (ver LevelLoader.cpp) -- por
+            // eso conviene dejar claro con el propio combo cuál manda.
+            var typeCombo = new ComboBox
             {
                 Location = new Point(10, InputY(0)), Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            typeCombo.Items.AddRange(EnemyVariantNames);
+            typeCombo.SelectedItem = enemy.Type;
+            if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0; // Type de un JSON externo que no reconocemos
+            typeCombo.SelectedIndexChanged += (s, e) => { enemy.Type = (string)typeCombo.SelectedItem!; MarkDirty(); };
+
+            var hpInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(1)), Width = 160,
                 Minimum = 1, Maximum = 1000, DecimalPlaces = 0,
                 Value = (decimal)enemy.MaxHP
             };
@@ -492,7 +648,7 @@ namespace LevelEditor
 
             var visionInput = new NumericUpDown
             {
-                Location = new Point(10, InputY(1)), Width = 160,
+                Location = new Point(10, InputY(2)), Width = 160,
                 Minimum = 0, Maximum = 50, DecimalPlaces = 1, Increment = 0.5m,
                 Value = (decimal)enemy.VisionRadius
             };
@@ -500,7 +656,7 @@ namespace LevelEditor
 
             var speedInput = new NumericUpDown
             {
-                Location = new Point(10, InputY(2)), Width = 160,
+                Location = new Point(10, InputY(3)), Width = 160,
                 Minimum = 0.5m, Maximum = 20, DecimalPlaces = 1, Increment = 0.5m,
                 Value = (decimal)enemy.Speed
             };
@@ -508,20 +664,61 @@ namespace LevelEditor
 
             var dmgInput = new NumericUpDown
             {
-                Location = new Point(10, InputY(3)), Width = 160,
+                Location = new Point(10, InputY(4)), Width = 160,
                 Minimum = 1, Maximum = 500, DecimalPlaces = 0,
                 Value = (decimal)enemy.AttackDamage
             };
             dmgInput.ValueChanged += (s, e) => { enemy.AttackDamage = (float)dmgInput.Value; MarkDirty(); };
 
-            _propertiesGroup.Controls.Add(new Label { Text = "HP máximo:", Location = new Point(10, LabelY(0)), AutoSize = true });
+            _propertiesGroup.Controls.Add(new Label { Text = "Tipo:", Location = new Point(10, LabelY(0)), AutoSize = true });
+            _propertiesGroup.Controls.Add(typeCombo);
+            _propertiesGroup.Controls.Add(new Label { Text = "HP máximo:", Location = new Point(10, LabelY(1)), AutoSize = true });
             _propertiesGroup.Controls.Add(hpInput);
-            _propertiesGroup.Controls.Add(new Label { Text = "Radio de visión:", Location = new Point(10, LabelY(1)), AutoSize = true });
+            _propertiesGroup.Controls.Add(new Label { Text = "Radio de visión:", Location = new Point(10, LabelY(2)), AutoSize = true });
             _propertiesGroup.Controls.Add(visionInput);
-            _propertiesGroup.Controls.Add(new Label { Text = "Velocidad:", Location = new Point(10, LabelY(2)), AutoSize = true });
+            _propertiesGroup.Controls.Add(new Label { Text = "Velocidad:", Location = new Point(10, LabelY(3)), AutoSize = true });
             _propertiesGroup.Controls.Add(speedInput);
-            _propertiesGroup.Controls.Add(new Label { Text = "Daño de ataque:", Location = new Point(10, LabelY(3)), AutoSize = true });
+            _propertiesGroup.Controls.Add(new Label { Text = "Daño de ataque:", Location = new Point(10, LabelY(4)), AutoSize = true });
             _propertiesGroup.Controls.Add(dmgInput);
+        }
+
+        private void BuildSpawnerProperties(SpawnerData spawner)
+        {
+            var typeCombo = new ComboBox
+            {
+                Location = new Point(10, InputY(0)), Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            // "Default" no aparece aquí: un Spawner siempre necesita una
+            // variante real de EnemyFactory, no tiene sentido para él (ver
+            // el mismo criterio en OnCanvasMouseClick al colocarlo).
+            typeCombo.Items.AddRange(EnemyVariantNames.Where(n => n != "Default").ToArray());
+            typeCombo.SelectedItem = spawner.EnemyType;
+            if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0;
+            typeCombo.SelectedIndexChanged += (s, e) => { spawner.EnemyType = (string)typeCombo.SelectedItem!; MarkDirty(); };
+
+            var intervalInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(1)), Width = 160,
+                Minimum = 0.5m, Maximum = 60, DecimalPlaces = 1, Increment = 0.5m,
+                Value = (decimal)spawner.Interval
+            };
+            intervalInput.ValueChanged += (s, e) => { spawner.Interval = (float)intervalInput.Value; MarkDirty(); };
+
+            var maxEnemiesInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(2)), Width = 160,
+                Minimum = 1, Maximum = 20, DecimalPlaces = 0,
+                Value = spawner.MaxEnemies
+            };
+            maxEnemiesInput.ValueChanged += (s, e) => { spawner.MaxEnemies = (int)maxEnemiesInput.Value; MarkDirty(); };
+
+            _propertiesGroup.Controls.Add(new Label { Text = "Tipo de enemigo:", Location = new Point(10, LabelY(0)), AutoSize = true });
+            _propertiesGroup.Controls.Add(typeCombo);
+            _propertiesGroup.Controls.Add(new Label { Text = "Intervalo (s):", Location = new Point(10, LabelY(1)), AutoSize = true });
+            _propertiesGroup.Controls.Add(intervalInput);
+            _propertiesGroup.Controls.Add(new Label { Text = "Máx. enemigos vivos:", Location = new Point(10, LabelY(2)), AutoSize = true });
+            _propertiesGroup.Controls.Add(maxEnemiesInput);
         }
 
         // Compartido por Obstacle y Door: ambos son solo posición + tamaño.
@@ -558,6 +755,9 @@ namespace LevelEditor
             DrawObstacles(e.Graphics);
             DrawDoor(e.Graphics);
             DrawGears(e.Graphics);
+            DrawHealthKits(e.Graphics);
+            DrawBarrels(e.Graphics);
+            DrawSpawners(e.Graphics);
             DrawEnemies(e.Graphics);
             DrawPlayer(e.Graphics);
             DrawSelectionHighlight(e.Graphics);
@@ -594,6 +794,26 @@ namespace LevelEditor
         private void DrawGears(Graphics g)
         {
             foreach (var gear in _gears) DrawEntityMarker(g, Brushes.Orange, gear.Position);
+        }
+
+        private void DrawSpawners(Graphics g)
+        {
+            foreach (var spawner in _spawners) DrawEntityMarker(g, Brushes.Magenta, spawner.Position);
+        }
+
+        // Cuadrado verde: distinto en forma Y color de cualquier otra
+        // entidad, no solo color (Gear ya es un círculo naranja).
+        private void DrawHealthKits(Graphics g)
+        {
+            foreach (var healthKit in _healthKits) DrawSquareMarker(g, Brushes.LimeGreen, healthKit.Position);
+        }
+
+        // Firebrick, no Red puro: Enemy ya usa un círculo Red -- con el mismo
+        // tono serían indistinguibles a golpe de vista pese a ser entidades
+        // muy distintas (uno ataca, el otro solo explota si lo golpeas).
+        private void DrawBarrels(Graphics g)
+        {
+            foreach (var barrel in _barrels) DrawEntityMarker(g, Brushes.Firebrick, barrel.Position);
         }
 
         private void DrawDoor(Graphics g)
@@ -643,6 +863,15 @@ namespace LevelEditor
                 case GearData gear:
                     DrawMarkerHighlight(g, highlightPen, WorldToScreen(gear.Position));
                     break;
+                case SpawnerData spawner:
+                    DrawMarkerHighlight(g, highlightPen, WorldToScreen(spawner.Position));
+                    break;
+                case HealthKitData healthKit:
+                    DrawMarkerHighlight(g, highlightPen, WorldToScreen(healthKit.Position));
+                    break;
+                case BarrelData barrel:
+                    DrawMarkerHighlight(g, highlightPen, WorldToScreen(barrel.Position));
+                    break;
                 case ObstacleData obstacle:
                     {
                         Rectangle rect = GetBoxScreenRect(obstacle.Position, obstacle.HalfExtents);
@@ -670,6 +899,12 @@ namespace LevelEditor
         {
             Point p = WorldToScreen(worldPos);
             g.FillEllipse(brush, p.X - MarkerRadius, p.Y - MarkerRadius, MarkerRadius * 2, MarkerRadius * 2);
+        }
+
+        private static void DrawSquareMarker(Graphics g, Brush brush, Vector3Data worldPos)
+        {
+            Point p = WorldToScreen(worldPos);
+            g.FillRectangle(brush, p.X - MarkerRadius, p.Y - MarkerRadius, MarkerRadius * 2, MarkerRadius * 2);
         }
 
         // --- Abrir ---
@@ -706,6 +941,12 @@ namespace LevelEditor
                 _obstacles.AddRange(level.Obstacles);
                 _gears.Clear();
                 _gears.AddRange(level.Gears);
+                _spawners.Clear();
+                _spawners.AddRange(level.Spawners);
+                _healthKits.Clear();
+                _healthKits.AddRange(level.HealthKits);
+                _barrels.Clear();
+                _barrels.AddRange(level.Barrels);
                 _door = level.Door;
 
                 _selectedEntity = null;
@@ -742,6 +983,9 @@ namespace LevelEditor
                 Obstacles = _obstacles,
                 Enemies = _enemies,
                 Gears = _gears,
+                Spawners = _spawners,
+                HealthKits = _healthKits,
+                Barrels = _barrels,
                 Door = _door
             };
 
@@ -785,8 +1029,11 @@ namespace LevelEditor
         {
             return $"Jugador: {(_player is null ? "sin colocar" : "colocado")}\n" +
                    $"Enemigos: {_enemies.Count}\n" +
+                   $"Spawners: {_spawners.Count}\n" +
                    $"Obstáculos: {_obstacles.Count}\n" +
                    $"Engranajes: {_gears.Count}\n" +
+                   $"Curas: {_healthKits.Count}\n" +
+                   $"Barriles: {_barrels.Count}\n" +
                    $"Puerta: {(_door is null ? "sin colocar" : "colocada")}";
         }
     }

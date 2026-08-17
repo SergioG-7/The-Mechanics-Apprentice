@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "Tank": {
+      "maxHP": 200.0,
+      "speed": 1.2,
+      "scale": 1.5,
+      "attackDamage": 25.0,
+      "visionRadius": 5.0
+    },
+    "Runner": {
+      "maxHP": 25.0,
+      "speed": 6.5,
+      "scale": 0.8,
+      "attackDamage": 6.0,
+      "visionRadius": 8.0
+    },
+    "Spitter": {
+      "maxHP": 20.0,
+      "speed": 2.0,
+      "scale": 0.9,
+      "attackDamage": 8.0,
+      "visionRadius": 10.0,
+      "behavior": "spitter"
+    },
+    "Kamikaze": {
+      "maxHP": 15.0,
+      "speed": 4.0,
+      "scale": 0.85,
+      "attackDamage": 35.0,
+      "visionRadius": 7.0,
+      "behavior": "kamikaze"
+    }
+  }
+}

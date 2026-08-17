@@ -193,6 +193,9 @@ void Player::Update(float dt) {
     if (m_dashCooldown > 0.0f) {
         m_dashCooldown -= dt;
     }
+    if (m_damageFlashTimer > 0.0f) {
+        m_damageFlashTimer -= dt;
+    }
     ApplyKnockback(dt);
     m_fsm.Update(dt);
 }
@@ -210,6 +213,12 @@ void Player::Draw() const {
     // procesa sus colores tal cual); el flash de daño pasa a RED, ya que
     // WHITE dejaría de contrastar contra un tinte neutro.
     Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : WHITE;
+
+    // Hit-flash: destello breve por encima del tinte de estado -- ver el
+    // mismo mecanismo en Enemy::Draw.
+    if (m_damageFlashTimer > 0.0f) {
+        tint = WHITE;
+    }
 
     // Sombra falsa: ancla al personaje al suelo sin necesitar un shader de
     // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
@@ -249,6 +258,7 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {
     Actor::TakeDamage(amount, knockbackDir);
+    m_damageFlashTimer = kDamageFlashDuration;
     if (IsAlive()) m_fsm.ChangeState(PlayerState::Hurt);
 }
 

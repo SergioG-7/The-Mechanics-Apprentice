@@ -41,6 +41,13 @@ add_executable(${PROJECT_NAME}
     src/Entities/Obstacle.cpp
     src/Entities/Gear.cpp
     src/Entities/Door.cpp
+    src/Entities/EnemyFactory.cpp
+    src/Entities/Spawner.cpp
+    src/VFX/ParticleSystem.cpp
+    src/Core/EndlessDirector.cpp
+    src/UI/MenuScreen.cpp
+    src/Entities/HealthKit.cpp
+    src/Entities/ExplosiveBarrel.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)

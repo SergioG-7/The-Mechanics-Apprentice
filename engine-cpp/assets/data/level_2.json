@@ -1,0 +1,39 @@
+{
+  "levelName": "level_2",
+  "player": {
+    "spawn": { "x": 0, "y": 0, "z": 6 },
+    "maxHP": 100,
+    "speed": 4.5,
+    "attackDamage": 45
+  },
+  "obstacles": [
+    { "position": { "x": -3, "y": 0, "z": 0 }, "halfExtents": { "x": 0.5, "y": 0.5, "z": 0.5 } },
+    { "position": { "x": 3, "y": 0, "z": 0 }, "halfExtents": { "x": 0.5, "y": 0.5, "z": 0.5 } }
+  ],
+  "enemies": [
+    {
+      "spawn": { "x": 0, "y": 0, "z": -2 },
+      "type": "Runner",
+      "maxHP": 30,
+      "visionRadius": 6,
+      "speed": 2.5,
+      "attackDamage": 10,
+      "patrolRoute": []
+    }
+  ],
+  "spawners": [
+    {
+      "position": { "x": -4, "y": 0, "z": -6 },
+      "enemyType": "Tank",
+      "interval": 8.0,
+      "maxEnemies": 1
+    }
+  ],
+  "gears": [
+    { "position": { "x": 0, "y": 0, "z": 2 } }
+  ],
+  "door": {
+    "position": { "x": 0, "y": 0, "z": -8 },
+    "halfExtents": { "x": 1, "y": 1, "z": 1 }
+  }
+}

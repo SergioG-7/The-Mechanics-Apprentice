@@ -48,6 +48,11 @@ private:
     static constexpr float kAttackDuration = 0.35f;
     static constexpr float kHurtDuration = 0.4f;
 
+    // Hit-flash: mismo mecanismo que Enemy (ver su comentario) -- destello
+    // breve de impacto por encima de cualquier otro tinte, incluida Hurt.
+    float m_damageFlashTimer = 0.0f;
+    static constexpr float kDamageFlashDuration = 0.1f;
+
     // Dash: dirección congelada al entrar (ignora input mientras dura),
     // velocidad x3, sigue respetando colisión contra obstáculos.
     float m_dashCooldown = 0.0f;

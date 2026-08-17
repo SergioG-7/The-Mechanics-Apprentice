@@ -1,0 +1,29 @@
+{
+  "levelName": "endless",
+  "player": {
+    "spawn": { "x": 0, "y": 0, "z": 0 },
+    "maxHP": 100,
+    "speed": 4.5,
+    "attackDamage": 45
+  },
+  "obstacles": [
+    { "position": { "x": -4, "y": 0, "z": -4 }, "halfExtents": { "x": 0.5, "y": 0.5, "z": 0.5 } },
+    { "position": { "x": 4, "y": 0, "z": 4 }, "halfExtents": { "x": 0.5, "y": 0.5, "z": 0.5 } }
+  ],
+  "enemies": [],
+  "spawners": [
+    {
+      "position": { "x": -6, "y": 0, "z": -6 },
+      "enemyType": "Runner",
+      "interval": 3.0,
+      "maxEnemies": 5
+    },
+    {
+      "position": { "x": 6, "y": 0, "z": 6 },
+      "enemyType": "Tank",
+      "interval": 6.0,
+      "maxEnemies": 2
+    }
+  ],
+  "gears": []
+}

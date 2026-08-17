@@ -1,11 +1,10 @@
 #pragma once
 
-// Menu queda reservado para cuando exista un menú real (fuera del alcance
-// de esta fase); Application arranca directo en Gameplay. GameOver/Victory
-// sustituyen al "End" genérico original de la Fase 1 -- son los dos
-// desenlaces reales que ya tiene el juego.
+// Estado de la partida en curso -- solo tiene sentido mientras AppState (ver
+// AppState.h) está en StoryMode o EndlessMode. "Menu" ya no vive aquí: lo
+// cubre AppState::MainMenu, que es quien de verdad decide qué pantalla ve
+// el jugador.
 enum class GameState {
-    Menu,
     Gameplay,
     GameOver,
     Victory

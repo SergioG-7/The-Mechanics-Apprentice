@@ -10,6 +10,7 @@ public:
     Actor(Vector3 position, float maxHP, Vector3 halfExtents = { 0.5f, 0.5f, 0.5f });
 
     virtual void TakeDamage(float amount, Vector3 knockbackDir);
+    void Heal(float amount);
     bool IsAlive() const { return m_hp > 0.0f; }
     float GetHP() const { return m_hp; }
     float GetMaxHP() const { return m_maxHP; }
