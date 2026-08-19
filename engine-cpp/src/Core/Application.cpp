@@ -5,6 +5,7 @@
 #include "../Entities/HealthKit.h"
 #include "../Entities/ExplosiveBarrel.h"
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 
 Application::Application(int width, int height, const std::string& title) {
@@ -18,26 +19,78 @@ Application::Application(int width, int height, const std::string& title) {
     m_camera.fovy       = 45.0f;
     m_camera.projection = CAMERA_PERSPECTIVE;
 
-    m_bgm = LoadMusicStream("assets/audio/music/theme.ogg");
-    if (m_bgm.frameCount > 0) {
-        m_bgm.looping = true;
-        SetMusicVolume(m_bgm, kMusicVolume);
-    }
+    // Construido en el cuerpo, no en la lista de inicialización: necesita
+    // InitAudioDevice() ya llamado (arriba), igual que m_toonShader necesita
+    // la ventana/contexto GL ya creados por InitWindow().
+    m_music = std::make_unique<MusicController>("assets/audio/music/theme.ogg", kMusicVolume);
 
     m_toonShader = std::make_unique<ShaderManager>("shaders/toon.vs", "shaders/toon.fs");
+
+    // m_saveManager ya se ha construido (lee save_data.json en su propio
+    // constructor, antes que nada aquí) -- LocalizationManager arranca
+    // directamente en el idioma guardado, no siempre en español.
+    m_localization.LoadAll(m_saveManager.Data().currentLanguage);
+    LoadUiFont();
 
     // Arranca en el menú (m_appState = AppState::MainMenu por defecto): no
     // hay LoadLevel aquí, se dispara al elegir Historia/Infinito.
 }
 
 Application::~Application() {
-    if (m_bgm.frameCount > 0) UnloadMusicStream(m_bgm);
+    // Los recursos de GPU/audio (modelos, texturas y sonidos de m_level,
+    // el shader, la música, la fuente) tienen que liberarse ANTES de cerrar
+    // el contexto que los sostiene. Dejarlo a la destrucción automática de
+    // miembros habría sido incorrecto: esa destrucción ocurre DESPUÉS de
+    // que termine el cuerpo de este destructor, es decir, después de
+    // CloseAudioDevice()/CloseWindow() si esas dos llamadas fueran lo único
+    // aquí -- liberando GPU/audio contra un contexto ya cerrado. Se liberan
+    // aquí a mano, en el orden correcto, antes de cerrar nada.
+    m_level = LevelData{};
+    m_toonShader.reset();
+    m_music.reset();
+    if (IsFontValid(m_font)) UnloadFont(m_font);
+
     CloseAudioDevice();
     CloseWindow();
 }
 
+void Application::LoadUiFont() {
+    // La unión de los tres idiomas a la vez: cambiar de idioma en caliente
+    // (CycleLanguage) nunca deja huecos en la fuente ya cargada, porque el
+    // japonés y los acentos del español ya están dentro desde el arranque.
+    const std::string& allText = m_localization.GetAllTextForCodepoints();
+
+    int codepointCount = 0;
+    int* codepoints = LoadCodepoints(allText.c_str(), &codepointCount);
+
+    constexpr int kFontSize = 48;
+    m_font = LoadFontEx("assets/fonts/font.ttf", kFontSize, codepoints, codepointCount);
+    if (IsFontValid(m_font)) {
+        SetTextureFilter(m_font.texture, TEXTURE_FILTER_BILINEAR);
+    } else {
+        TraceLog(LOG_WARNING, "Application: no se pudo cargar assets/fonts/font.ttf, usando la fuente por defecto");
+        m_font = GetFontDefault();
+    }
+
+    UnloadCodepoints(codepoints);
+}
+
 void Application::LoadLevel(const std::string& path) {
     m_currentLevelPath = path;
+
+    // Estado transitorio de la partida anterior (o del intento anterior, si
+    // esto es un reintento con 'R'): se limpia ANTES de tocar m_level, no
+    // después, para no dejar una ventana en la que m_spawners siga
+    // apuntando (por Spawner::m_spawnedEnemies, Enemy* no propietarios) a
+    // los Enemy que la reasignación de m_level está a punto de destruir.
+    // Sin esto: un proyectil de Spitter en vuelo, o un screen shake/hit-stop
+    // activo justo al cruzar la puerta, sobrevivían al cambio de nivel.
+    m_spawners.clear();
+    m_projectiles.clear();
+    m_shakeTimer.Start(0.0f);
+    m_shakeIntensity = 0.0f;
+    m_hitStopTimer.Start(0.0f);
+
     m_level = LevelLoader::LoadFromFile(path);
 
     if (!m_level.player) {
@@ -60,10 +113,8 @@ void Application::LoadLevel(const std::string& path) {
     m_totalGears = static_cast<int>(m_level.gears.size());
     m_matchState = GameState::Gameplay;
 
-    // Spawners data-driven, leídos del propio nivel (ver LevelLoader.cpp).
-    // Se recrean aquí, no solo la primera vez, para que un reintento con 'R'
-    // también limpie sus timers y su cupo de enemigos vivos.
-    m_spawners.clear();
+    // Spawners data-driven, leídos del propio nivel (ver LevelLoader.cpp) --
+    // ya se limpiaron arriba, antes de reasignar m_level.
     for (const SpawnerData& data : m_level.spawners) {
         m_spawners.emplace_back(data.position, data.enemyType, data.interval, data.maxEnemies,
                                  &m_level.obstacles, m_toonShader->Get());
@@ -71,16 +122,16 @@ void Application::LoadLevel(const std::string& path) {
 
     // Arranca (o reinicia desde el principio) la música al entrar en
     // partida; se para en GameOver/Victory para dar un respiro.
-    if (m_bgm.frameCount > 0) PlayMusicStream(m_bgm);
+    m_music->Play();
 }
 
 std::string Application::BuildStoryLevelPath(int level) {
     return "assets/data/level_" + std::to_string(level) + ".json";
 }
 
-void Application::StartStoryMode() {
+void Application::StartStoryMode(int level) {
     m_appState = AppState::StoryMode;
-    m_currentLevel = 1;
+    m_currentLevel = level;
     LoadLevel(BuildStoryLevelPath(m_currentLevel));
 }
 
@@ -92,23 +143,66 @@ void Application::StartEndlessMode() {
 
 void Application::AdvanceToNextStoryLevel() {
     m_currentLevel++;
+    if (m_currentLevel > m_saveManager.Data().maxLevelUnlocked) {
+        m_saveManager.Data().maxLevelUnlocked = m_currentLevel;
+    }
     LoadLevel(BuildStoryLevelPath(m_currentLevel));
 }
 
 // --- Menú ---
 
+void Application::LaunchLevelEditor() const {
+    // std::system en vez de ShellExecute/CreateProcess a propósito: la API
+    // Win32 (windows.h) choca en nombres con raylib.h (Rectangle, CloseWindow...)
+    // si se incluyen juntos en el mismo .cpp, y este atajo no vale la pena esa
+    // complicación. "start" lanza el proceso sin bloquear ni heredar esta consola.
+    constexpr const char* kEditorPath = "../../../level-editor-csharp/bin/Debug/net9.0-windows/LevelEditor.exe";
+
+    if (!FileExists(kEditorPath)) {
+        TraceLog(LOG_WARNING, "Application: editor de niveles no encontrado en '%s' (¿esta compilado en Debug?)", kEditorPath);
+        return;
+    }
+
+    std::string command = std::string("start \"\" \"") + kEditorPath + "\"";
+    std::system(command.c_str());
+}
+
 void Application::UpdateMenu() {
-    MenuAction action = (m_appState == AppState::Options)
-        ? m_menuScreen.UpdateOptions()
-        : m_menuScreen.UpdateMainMenu();
+    // Atajo oculto de desarrollo, no un botón de menú: no tiene sentido para
+    // un jugador y solo funciona con el editor compilado en la misma máquina.
+    if (IsKeyPressed(KEY_F12)) {
+        LaunchLevelEditor();
+    }
+
+    MenuAction action = MenuAction::None;
+    switch (m_appState) {
+        case AppState::MainMenu:     action = m_menuScreen.UpdateMainMenu();    break;
+        case AppState::Options:      action = m_menuScreen.UpdateOptions();     break;
+        case AppState::Controls:     action = m_menuScreen.UpdateControls();    break;
+        case AppState::Stats:        action = m_menuScreen.UpdateStats();       break;
+        case AppState::LevelSelect:  action = m_menuScreen.UpdateLevelSelect(m_saveManager.Data().maxLevelUnlocked); break;
+        default: break; // StoryMode/EndlessMode no llegan aquí (ver Run())
+    }
 
     switch (action) {
-        case MenuAction::StartStory:     StartStoryMode();   break;
-        case MenuAction::StartEndless:   StartEndlessMode(); break;
-        case MenuAction::OpenOptions:    m_appState = AppState::Options; break;
-        case MenuAction::BackToMainMenu: m_appState = AppState::MainMenu; break;
-        case MenuAction::Quit:           m_quitRequested = true; break;
-        case MenuAction::None:           break;
+        case MenuAction::OpenLevelSelect: m_appState = AppState::LevelSelect; break;
+        case MenuAction::StartStory:      StartStoryMode(m_menuScreen.GetSelectedLevel()); break;
+        case MenuAction::StartEndless:    StartEndlessMode(); break;
+        case MenuAction::OpenOptions:     m_appState = AppState::Options; break;
+        case MenuAction::OpenControls:    m_appState = AppState::Controls; break;
+        case MenuAction::OpenStats:       m_appState = AppState::Stats; break;
+        case MenuAction::BackToMainMenu:  m_appState = AppState::MainMenu; break;
+        case MenuAction::BackToOptions:   m_appState = AppState::Options; break;
+        case MenuAction::CycleLanguage:
+            m_localization.CycleLanguage();
+            // Se guarda al instante, no solo al morir/completar nivel: es la
+            // única preferencia de UI persistente, y perderla si se cierra
+            // el juego sin pasar por una partida sería un mal trago.
+            m_saveManager.Data().currentLanguage = m_localization.GetCurrentLanguage();
+            m_saveManager.Save();
+            break;
+        case MenuAction::Quit: m_quitRequested = true; break;
+        case MenuAction::None: break;
     }
 }
 
@@ -116,10 +210,14 @@ void Application::DrawMenu() const {
     BeginDrawing();
     ClearBackground(Color{ 20, 20, 25, 255 });
 
-    if (m_appState == AppState::Options) {
-        m_menuScreen.DrawOptions();
-    } else {
-        m_menuScreen.DrawMainMenu();
+    UiContext ui = BuildUiContext();
+    switch (m_appState) {
+        case AppState::MainMenu:    m_menuScreen.DrawMainMenu(ui); break;
+        case AppState::Options:     m_menuScreen.DrawOptions(ui);  break;
+        case AppState::Controls:    m_menuScreen.DrawControls(ui); break;
+        case AppState::Stats:       m_menuScreen.DrawStats(ui, m_saveManager.Data()); break;
+        case AppState::LevelSelect: m_menuScreen.DrawLevelSelect(ui, m_saveManager.Data().maxLevelUnlocked); break;
+        default: break;
     }
 
     EndDrawing();
@@ -128,10 +226,10 @@ void Application::DrawMenu() const {
 // --- Gameplay (StoryMode / EndlessMode) ---
 
 void Application::UpdateGameplay(float dt) {
-    if (m_bgm.frameCount > 0) UpdateMusicStream(m_bgm);
+    m_music->Update();
 
-    if (m_shakeTimer > 0.0f) m_shakeTimer -= dt;
-    if (m_hitStopTimer > 0.0f) m_hitStopTimer -= dt;
+    m_shakeTimer.Tick(dt);
+    m_hitStopTimer.Tick(dt);
     m_particles.Update(dt);
 
     if (m_level.player != nullptr) {
@@ -145,7 +243,7 @@ void Application::UpdateGameplay(float dt) {
         // Shake sumado ENCIMA de la posición ya calculada, nunca la sustituye
         // -- si escribiera m_camera.position aparte, pelearía con el offset
         // isométrico de arriba en vez de mezclarse con él.
-        if (m_shakeTimer > 0.0f) {
+        if (m_shakeTimer.IsActive()) {
             float offsetX = (static_cast<float>(GetRandomValue(-100, 100)) / 100.0f) * m_shakeIntensity;
             float offsetZ = (static_cast<float>(GetRandomValue(-100, 100)) / 100.0f) * m_shakeIntensity;
             m_camera.position.x += offsetX;
@@ -188,7 +286,7 @@ void Application::UpdateActiveMatch(float dt) {
 
     // Hit-stop: Player/Enemy ven dt = 0 (FSM y animación congeladas) mientras
     // el timer sigue corriendo con el dt real de Application::UpdateGameplay.
-    float entityDt = (m_hitStopTimer > 0.0f) ? 0.0f : dt;
+    float entityDt = m_hitStopTimer.IsActive() ? 0.0f : dt;
 
     m_level.player->Update(entityDt);
 
@@ -207,15 +305,19 @@ void Application::UpdateActiveMatch(float dt) {
         AddCameraShake(kHitShakeDuration, kHitShakeIntensity);
         m_particles.Emit(hit->impactPoint, GetRandomValue(kMinHitParticles, kMaxHitParticles));
 
-        // Solo en Infinito: cada baja deja un engranaje (95%) o, más raro, un
-        // botiquín (5%) -- así el modo se sostiene solo, sin depender de los
-        // objetos fijos de un nivel.
-        if (m_appState == AppState::EndlessMode && hit->hitEnemy && !hit->hitEnemy->IsAlive()) {
-            constexpr int kHealthKitDropChancePercent = 5;
-            if (GetRandomValue(1, 100) <= kHealthKitDropChancePercent) {
-                m_level.healthKits.push_back(std::make_unique<HealthKit>(hit->hitEnemy->GetPosition()));
-            } else {
-                m_level.gears.push_back(std::make_unique<Gear>(hit->hitEnemy->GetPosition()));
+        if (hit->hitEnemy && !hit->hitEnemy->IsAlive()) {
+            m_saveManager.Data().zombiesKilled++;
+
+            // Solo en Infinito: cada baja deja un engranaje (95%) o, más
+            // raro, un botiquín (5%) -- así el modo se sostiene solo, sin
+            // depender de los objetos fijos de un nivel.
+            if (m_appState == AppState::EndlessMode) {
+                constexpr int kHealthKitDropChancePercent = 5;
+                if (GetRandomValue(1, 100) <= kHealthKitDropChancePercent) {
+                    m_level.healthKits.push_back(std::make_unique<HealthKit>(hit->hitEnemy->GetPosition()));
+                } else {
+                    m_level.gears.push_back(std::make_unique<Gear>(hit->hitEnemy->GetPosition()));
+                }
             }
         }
     } else if (auto barrelHit = CombatSystem::ResolveMeleeAttackOnBarrels(*m_level.player, m_level.barrels)) {
@@ -244,6 +346,9 @@ void Application::UpdateActiveMatch(float dt) {
     CombatSystem::ResolveEnemyAttacks(*m_level.player, m_level.enemies);
     CombatSystem::UpdateProjectiles(entityDt, m_projectiles, *m_level.player);
 
+    for (auto& hazard : m_level.hazards) hazard->Update(entityDt);
+    CombatSystem::ApplyHazardDamage(m_level.hazards, *m_level.player, m_level.enemies);
+
     for (auto& spawner : m_spawners) {
         spawner.Update(entityDt, m_level.enemies);
     }
@@ -260,6 +365,7 @@ void Application::UpdateActiveMatch(float dt) {
         CombatSystem::ApplyAreaDamage(barrel->GetPosition(), ExplosiveBarrel::kExplosionRadius,
                                        ExplosiveBarrel::kExplosionDamage, *m_level.player, m_level.enemies);
         m_particles.Emit(barrel->GetPosition(), GetRandomValue(15, 25));
+        m_saveManager.Data().barrelsExploded++;
     }
     m_level.barrels.erase(
         std::remove_if(m_level.barrels.begin(), m_level.barrels.end(),
@@ -291,6 +397,7 @@ void Application::UpdateActiveMatch(float dt) {
         if (CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), (*it)->GetBoundingBox())) {
             std::cout << "[Gameplay] Botiquin recogido!" << std::endl;
             m_level.player->Heal((*it)->GetHealAmount());
+            m_saveManager.Data().healthKitsUsed++;
             it = m_level.healthKits.erase(it);
         } else {
             ++it;
@@ -301,7 +408,12 @@ void Application::UpdateActiveMatch(float dt) {
     if (!m_level.player->IsAlive()) {
         TraceLog(LOG_INFO, "Application: GAME OVER");
         m_matchState = GameState::GameOver;
-        if (m_bgm.frameCount > 0) StopMusicStream(m_bgm);
+        m_music->Stop();
+
+        if (m_appState == AppState::EndlessMode && m_endlessDirector.GetScore() > m_saveManager.Data().highScore) {
+            m_saveManager.Data().highScore = m_endlessDirector.GetScore();
+        }
+        m_saveManager.Save();
         return;
     }
 
@@ -311,45 +423,8 @@ void Application::UpdateActiveMatch(float dt) {
         CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), m_level.door->GetBoundingBox())) {
         TraceLog(LOG_INFO, "Application: VICTORY");
         m_matchState = GameState::Victory;
-        if (m_bgm.frameCount > 0) StopMusicStream(m_bgm);
-    }
-}
-
-void Application::DrawHud() const {
-    if (!m_level.player) return;
-
-    // --- Barra de HP del Player ---
-    constexpr int barX = 10, barY = 40, barWidth = 200, barHeight = 20;
-    float hpRatio = m_level.player->GetHP() / m_level.player->GetMaxHP();
-    DrawRectangle(barX, barY, barWidth, barHeight, DARKGRAY);
-    DrawRectangle(barX, barY, static_cast<int>(barWidth * hpRatio), barHeight, RED);
-    DrawRectangleLines(barX, barY, barWidth, barHeight, BLACK);
-
-    // --- Engranajes: en Infinito es la puntuación (sin total fijo); en
-    // Historia, recolectados / total del nivel. ---
-    if (m_appState == AppState::EndlessMode) {
-        DrawText(TextFormat("Engranajes: %d", m_endlessDirector.GetScore()), barX, barY + barHeight + 10, 20, BLACK);
-    } else {
-        int collected = m_totalGears - static_cast<int>(m_level.gears.size());
-        DrawText(TextFormat("Engranajes: %d / %d", collected, m_totalGears), barX, barY + barHeight + 10, 20, BLACK);
-    }
-
-    // --- Barra de HP flotante sobre cada Enemy dañado ---
-    for (auto& enemy : m_level.enemies) {
-        if (!enemy->IsAlive()) continue;               // un zombie derrotado no necesita barra
-        if (enemy->GetHP() >= enemy->GetMaxHP()) continue; // solo tras el primer golpe, para no saturar
-
-        Vector3 worldPos = enemy->GetPosition();
-        worldPos.y += 1.0f; // encima del cubo, no sobre su centro
-        Vector2 screenPos = GetWorldToScreen(worldPos, m_camera);
-
-        constexpr int enemyBarWidth = 40, enemyBarHeight = 6;
-        int ex = static_cast<int>(screenPos.x) - enemyBarWidth / 2;
-        int ey = static_cast<int>(screenPos.y);
-        float enemyHpRatio = enemy->GetHP() / enemy->GetMaxHP();
-
-        DrawRectangle(ex, ey, enemyBarWidth, enemyBarHeight, DARKGRAY);
-        DrawRectangle(ex, ey, static_cast<int>(enemyBarWidth * enemyHpRatio), enemyBarHeight, RED);
+        m_music->Stop();
+        m_saveManager.Save();
     }
 }
 
@@ -369,21 +444,6 @@ void Application::DrawGroundGrid() const {
     }
 }
 
-void Application::DrawCenteredOverlay(const char* title, Color titleColor, const char* subtitle) const {
-    int screenW = GetScreenWidth();
-    int screenH = GetScreenHeight();
-
-    DrawRectangle(0, 0, screenW, screenH, Color{ 0, 0, 0, 150 });
-
-    int titleSize = 60;
-    int titleWidth = MeasureText(title, titleSize);
-    DrawText(title, (screenW - titleWidth) / 2, screenH / 2 - 40, titleSize, titleColor);
-
-    int subSize = 20;
-    int subWidth = MeasureText(subtitle, subSize);
-    DrawText(subtitle, (screenW - subWidth) / 2, screenH / 2 + 30, subSize, RAYWHITE);
-}
-
 void Application::DrawGameplay() const {
     BeginDrawing();
     ClearBackground(Color{ 30, 30, 35, 255 });
@@ -394,6 +454,7 @@ void Application::DrawGameplay() const {
     if (m_level.player) m_level.player->Draw();
     for (auto& enemy : m_level.enemies) enemy->Draw();
     for (auto& obstacle : m_level.obstacles) obstacle->Draw();
+    for (auto& hazard : m_level.hazards) hazard->Draw();
     for (auto& gear : m_level.gears) gear->Draw();
     for (auto& healthKit : m_level.healthKits) healthKit->Draw();
     for (auto& barrel : m_level.barrels) barrel->Draw();
@@ -402,15 +463,16 @@ void Application::DrawGameplay() const {
     m_particles.Draw();
     EndMode3D();
 
-    DrawHud();
+    UiContext ui = BuildUiContext();
+    m_hud.DrawHud(ui, m_level, m_totalGears, m_appState, m_endlessDirector, m_camera);
 
     switch (m_matchState) {
         case GameState::GameOver:
-            DrawCenteredOverlay("GAME OVER", RED,
-                (m_appState == AppState::EndlessMode) ? "Pulsa R para volver al menu" : "Pulsa R para reintentar");
+            m_hud.DrawCenteredOverlay(ui, "gameover_title", RED,
+                (m_appState == AppState::EndlessMode) ? "gameover_menu" : "gameover_retry");
             break;
         case GameState::Victory:
-            DrawCenteredOverlay("VICTORIA", GREEN, "Pulsa R para continuar");
+            m_hud.DrawCenteredOverlay(ui, "victory_title", GREEN, "victory_continue");
             break;
         default:
             break;
@@ -421,14 +483,14 @@ void Application::DrawGameplay() const {
 }
 
 void Application::AddCameraShake(float duration, float intensity) {
-    m_shakeTimer = duration;
+    m_shakeTimer.Start(duration);
     m_shakeIntensity = intensity;
 }
 
 void Application::TriggerHitStop(float duration) {
     // max, no asignación directa: un segundo golpe durante un hit-stop ya
     // activo no debe acortarlo.
-    m_hitStopTimer = std::max(m_hitStopTimer, duration);
+    m_hitStopTimer.Start(std::max(m_hitStopTimer.Remaining(), duration));
 }
 
 void Application::Run() {
@@ -436,6 +498,9 @@ void Application::Run() {
         switch (m_appState) {
             case AppState::MainMenu:
             case AppState::Options:
+            case AppState::Controls:
+            case AppState::Stats:
+            case AppState::LevelSelect:
                 UpdateMenu();
                 DrawMenu();
                 break;

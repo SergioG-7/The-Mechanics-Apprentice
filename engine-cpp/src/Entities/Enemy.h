@@ -1,6 +1,7 @@
 #pragma once
 #include "Actor.h"
 #include "../Core/FSM/StateMachine.h"
+#include "../Core/CountdownTimer.h"
 #include "../Combat/Hitbox.h"
 #include "../Combat/Projectile.h"
 #include <vector>
@@ -66,6 +67,11 @@ private:
     void UpdateDead(float dt);
     Hitbox SpawnAttackHitbox() const;
 
+    // Compartido por UpdateChase, SpawnAttackHitbox y UpdateAttackRanged:
+    // los tres calculaban el mismo vector normalizado hacia
+    // m_lastKnownPlayerPosition por separado.
+    Vector3 DirectionToLastKnownPlayer() const;
+
     StateMachine<EnemyState> m_fsm;
     Vector3 m_facingDirection = { 0.0f, 0.0f, 1.0f };
     std::vector<Vector3> m_patrolRoute;
@@ -89,7 +95,7 @@ private:
     // Hit-flash: destello breve independiente del tinte de estado (Hurt ya
     // tiñe de rojo durante toda su duración; esto es un pop de impacto de
     // 0.1s por encima de cualquier otro tinte, incluido Dead). Ver Draw().
-    float m_damageFlashTimer = 0.0f;
+    CountdownTimer m_damageFlashTimer;
     static constexpr float kDamageFlashDuration = 0.1f;
 
     // Spitter (AttackRanged): mantiene las distancias y dispara en vez de

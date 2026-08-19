@@ -1,0 +1,71 @@
+{
+  "levelName": "level_4",
+  "player": {
+    "spawn": { "x": 0, "y": 0, "z": 8 },
+    "maxHP": 100,
+    "speed": 4.5,
+    "attackDamage": 45
+  },
+  "obstacles": [
+    { "position": { "x": -3, "y": 0, "z": 2 }, "type": "box", "size": { "x": 1.2, "y": 1, "z": 1.2 } },
+    { "position": { "x": 3, "y": 0, "z": 2 }, "type": "box", "size": { "x": 1.2, "y": 1, "z": 1.2 } },
+    { "position": { "x": -1.5, "y": 0, "z": -2 }, "type": "cylinder", "radius": 0.6, "height": 2.5 },
+    { "position": { "x": 1.5, "y": 0, "z": -2 }, "type": "cylinder", "radius": 0.6, "height": 2.5 }
+  ],
+  "hazards": [
+    { "position": { "x": 0, "y": 0, "z": -3.5 }, "size": { "x": 2.5, "y": 0.1, "z": 2 }, "damagePerTick": 8 }
+  ],
+  "enemies": [
+    {
+      "spawn": { "x": -4.5, "y": 0, "z": -4.5 },
+      "type": "Spitter",
+      "maxHP": 20,
+      "visionRadius": 10,
+      "speed": 2.0,
+      "attackDamage": 8,
+      "patrolRoute": [
+        { "x": -4.5, "y": 0, "z": -4.5 },
+        { "x": -4.5, "y": 0, "z": -1 },
+        { "x": -4.5, "y": 0, "z": -4.5 }
+      ]
+    },
+    {
+      "spawn": { "x": 4.5, "y": 0, "z": -4.5 },
+      "type": "Spitter",
+      "maxHP": 20,
+      "visionRadius": 10,
+      "speed": 2.0,
+      "attackDamage": 8,
+      "patrolRoute": [
+        { "x": 4.5, "y": 0, "z": -4.5 },
+        { "x": 4.5, "y": 0, "z": -1 },
+        { "x": 4.5, "y": 0, "z": -4.5 }
+      ]
+    }
+  ],
+  "spawners": [
+    {
+      "position": { "x": 0, "y": 0, "z": -6.5 },
+      "enemyType": "Kamikaze",
+      "interval": 6.0,
+      "maxEnemies": 2
+    }
+  ],
+  "gears": [
+    { "position": { "x": -4.5, "y": 0, "z": 4.5 } },
+    { "position": { "x": 4.5, "y": 0, "z": 4.5 } },
+    { "position": { "x": -4.5, "y": 0, "z": 0 } },
+    { "position": { "x": 4.5, "y": 0, "z": 0 } }
+  ],
+  "healthKits": [
+    { "position": { "x": 0, "y": 0, "z": 3 } }
+  ],
+  "barrels": [
+    { "position": { "x": -2, "y": 0, "z": -5.5 } },
+    { "position": { "x": 2, "y": 0, "z": -5.5 } }
+  ],
+  "door": {
+    "position": { "x": 0, "y": 0, "z": -9 },
+    "halfExtents": { "x": 1, "y": 1, "z": 1 }
+  }
+}

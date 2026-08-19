@@ -9,4 +9,11 @@
     <RootNamespace>LevelEditor</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="Resources\Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Misma fuente que ya usa el motor C++ (verificada con glifos CJK reales),
+         enlazada en vez de duplicada para no tener dos copias de 9+ MB divergiendo. -->
+    <None Include="..\engine-cpp\assets\fonts\font.ttf" Link="Resources\Fonts\font.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

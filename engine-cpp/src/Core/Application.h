@@ -3,12 +3,18 @@
 #include "AppState.h"
 #include "GameState.h"
 #include "EndlessDirector.h"
+#include "SaveManager.h"
+#include "LocalizationManager.h"
+#include "CountdownTimer.h"
+#include "../Audio/MusicController.h"
 #include "../IO/LevelLoader.h"
 #include "../Renderer/ShaderManager.h"
 #include "../VFX/ParticleSystem.h"
 #include "../Entities/Spawner.h"
 #include "../Combat/Projectile.h"
 #include "../UI/MenuScreen.h"
+#include "../UI/HudRenderer.h"
+#include "../UI/UiContext.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,6 +35,15 @@ private:
     void UpdateMenu();
     void DrawMenu() const;
 
+    // Atajo de desarrollo oculto (F12, cualquier pantalla de menú): abre el
+    // editor de niveles de nivel-editor-csharp como proceso aparte -- WinForms
+    // no se puede incrustar en la ventana de raylib, así que es una ventana
+    // de Windows independiente, no un panel embebido. Ruta relativa al cwd
+    // del juego (build/Debug), solo válida en la máquina de desarrollo con
+    // ambos proyectos compilados en Debug -- no tiene sentido en una build
+    // para repartir, por eso no hay ningún botón visible para esto.
+    void LaunchLevelEditor() const;
+
     // --- AppState::StoryMode / EndlessMode ---
     // Todo lo que corre siempre en una pantalla de juego (cámara, música,
     // timers de juice, partículas) más, si la partida sigue viva, delega en
@@ -39,9 +54,14 @@ private:
     void UpdateActiveMatch(float dt);
     void HandleGameplayPauseInput();
 
-    void DrawHud() const;
-    void DrawCenteredOverlay(const char* title, Color titleColor, const char* subtitle) const;
     void DrawGroundGrid() const;
+
+    // Concatena el texto de LocalizationManager (los tres idiomas a la vez)
+    // y lo pasa por LoadCodepoints -- el conjunto de glifos que necesita
+    // LoadFontEx para que el japonés (y los acentos del español) se vean
+    // bien sea cual sea el idioma activo al arrancar o tras cambiarlo.
+    void LoadUiFont();
+    UiContext BuildUiContext() const { return UiContext{ m_font, m_localization }; }
 
     // Carga (o recarga) el nivel indicado desde disco y deja la partida en
     // Gameplay. Si el archivo no existe (fin del Modo Historia, o un
@@ -49,7 +69,7 @@ private:
     // vez de dejar la partida a medio construir.
     void LoadLevel(const std::string& path);
 
-    void StartStoryMode();
+    void StartStoryMode(int level);
     void StartEndlessMode();
     void AdvanceToNextStoryLevel();
     static std::string BuildStoryLevelPath(int level);
@@ -57,10 +77,18 @@ private:
     AppState m_appState = AppState::MainMenu;
     bool m_quitRequested = false;
     MenuScreen m_menuScreen;
+    HudRenderer m_hud;
+
+    // Persistencia (save_data.json) e idioma. SaveManager se construye
+    // primero (lee CurrentLanguage de disco) para que LocalizationManager
+    // pueda arrancar ya en el idioma correcto, no siempre en español.
+    SaveManager m_saveManager;
+    LocalizationManager m_localization;
+    Font m_font{};
 
     Camera3D m_camera{};
     GameState m_matchState = GameState::Gameplay;
-    Music m_bgm{};
+    std::unique_ptr<MusicController> m_music;
     static constexpr float kMusicVolume = 0.03f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
 
     std::unique_ptr<ShaderManager> m_toonShader;
@@ -79,13 +107,13 @@ private:
     // Screen shake: offset aleatorio sumado sobre la posición de cámara ya
     // calculada a partir del jugador (Application::UpdateGameplay), nunca
     // escrito por otro lado.
-    float m_shakeTimer = 0.0f;
+    CountdownTimer m_shakeTimer;
     float m_shakeIntensity = 0.0f;
 
-    // Hit-stop: mientras > 0, Player/Enemy reciben dt = 0 en su Update (ver
-    // UpdateActiveMatch), pero el timer se descuenta con el dt real de cada
-    // frame para no congelarse a sí mismo.
-    float m_hitStopTimer = 0.0f;
+    // Hit-stop: mientras esté activo, Player/Enemy reciben dt = 0 en su
+    // Update (ver UpdateActiveMatch), pero el timer se descuenta con el dt
+    // real de cada frame para no congelarse a sí mismo.
+    CountdownTimer m_hitStopTimer;
 
     ParticleSystem m_particles;
 

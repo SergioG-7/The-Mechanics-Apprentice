@@ -1,0 +1,82 @@
+{
+  "tab_entities": "エンティティ",
+  "tab_objects": "オブジェクト",
+  "tab_system": "システム",
+
+  "tool_place_player": "プレイヤーを配置",
+  "tool_place_enemy": "敵を配置",
+  "tool_place_obstacle": "障害物を配置",
+  "tool_place_cylinder": "柱を配置",
+  "tool_place_hazard": "トラップを配置",
+  "tool_place_door": "ドアを配置",
+  "tool_place_gear": "歯車を配置",
+  "tool_place_healthkit": "回復キットを配置",
+  "tool_place_barrel": "樽を配置",
+  "tool_place_spawner": "スポナーを配置",
+  "tool_define_patrol": "巡回ルートを設定",
+  "tool_select": "選択・編集",
+
+  "group_edit": "編集",
+  "group_variant": "敵のバリエーション",
+  "group_properties": "プロパティ",
+  "group_language": "言語",
+
+  "hint_delete": "右クリック: エンティティを削除\n(または最も近い巡回ポイント)",
+
+  "btn_open": "レベルを開く",
+  "btn_export": "レベルをエクスポート",
+
+  "title_app": "LEVEL-5 Portfolio - レベルエディタ",
+  "title_unsaved": "未保存",
+
+  "prop_hp": "最大HP:",
+  "prop_speed": "速度:",
+  "prop_damage": "攻撃力:",
+  "prop_type": "タイプ:",
+  "prop_vision": "視界範囲:",
+  "prop_enemytype": "敵のタイプ:",
+  "prop_interval": "間隔 (秒):",
+  "prop_maxenemies": "同時出現数の上限:",
+  "prop_halfextents_x": "HalfExtents X:",
+  "prop_halfextents_z": "HalfExtents Z:",
+  "prop_width": "幅:",
+  "prop_height": "高さ:",
+  "prop_length": "奥行き:",
+  "prop_radius": "半径:",
+  "prop_damagepertick": "ティックごとのダメージ:",
+
+  "msg_no_enemy_title": "敵が選択されていません",
+  "msg_no_enemy_body": "巡回ポイントを追加するには、まず「選択・編集」ツールで敵を選択してください。\n\n左クリック: ポイントを追加。右クリック: 最も近いポイントを削除。",
+
+  "msg_unsaved_title": "未保存の変更",
+  "msg_unsaved_body": "現在のレベルにエクスポートされていない変更があります。別のレベルを開くと失われます。\n\nそれでも続けますか?",
+
+  "dialog_open_title": "C++エンジンのレベルを開く",
+  "dialog_json_filter": "JSONファイル (*.json)|*.json|すべてのファイル (*.*)|*.*",
+
+  "error_title": "エラー",
+  "msg_open_error_body": "レベルを開けませんでした:\n{0}",
+
+  "msg_missing_player_title": "プレイヤーが未配置です",
+  "msg_missing_player_body": "エクスポートする前にプレイヤーを配置してください(「プレイヤーを配置」ツール)。",
+
+  "dialog_save_title": "C++エンジンのレベルを保存",
+
+  "msg_export_success_title": "エクスポート完了",
+  "msg_export_success_body": "レベルのエクスポート先:\n{0}",
+  "msg_export_error_body": "レベルをエクスポートできませんでした:\n{0}",
+
+  "status_player": "プレイヤー: {0}",
+  "status_player_placed": "配置済み",
+  "status_player_unplaced": "未配置",
+  "status_enemies": "敵: {0}",
+  "status_spawners": "スポナー: {0}",
+  "status_obstacles": "障害物: {0}",
+  "status_gears": "歯車: {0}",
+  "status_healthkits": "回復キット: {0}",
+  "status_barrels": "樽: {0}",
+  "status_hazards": "トラップ: {0}",
+  "status_door": "ドア: {0}",
+  "status_door_placed": "配置済み",
+  "status_door_unplaced": "未配置"
+}

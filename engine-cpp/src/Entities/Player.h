@@ -1,6 +1,7 @@
 #pragma once
 #include "Actor.h"
 #include "../Core/FSM/StateMachine.h"
+#include "../Core/CountdownTimer.h"
 #include "../Combat/Hitbox.h"
 
 enum class PlayerState { Idle, Run, Attack, Hurt, Dash };
@@ -50,16 +51,17 @@ private:
 
     // Hit-flash: mismo mecanismo que Enemy (ver su comentario) -- destello
     // breve de impacto por encima de cualquier otro tinte, incluida Hurt.
-    float m_damageFlashTimer = 0.0f;
+    CountdownTimer m_damageFlashTimer;
     static constexpr float kDamageFlashDuration = 0.1f;
 
     // Dash: dirección congelada al entrar (ignora input mientras dura),
     // velocidad x3, sigue respetando colisión contra obstáculos.
-    float m_dashCooldown = 0.0f;
+    CountdownTimer m_dashCooldownTimer;
     float m_dashTimer = 0.0f;
     Vector3 m_dashDirection{};
     static constexpr float kDashDuration = 0.2f;
     static constexpr float kDashSpeedMultiplier = 3.0f;
+    static constexpr float kDashCooldownDuration = 1.0f;
 
     Hitbox m_activeHitbox{};
     bool m_hitboxWindowOpen = false;

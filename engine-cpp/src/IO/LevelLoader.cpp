@@ -1,5 +1,6 @@
 #include "LevelLoader.h"
 #include "../Entities/Obstacle.h"
+#include "../Entities/Cylinder.h"
 #include "../Entities/EnemyFactory.h"
 #include "raylib.h"
 #include <nlohmann/json.hpp>
@@ -17,19 +18,52 @@ Vector3 ParseVector3(const json& node) {
     };
 }
 
+// "box" (por defecto si falta "type", para niveles de antes de esta fase) o
+// "cylinder". Un obstáculo box acepta "size" (dimensión completa, el formato
+// nuevo) o, si falta, el "halfExtents" directo de antes -- y si no hay
+// ninguno de los dos, 1.0/1.0/1.0 tal como pide el diseño. Ambos tipos
+// terminan en la MISMA lista (LevelData::obstacles) porque los dos son
+// Entity con AABB; ver el comentario en LevelData.
+std::unique_ptr<Entity> ParseObstacle(const json& n) {
+    Vector3 position = ParseVector3(n.at("position"));
+    std::string type = n.value("type", std::string("box"));
+
+    if (type == "cylinder") {
+        float radius = n.value("radius", 0.5f);
+        float height = n.value("height", 1.0f);
+        return std::make_unique<Cylinder>(position, radius, height);
+    }
+
+    if (n.contains("size")) {
+        Vector3 size = ParseVector3(n.at("size"));
+        return std::make_unique<Obstacle>(position, Vector3{ size.x * 0.5f, size.y * 0.5f, size.z * 0.5f });
+    }
+    if (n.contains("halfExtents")) {
+        return std::make_unique<Obstacle>(position, ParseVector3(n.at("halfExtents")));
+    }
+    return std::make_unique<Obstacle>(position, Vector3{ 0.5f, 0.5f, 0.5f }); // "size" 1,1,1 sin declarar
+}
+
 // Construye el Enemy directamente con los stats propios de su entrada en el
 // JSON del nivel, sin pasar por EnemyFactory. Camino usado tanto por
 // type == "Default" como por un type que no coincide con ningún arquetipo de
 // enemy_variants.json (variante desconocida: mejor un enemigo con sus stats
 // tal cual que perderlo o abortar la carga entera del nivel).
+//
+// Los stats usan .value(...) con default, no .at(...): un campo suelto que
+// falte en UNA entrada (typo, JSON editado a mano) no debe tirar abajo la
+// carga del nivel ENTERO -- antes de este cambio, cualquier .at() ausente
+// aquí lanzaba, el catch de LoadFromFile lo atrapaba, y TODO el nivel volvía
+// vacío (Application lo interpretaba como "nivel no disponible" y volvía al
+// menú, sin pista de qué campo faltaba en qué enemigo).
 std::unique_ptr<Enemy> BuildEnemyFromOwnStats(const json& n, std::vector<Vector3> patrolRoute) {
     return std::make_unique<Enemy>(
         ParseVector3(n.at("spawn")),
-        n.at("maxHP").get<float>(),
+        n.value("maxHP", 30.0f),
         std::move(patrolRoute),
-        n.at("visionRadius").get<float>(),
-        n.at("speed").get<float>(),
-        n.at("attackDamage").get<float>());
+        n.value("visionRadius", 5.0f),
+        n.value("speed", 2.5f),
+        n.value("attackDamage", 10.0f));
 }
 
 } // namespace
@@ -56,15 +90,28 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
 
         if (root.contains("obstacles")) {
             for (const json& n : root.at("obstacles")) {
-                level.obstacles.push_back(std::make_unique<Obstacle>(
-                    ParseVector3(n.at("position")), ParseVector3(n.at("halfExtents"))));
+                level.obstacles.push_back(ParseObstacle(n));
+            }
+        }
+
+        if (root.contains("hazards")) {
+            for (const json& n : root.at("hazards")) {
+                Vector3 size = n.contains("size") ? ParseVector3(n.at("size")) : Vector3{ 1.0f, 0.1f, 1.0f };
+                float damagePerTick = n.value("damagePerTick", 10.0f);
+                level.hazards.push_back(std::make_unique<Hazard>(ParseVector3(n.at("position")), size, damagePerTick));
             }
         }
 
         if (root.contains("enemies")) {
             for (const json& n : root.at("enemies")) {
+                // Opcional (no .at): un enemigo estático sin patrolRoute es
+                // válido (ver "El drift devuelve..." en la doc del proyecto),
+                // y antes su ausencia tiraba abajo el nivel entero igual que
+                // los stats de arriba.
                 std::vector<Vector3> patrolRoute;
-                for (const json& p : n.at("patrolRoute")) patrolRoute.push_back(ParseVector3(p));
+                if (n.contains("patrolRoute")) {
+                    for (const json& p : n.at("patrolRoute")) patrolRoute.push_back(ParseVector3(p));
+                }
 
                 // "type" es opcional por compatibilidad con niveles exportados
                 // antes de la Fase 3 (sin el campo, se comportaban todos como
@@ -94,9 +141,9 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
             for (const json& n : root.at("spawners")) {
                 SpawnerData spawner;
                 spawner.position = ParseVector3(n.at("position"));
-                spawner.enemyType = n.at("enemyType").get<std::string>();
-                spawner.interval = n.at("interval").get<float>();
-                spawner.maxEnemies = n.at("maxEnemies").get<int>();
+                spawner.enemyType = n.value("enemyType", std::string("Runner"));
+                spawner.interval = n.value("interval", 4.0f);
+                spawner.maxEnemies = n.value("maxEnemies", 3);
                 level.spawners.push_back(std::move(spawner));
             }
         }
@@ -130,10 +177,11 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
                 ParseVector3(doorNode.at("halfExtents")));
         }
 
-        TraceLog(LOG_INFO, "LevelLoader: '%s' cargado -> %d enemigos, %d obstaculos, %d engranajes, %d spawners, %d botiquines, %d barriles, puerta %s",
+        TraceLog(LOG_INFO, "LevelLoader: '%s' cargado -> %d enemigos, %d obstaculos, %d hazards, %d engranajes, %d spawners, %d botiquines, %d barriles, puerta %s",
                  jsonPath.c_str(),
                  static_cast<int>(level.enemies.size()),
                  static_cast<int>(level.obstacles.size()),
+                 static_cast<int>(level.hazards.size()),
                  static_cast<int>(level.gears.size()),
                  static_cast<int>(level.spawners.size()),
                  static_cast<int>(level.healthKits.size()),

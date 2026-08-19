@@ -1,0 +1,82 @@
+{
+  "tab_entities": "Entities",
+  "tab_objects": "Objects",
+  "tab_system": "System",
+
+  "tool_place_player": "Place Player",
+  "tool_place_enemy": "Place Enemy",
+  "tool_place_obstacle": "Place Obstacle",
+  "tool_place_cylinder": "Place Pillar",
+  "tool_place_hazard": "Place Hazard",
+  "tool_place_door": "Place Door",
+  "tool_place_gear": "Place Gear",
+  "tool_place_healthkit": "Place Health Kit",
+  "tool_place_barrel": "Place Barrel",
+  "tool_place_spawner": "Place Spawner",
+  "tool_define_patrol": "Define Patrol",
+  "tool_select": "Select / Edit",
+
+  "group_edit": "Editing",
+  "group_variant": "Enemy variant",
+  "group_properties": "Properties",
+  "group_language": "Language",
+
+  "hint_delete": "Right click: delete entity\n(or nearest patrol point)",
+
+  "btn_open": "Open Level",
+  "btn_export": "Export Level",
+
+  "title_app": "LEVEL-5 Portfolio - Level Editor",
+  "title_unsaved": "unsaved",
+
+  "prop_hp": "Max HP:",
+  "prop_speed": "Speed:",
+  "prop_damage": "Attack damage:",
+  "prop_type": "Type:",
+  "prop_vision": "Vision radius:",
+  "prop_enemytype": "Enemy type:",
+  "prop_interval": "Interval (s):",
+  "prop_maxenemies": "Max alive enemies:",
+  "prop_halfextents_x": "HalfExtents X:",
+  "prop_halfextents_z": "HalfExtents Z:",
+  "prop_width": "Width:",
+  "prop_height": "Height:",
+  "prop_length": "Length:",
+  "prop_radius": "Radius:",
+  "prop_damagepertick": "Damage per tick:",
+
+  "msg_no_enemy_title": "No enemy selected",
+  "msg_no_enemy_body": "Please select an enemy first (with the 'Select / Edit' tool) to add patrol points.\n\nLeft click: adds a point. Right click: removes the nearest one.",
+
+  "msg_unsaved_title": "Unsaved changes",
+  "msg_unsaved_body": "There are unexported changes in the current level. Opening another level will lose them.\n\nContinue anyway?",
+
+  "dialog_open_title": "Open C++ engine level",
+  "dialog_json_filter": "JSON files (*.json)|*.json|All files (*.*)|*.*",
+
+  "error_title": "Error",
+  "msg_open_error_body": "Could not open the level:\n{0}",
+
+  "msg_missing_player_title": "Missing player",
+  "msg_missing_player_body": "Place the player before exporting (\"Place Player\" tool).",
+
+  "dialog_save_title": "Save C++ engine level",
+
+  "msg_export_success_title": "Export complete",
+  "msg_export_success_body": "Level exported to:\n{0}",
+  "msg_export_error_body": "Could not export the level:\n{0}",
+
+  "status_player": "Player: {0}",
+  "status_player_placed": "placed",
+  "status_player_unplaced": "not placed",
+  "status_enemies": "Enemies: {0}",
+  "status_spawners": "Spawners: {0}",
+  "status_obstacles": "Obstacles: {0}",
+  "status_gears": "Gears: {0}",
+  "status_healthkits": "Health kits: {0}",
+  "status_barrels": "Barrels: {0}",
+  "status_hazards": "Hazards: {0}",
+  "status_door": "Door: {0}",
+  "status_door_placed": "placed",
+  "status_door_unplaced": "not placed"
+}

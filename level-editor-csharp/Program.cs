@@ -1,5 +1,7 @@
 using System;
 using System.Windows.Forms;
+using LevelEditor.Core;
+using LevelEditor.Localization;
 
 namespace LevelEditor
 {
@@ -8,6 +10,7 @@ namespace LevelEditor
         [STAThread]
         static void Main()
         {
+                LocalizationManager.LoadAll(EditorSettings.Load().Language);
                 ApplicationConfiguration.Initialize();
                 Application.Run(new MainForm());
         }

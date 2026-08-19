@@ -1,0 +1,47 @@
+{
+  "menu_title": "THE MECHANIC'S APPRENTICE",
+  "menu_story": "Story Mode",
+  "menu_endless": "Endless Mode",
+  "menu_options": "Options",
+  "menu_stats": "Statistics",
+  "menu_quit": "Quit",
+
+  "options_title": "OPTIONS",
+  "options_volume": "Volume",
+  "options_language": "Language",
+  "options_controls": "Controls",
+  "options_back": "Back",
+
+  "controls_title": "CONTROLS",
+  "controls_column_kb": "Keyboard",
+  "controls_column_pad": "Gamepad",
+  "controls_back": "Back",
+  "ctrl_move": "Move",
+  "ctrl_move_kb": "WASD / Arrows",
+  "ctrl_move_pad": "Left Stick",
+  "ctrl_attack": "Attack",
+  "ctrl_attack_kb": "Space",
+  "ctrl_attack_pad": "A Button",
+  "ctrl_dash": "Dash",
+  "ctrl_dash_kb": "Shift",
+  "ctrl_dash_pad": "RB / B Button",
+
+  "levelselect_title": "SELECT LEVEL",
+  "level_label": "LEVEL",
+  "levelselect_back": "Back",
+
+  "stats_title": "STATISTICS",
+  "stats_highscore": "High Score",
+  "stats_zombies": "Zombies Killed",
+  "stats_barrels": "Barrels Exploded",
+  "stats_healthkits": "Health Kits Used",
+  "stats_maxlevel": "Max Level Unlocked",
+  "stats_back": "Back",
+
+  "hud_gears": "Gears",
+  "gameover_title": "GAME OVER",
+  "gameover_retry": "Press R to retry",
+  "gameover_menu": "Press R to return to menu",
+  "victory_title": "VICTORY",
+  "victory_continue": "Press R to continue"
+}

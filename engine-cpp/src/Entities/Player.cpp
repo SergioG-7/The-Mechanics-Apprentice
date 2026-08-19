@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "../Combat/CollisionMath.h"
+#include "../Combat/CombatSystem.h"
 #include "../Renderer/ModelUtils.h"
 #include "raylib.h"
 #include <iostream>
@@ -28,21 +29,15 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
 }
 
 Player::~Player() {
-    ModelUtils::UnloadOwnTextures(m_model);
-    ModelUtils::UnloadOwnTextures(m_weaponModel);
-    UnloadModel(m_model);
-    UnloadModel(m_weaponModel);
+    ModelUtils::UnloadModelAndTextures(m_model);
+    ModelUtils::UnloadModelAndTextures(m_weaponModel);
     if (m_attackSound.frameCount > 0) UnloadSound(m_attackSound);
     if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
 }
 
 void Player::SetShader(Shader shader) {
-    for (int i = 0; i < m_model.materialCount; i++) {
-        m_model.materials[i].shader = shader;
-    }
-    for (int i = 0; i < m_weaponModel.materialCount; i++) {
-        m_weaponModel.materials[i].shader = shader;
-    }
+    ModelUtils::ApplyShaderToMaterials(m_model, shader);
+    ModelUtils::ApplyShaderToMaterials(m_weaponModel, shader);
 }
 
 void Player::SetupStates() {
@@ -78,6 +73,20 @@ Vector3 Player::ReadMovementInput() const {
     if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))  dir.z += 1.0f;
     if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  dir.x -= 1.0f;
     if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) dir.x += 1.0f;
+
+    // Mando: se fusiona con el teclado, no lo sustituye (jugar con los dos a
+    // la vez no se rompe -- solo se suma). Deadzone para no arrastrar drift
+    // de un stick mal centrado como si fuera input real. La magnitud
+    // combinada puede superar 1 si se usan ambos a la vez, pero da igual:
+    // UpdateRun normaliza el resultado, solo le importa la dirección.
+    if (IsGamepadAvailable(0)) {
+        constexpr float kDeadzone = 0.25f;
+        float axisX = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+        float axisY = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+        if (fabsf(axisX) > kDeadzone) dir.x += axisX;
+        if (fabsf(axisY) > kDeadzone) dir.z += axisY;
+    }
+
     return dir;
 }
 
@@ -96,8 +105,16 @@ void Player::UpdateRun(float dt) {
         return;
     }
 
-    if (IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)) {
-        m_dashCooldown = 1.0f;
+    bool gamepadReady = IsGamepadAvailable(0);
+
+    bool dashPressed = IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)
+        || (gamepadReady && (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_1)
+                              || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)));
+    // !IsActive(): el cooldown se fijaba pero nunca se comprobaba -- se podía
+    // encadenar un dash tras otro tan rápido como el jugador pulsase la
+    // tecla, sin ningún respiro real entre ellos.
+    if (dashPressed && !m_dashCooldownTimer.IsActive()) {
+        m_dashCooldownTimer.Start(kDashCooldownDuration);
         m_fsm.ChangeState(PlayerState::Dash);
         return;
     }
@@ -107,7 +124,9 @@ void Player::UpdateRun(float dt) {
 
     TryMoveAgainstObstacles(Vector3{ dir.x * m_moveSpeed * dt, 0.0f, dir.z * m_moveSpeed * dt });
 
-    if (IsKeyPressed(KEY_SPACE)) {
+    bool attackPressed = IsKeyPressed(KEY_SPACE)
+        || (gamepadReady && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
+    if (attackPressed) {
         m_fsm.ChangeState(PlayerState::Attack);
     }
 }
@@ -145,23 +164,7 @@ Hitbox Player::SpawnAttackHitbox() const {
     // ~1.0 -- apenas empujaba). kKnockbackForce en unidades/seg de impulso
     // inicial; Actor::ApplyKnockback ya lo frena con drag.
     constexpr float kKnockbackForce = 6.0f;
-
-    Vector3 center{
-        m_position.x + m_facingDirection.x * 1.0f,
-        m_position.y,
-        m_position.z + m_facingDirection.z * 1.0f
-    };
-    Vector3 halfExtents{ 0.5f, 0.5f, 0.5f };
-
-    Hitbox hitbox;
-    hitbox.box = BoundingBox{
-        Vector3{ center.x - halfExtents.x, center.y - halfExtents.y, center.z - halfExtents.z },
-        Vector3{ center.x + halfExtents.x, center.y + halfExtents.y, center.z + halfExtents.z }
-    };
-    hitbox.damage = m_attackDamage;
-    hitbox.knockbackDir = Vector3{ m_facingDirection.x * kKnockbackForce, 0.0f, m_facingDirection.z * kKnockbackForce };
-    hitbox.remainingTime = 0.15f;
-    return hitbox;
+    return CombatSystem::BuildMeleeHitbox(m_position, m_facingDirection, m_attackDamage, kKnockbackForce);
 }
 
 void Player::UpdateAttack(float dt) {
@@ -190,12 +193,8 @@ void Player::UpdateHurt(float dt) {
 }
 
 void Player::Update(float dt) {
-    if (m_dashCooldown > 0.0f) {
-        m_dashCooldown -= dt;
-    }
-    if (m_damageFlashTimer > 0.0f) {
-        m_damageFlashTimer -= dt;
-    }
+    m_dashCooldownTimer.Tick(dt);
+    m_damageFlashTimer.Tick(dt);
     ApplyKnockback(dt);
     m_fsm.Update(dt);
 }
@@ -216,7 +215,7 @@ void Player::Draw() const {
 
     // Hit-flash: destello breve por encima del tinte de estado -- ver el
     // mismo mecanismo en Enemy::Draw.
-    if (m_damageFlashTimer > 0.0f) {
+    if (m_damageFlashTimer.IsActive()) {
         tint = WHITE;
     }
 
@@ -224,7 +223,11 @@ void Player::Draw() const {
     // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
     DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f, 0.6f, 0.01f, 15, Color{ 0, 0, 0, 100 });
 
-    DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
+    // Outline estilo anime ("inverted hull") -- ver ModelUtils::DrawModelWithOutline.
+    // Negro puro (sin depender de la iluminación del shader: negro × cualquier
+    // color = negro) y con el mismo alpha que el cuerpo, para que no quede un
+    // borde sólido si el cuerpo se desvanece.
+    ModelUtils::DrawModelWithOutline(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
     if (m_fsm.Is(PlayerState::Attack)) {
         DrawWeapon(rotationAngle);
@@ -258,7 +261,7 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {
     Actor::TakeDamage(amount, knockbackDir);
-    m_damageFlashTimer = kDamageFlashDuration;
+    m_damageFlashTimer.Start(kDamageFlashDuration);
     if (IsAlive()) m_fsm.ChangeState(PlayerState::Hurt);
 }
 

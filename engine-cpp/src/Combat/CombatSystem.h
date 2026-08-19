@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "Hitbox.h"
 #include "Projectile.h"
 #include <vector>
 #include <memory>
@@ -8,6 +9,7 @@
 class Player;
 class Enemy;
 class ExplosiveBarrel;
+class Hazard;
 
 // Resultado de un golpe conectado: el punto de impacto (juice) y un puntero
 // no propietario al Enemy golpeado (para que Application pueda mirar si
@@ -20,6 +22,13 @@ struct MeleeHitResult {
 
 class CombatSystem {
 public:
+    // Caja de golpe cuerpo a cuerpo centrada 'reach' unidades por delante de
+    // origin, en la dirección 'direction' (normalizada) -- Player y Enemy
+    // construían la misma BoundingBox campo a campo, solo cambiaban origen,
+    // dirección, daño y fuerza de empuje.
+    static Hitbox BuildMeleeHitbox(Vector3 origin, Vector3 direction, float damage, float knockbackForce,
+                                    float reach = 1.0f, float halfExtent = 0.5f, float duration = 0.15f);
+
     // Devuelve el resultado del golpe si conecta, o std::nullopt si no había
     // hitbox activa o no golpeó a nadie -- Application lo usa para disparar
     // el juice (hit-stop, shake, chispas) sin que CombatSystem necesite
@@ -48,4 +57,12 @@ public:
     // Mueve cada proyectil, comprueba impacto contra el Player y descarta
     // (erase-remove) los que impactan o expiran por tiempo de vida.
     static void UpdateProjectiles(float dt, std::vector<Projectile>& projectiles, Player& player);
+
+    // Un hazard no bloquea el paso (no vive en obstacles), así que a
+    // diferencia del resto de combate esto no se dispara por colisión de
+    // movimiento: se prueba una vez por frame contra todo lo que siga dentro
+    // de su AABB cuando toca tick (ver Hazard::ConsumeTick). Empuja con un
+    // knockback suave hacia afuera del centro -- mismo patrón que ApplyAreaDamage.
+    static void ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazards, Player& player,
+                                   std::vector<std::unique_ptr<Enemy>>& enemies);
 };

@@ -39,6 +39,8 @@ add_executable(${PROJECT_NAME}
     src/Entities/Player.cpp
     src/Entities/Enemy.cpp
     src/Entities/Obstacle.cpp
+    src/Entities/Cylinder.cpp
+    src/Entities/Hazard.cpp
     src/Entities/Gear.cpp
     src/Entities/Door.cpp
     src/Entities/EnemyFactory.cpp
@@ -46,8 +48,12 @@ add_executable(${PROJECT_NAME}
     src/VFX/ParticleSystem.cpp
     src/Core/EndlessDirector.cpp
     src/UI/MenuScreen.cpp
+    src/UI/HudRenderer.cpp
     src/Entities/HealthKit.cpp
     src/Entities/ExplosiveBarrel.cpp
+    src/Core/SaveManager.cpp
+    src/Core/LocalizationManager.cpp
+    src/Audio/MusicController.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)

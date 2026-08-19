@@ -1,5 +1,6 @@
 #include "Enemy.h"
 #include "../Combat/CollisionMath.h"
+#include "../Combat/CombatSystem.h"
 #include "../Renderer/ModelUtils.h"
 #include "raylib.h"
 #include <iostream>
@@ -21,8 +22,7 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
 }
 
 Enemy::~Enemy() {
-    ModelUtils::UnloadOwnTextures(m_model);
-    UnloadModel(m_model);
+    ModelUtils::UnloadModelAndTextures(m_model);
     if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
 }
 
@@ -130,15 +130,19 @@ void Enemy::UpdateChase(float dt) {
         return;
     }
 
-    Vector3 toPlayer{
-        m_lastKnownPlayerPosition.x - m_position.x, 0.0f,
-        m_lastKnownPlayerPosition.z - m_position.z
-    };
-    Vector3 dir = CollisionMath::Normalize2D(toPlayer);
+    Vector3 dir = DirectionToLastKnownPlayer();
 
     m_facingDirection = dir;
 
     TryMoveAgainstObstacles(Vector3{ dir.x * m_speed * dt, 0.0f, dir.z * m_speed * dt });
+}
+
+Vector3 Enemy::DirectionToLastKnownPlayer() const {
+    Vector3 toPlayer{
+        m_lastKnownPlayerPosition.x - m_position.x, 0.0f,
+        m_lastKnownPlayerPosition.z - m_position.z
+    };
+    return CollisionMath::Normalize2D(toPlayer);
 }
 
 void Enemy::EnterAttack() {
@@ -151,25 +155,7 @@ Hitbox Enemy::SpawnAttackHitbox() const {
     // Subido de 6.0f: da al jugador más distancia tras un golpe, con margen
     // real para reaccionar con el Dash en vez de quedar pegado al enemigo.
     constexpr float kKnockbackForce = 9.0f;
-
-    Vector3 toPlayer{
-        m_lastKnownPlayerPosition.x - m_position.x, 0.0f,
-        m_lastKnownPlayerPosition.z - m_position.z
-    };
-    Vector3 dir = CollisionMath::Normalize2D(toPlayer);
-
-    Vector3 center{ m_position.x + dir.x * 1.0f, m_position.y, m_position.z + dir.z * 1.0f };
-    Vector3 halfExtents{ 0.5f, 0.5f, 0.5f };
-
-    Hitbox hitbox;
-    hitbox.box = BoundingBox{
-        Vector3{ center.x - halfExtents.x, center.y - halfExtents.y, center.z - halfExtents.z },
-        Vector3{ center.x + halfExtents.x, center.y + halfExtents.y, center.z + halfExtents.z }
-    };
-    hitbox.damage = m_attackDamage;
-    hitbox.knockbackDir = Vector3{ dir.x * kKnockbackForce, 0.0f, dir.z * kKnockbackForce };
-    hitbox.remainingTime = 0.15f;
-    return hitbox;
+    return CombatSystem::BuildMeleeHitbox(m_position, DirectionToLastKnownPlayer(), m_attackDamage, kKnockbackForce);
 }
 
 void Enemy::UpdateAttack(float dt) {
@@ -196,11 +182,7 @@ void Enemy::UpdateAttackRanged(float dt) {
     // TryMoveAgainstObstacles -- solo gira hacia el jugador y dispara. No
     // retrocede si el jugador se acerca demasiado (simplificación deliberada:
     // un Spitter arrinconado sigue disparando en vez de huir).
-    Vector3 toPlayer{
-        m_lastKnownPlayerPosition.x - m_position.x, 0.0f,
-        m_lastKnownPlayerPosition.z - m_position.z
-    };
-    m_facingDirection = CollisionMath::Normalize2D(toPlayer);
+    m_facingDirection = DirectionToLastKnownPlayer();
 
     m_attackCooldown -= dt;
     if (m_attackCooldown <= 0.0f) {
@@ -263,7 +245,7 @@ void Enemy::UpdateDead(float dt) {
 }
 
 void Enemy::Update(float dt) {
-    if (m_damageFlashTimer > 0.0f) m_damageFlashTimer -= dt;
+    m_damageFlashTimer.Tick(dt);
     ApplyKnockback(dt);
     m_fsm.Update(dt);
 }
@@ -312,7 +294,7 @@ void Enemy::Draw() const {
     // Hit-flash: destello breve de impacto, independiente del tinte de
     // estado de arriba (incluida la propia muerte) -- por eso se aplica el
     // último y sin "else", manda sobre cualquier cosa durante sus 0.1s.
-    if (m_damageFlashTimer > 0.0f) {
+    if (m_damageFlashTimer.IsActive()) {
         tint = WHITE;
     }
 
@@ -320,13 +302,16 @@ void Enemy::Draw() const {
     // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
     DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f * m_scale, 0.6f * m_scale, 0.01f, 15, Color{ 0, 0, 0, shadowAlpha });
 
-    DrawModelEx(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
+    // Outline estilo anime ("inverted hull"), igual que Player::Draw -- ver
+    // ModelUtils::DrawModelWithOutline. Negro puro con el mismo alpha que el
+    // cuerpo para que se desvanezca a la par durante el fade del cadáver.
+    ModelUtils::DrawModelWithOutline(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 }
 
 void Enemy::TakeDamage(float amount, Vector3 knockbackDir) {
     if (!IsAlive()) return;
     Actor::TakeDamage(amount, knockbackDir);
-    m_damageFlashTimer = kDamageFlashDuration;
+    m_damageFlashTimer.Start(kDamageFlashDuration);
     m_fsm.ChangeState(IsAlive() ? EnemyState::Hurt : EnemyState::Dead);
 }
 
@@ -357,7 +342,5 @@ bool Enemy::ConsumeExplosionTrigger() {
 }
 
 void Enemy::SetShader(Shader shader) {
-    for (int i = 0; i < m_model.materialCount; i++) {
-        m_model.materials[i].shader = shader;
-    }
+    ModelUtils::ApplyShaderToMaterials(m_model, shader);
 }

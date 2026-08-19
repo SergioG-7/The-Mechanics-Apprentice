@@ -3,7 +3,23 @@
 #include "../Entities/Player.h"
 #include "../Entities/Enemy.h"
 #include "../Entities/ExplosiveBarrel.h"
+#include "../Entities/Hazard.h"
 #include <algorithm>
+
+Hitbox CombatSystem::BuildMeleeHitbox(Vector3 origin, Vector3 direction, float damage, float knockbackForce,
+                                       float reach, float halfExtent, float duration) {
+    Vector3 center{ origin.x + direction.x * reach, origin.y, origin.z + direction.z * reach };
+
+    Hitbox hitbox;
+    hitbox.box = BoundingBox{
+        Vector3{ center.x - halfExtent, center.y - halfExtent, center.z - halfExtent },
+        Vector3{ center.x + halfExtent, center.y + halfExtent, center.z + halfExtent }
+    };
+    hitbox.damage = damage;
+    hitbox.knockbackDir = Vector3{ direction.x * knockbackForce, 0.0f, direction.z * knockbackForce };
+    hitbox.remainingTime = duration;
+    return hitbox;
+}
 
 std::optional<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std::vector<std::unique_ptr<Enemy>>& enemies) {
     const Hitbox* hitbox = player.GetActiveHitbox();
@@ -101,4 +117,28 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
         std::remove_if(projectiles.begin(), projectiles.end(),
                         [](const Projectile& p) { return p.lifetime <= 0.0f; }),
         projectiles.end());
+}
+
+void CombatSystem::ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazards, Player& player,
+                                      std::vector<std::unique_ptr<Enemy>>& enemies) {
+    constexpr float kHazardKnockbackForce = 3.0f;
+
+    for (auto& hazard : hazards) {
+        if (!hazard->ConsumeTick()) continue;
+
+        if (CollisionMath::AABBIntersects(player.GetBoundingBox(), hazard->GetBoundingBox())) {
+            Vector3 dir = CollisionMath::Normalize2D(Vector3{
+                player.GetPosition().x - hazard->GetPosition().x, 0.0f, player.GetPosition().z - hazard->GetPosition().z });
+            player.TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
+        }
+
+        for (auto& enemy : enemies) {
+            if (!enemy->IsAlive()) continue;
+            if (!CollisionMath::AABBIntersects(enemy->GetBoundingBox(), hazard->GetBoundingBox())) continue;
+
+            Vector3 dir = CollisionMath::Normalize2D(Vector3{
+                enemy->GetPosition().x - hazard->GetPosition().x, 0.0f, enemy->GetPosition().z - hazard->GetPosition().z });
+            enemy->TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
+        }
+    }
 }

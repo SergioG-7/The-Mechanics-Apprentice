@@ -1,0 +1,47 @@
+{
+  "menu_title": "THE MECHANIC'S APPRENTICE",
+  "menu_story": "ストーリーモード",
+  "menu_endless": "エンドレスモード",
+  "menu_options": "オプション",
+  "menu_stats": "統計",
+  "menu_quit": "終了",
+
+  "options_title": "オプション",
+  "options_volume": "音量",
+  "options_language": "言語",
+  "options_controls": "操作方法",
+  "options_back": "戻る",
+
+  "controls_title": "操作方法",
+  "controls_column_kb": "キーボード",
+  "controls_column_pad": "ゲームパッド",
+  "controls_back": "戻る",
+  "ctrl_move": "移動",
+  "ctrl_move_kb": "WASD / 矢印キー",
+  "ctrl_move_pad": "左スティック",
+  "ctrl_attack": "攻撃",
+  "ctrl_attack_kb": "スペース",
+  "ctrl_attack_pad": "Aボタン",
+  "ctrl_dash": "ダッシュ",
+  "ctrl_dash_kb": "シフト",
+  "ctrl_dash_pad": "RB / Bボタン",
+
+  "levelselect_title": "レベル選択",
+  "level_label": "レベル",
+  "levelselect_back": "戻る",
+
+  "stats_title": "統計",
+  "stats_highscore": "ハイスコア",
+  "stats_zombies": "倒したゾンビ数",
+  "stats_barrels": "爆発させた樽の数",
+  "stats_healthkits": "使用した回復キットの数",
+  "stats_maxlevel": "解放した最大レベル",
+  "stats_back": "戻る",
+
+  "hud_gears": "歯車",
+  "gameover_title": "ゲームオーバー",
+  "gameover_retry": "Rキーでリトライ",
+  "gameover_menu": "Rキーでメニューに戻る",
+  "victory_title": "勝利",
+  "victory_continue": "Rキーで続ける"
+}

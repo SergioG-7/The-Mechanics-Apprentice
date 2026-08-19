@@ -1,0 +1,82 @@
+{
+  "tab_entities": "Entidades",
+  "tab_objects": "Objetos",
+  "tab_system": "Sistema",
+
+  "tool_place_player": "Colocar Jugador",
+  "tool_place_enemy": "Colocar Enemigo",
+  "tool_place_obstacle": "Colocar Obstáculo",
+  "tool_place_cylinder": "Colocar Pilar",
+  "tool_place_hazard": "Colocar Trampa",
+  "tool_place_door": "Colocar Puerta",
+  "tool_place_gear": "Colocar Engranaje",
+  "tool_place_healthkit": "Colocar Cura",
+  "tool_place_barrel": "Colocar Barril",
+  "tool_place_spawner": "Colocar Spawner",
+  "tool_define_patrol": "Definir Patrulla",
+  "tool_select": "Seleccionar / Editar",
+
+  "group_edit": "Edición",
+  "group_variant": "Variante de enemigo",
+  "group_properties": "Propiedades",
+  "group_language": "Idioma",
+
+  "hint_delete": "Click derecho: borrar entidad\n(o punto de patrulla más cercano)",
+
+  "btn_open": "Abrir Nivel",
+  "btn_export": "Exportar Nivel",
+
+  "title_app": "LEVEL-5 Portfolio - Editor de Niveles",
+  "title_unsaved": "sin guardar",
+
+  "prop_hp": "HP máximo:",
+  "prop_speed": "Velocidad:",
+  "prop_damage": "Daño de ataque:",
+  "prop_type": "Tipo:",
+  "prop_vision": "Radio de visión:",
+  "prop_enemytype": "Tipo de enemigo:",
+  "prop_interval": "Intervalo (s):",
+  "prop_maxenemies": "Máx. enemigos vivos:",
+  "prop_halfextents_x": "HalfExtents X:",
+  "prop_halfextents_z": "HalfExtents Z:",
+  "prop_width": "Ancho:",
+  "prop_height": "Alto:",
+  "prop_length": "Largo:",
+  "prop_radius": "Radio:",
+  "prop_damagepertick": "Daño por tick:",
+
+  "msg_no_enemy_title": "Sin enemigo seleccionado",
+  "msg_no_enemy_body": "Por favor, selecciona primero un enemigo (con la herramienta 'Seleccionar / Editar') para añadirle puntos de patrulla.\n\nClick izquierdo: añade un punto. Click derecho: quita el punto más cercano.",
+
+  "msg_unsaved_title": "Cambios sin guardar",
+  "msg_unsaved_body": "Hay cambios sin exportar en el nivel actual. Si abres otro nivel se perderán.\n\n¿Continuar de todas formas?",
+
+  "dialog_open_title": "Abrir nivel del motor C++",
+  "dialog_json_filter": "Archivos JSON (*.json)|*.json|Todos los archivos (*.*)|*.*",
+
+  "error_title": "Error",
+  "msg_open_error_body": "No se pudo abrir el nivel:\n{0}",
+
+  "msg_missing_player_title": "Falta el jugador",
+  "msg_missing_player_body": "Coloca al jugador antes de exportar (herramienta \"Colocar Jugador\").",
+
+  "dialog_save_title": "Guardar nivel del motor C++",
+
+  "msg_export_success_title": "Exportación completada",
+  "msg_export_success_body": "Nivel exportado a:\n{0}",
+  "msg_export_error_body": "No se pudo exportar el nivel:\n{0}",
+
+  "status_player": "Jugador: {0}",
+  "status_player_placed": "colocado",
+  "status_player_unplaced": "sin colocar",
+  "status_enemies": "Enemigos: {0}",
+  "status_spawners": "Spawners: {0}",
+  "status_obstacles": "Obstáculos: {0}",
+  "status_gears": "Engranajes: {0}",
+  "status_healthkits": "Curas: {0}",
+  "status_barrels": "Barriles: {0}",
+  "status_hazards": "Trampas: {0}",
+  "status_door": "Puerta: {0}",
+  "status_door_placed": "colocada",
+  "status_door_unplaced": "sin colocar"
+}

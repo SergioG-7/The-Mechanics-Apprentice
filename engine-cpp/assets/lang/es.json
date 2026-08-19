@@ -1,0 +1,47 @@
+{
+  "menu_title": "THE MECHANIC'S APPRENTICE",
+  "menu_story": "Modo Historia",
+  "menu_endless": "Modo Infinito",
+  "menu_options": "Opciones",
+  "menu_stats": "Estadísticas",
+  "menu_quit": "Salir",
+
+  "options_title": "OPCIONES",
+  "options_volume": "Volumen",
+  "options_language": "Idioma",
+  "options_controls": "Controles",
+  "options_back": "Volver",
+
+  "controls_title": "CONTROLES",
+  "controls_column_kb": "Teclado",
+  "controls_column_pad": "Mando",
+  "controls_back": "Volver",
+  "ctrl_move": "Moverse",
+  "ctrl_move_kb": "WASD / Flechas",
+  "ctrl_move_pad": "Stick Izquierdo",
+  "ctrl_attack": "Atacar",
+  "ctrl_attack_kb": "Espacio",
+  "ctrl_attack_pad": "Botón A",
+  "ctrl_dash": "Esquivar",
+  "ctrl_dash_kb": "Shift",
+  "ctrl_dash_pad": "RB / Botón B",
+
+  "levelselect_title": "SELECCIONA NIVEL",
+  "level_label": "NIVEL",
+  "levelselect_back": "Volver",
+
+  "stats_title": "ESTADÍSTICAS",
+  "stats_highscore": "Puntuación máxima",
+  "stats_zombies": "Zombis eliminados",
+  "stats_barrels": "Barriles explotados",
+  "stats_healthkits": "Botiquines usados",
+  "stats_maxlevel": "Nivel máximo desbloqueado",
+  "stats_back": "Volver",
+
+  "hud_gears": "Engranajes",
+  "gameover_title": "GAME OVER",
+  "gameover_retry": "Pulsa R para reintentar",
+  "gameover_menu": "Pulsa R para volver al menú",
+  "victory_title": "VICTORIA",
+  "victory_continue": "Pulsa R para continuar"
+}
