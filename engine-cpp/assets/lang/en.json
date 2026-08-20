@@ -1,16 +1,24 @@
 {
+  "language_name": "English",
+
   "menu_title": "THE MECHANIC'S APPRENTICE",
   "menu_story": "Story Mode",
   "menu_endless": "Endless Mode",
   "menu_options": "Options",
   "menu_stats": "Statistics",
+  "menu_editor": "Level Editor",
   "menu_quit": "Quit",
 
   "options_title": "OPTIONS",
-  "options_volume": "Volume",
+  "options_volume_bgm": "Music",
+  "options_volume_sfx": "Sound Effects",
   "options_language": "Language",
   "options_controls": "Controls",
   "options_back": "Back",
+
+  "pause_title": "PAUSED",
+  "pause_resume": "Resume",
+  "pause_exit": "Exit to Main Menu",
 
   "controls_title": "CONTROLS",
   "controls_column_kb": "Keyboard",
@@ -25,10 +33,21 @@
   "ctrl_dash": "Dash",
   "ctrl_dash_kb": "Shift",
   "ctrl_dash_pad": "RB / B Button",
+  "ctrl_pause": "Pause/Back",
+  "ctrl_pause_kb": "ESC",
+  "ctrl_pause_pad": "Start Button",
+  "ctrl_retry": "Retry",
+  "ctrl_retry_kb": "R",
+  "ctrl_retry_pad": "Select Button",
 
   "levelselect_title": "SELECT LEVEL",
   "level_label": "LEVEL",
+  "levelselect_prev": "< Previous",
+  "levelselect_next": "Next >",
   "levelselect_back": "Back",
+
+  "ready_title": "GET READY!",
+  "ready_subtitle": "Press ATTACK to start",
 
   "stats_title": "STATISTICS",
   "stats_highscore": "High Score",
@@ -38,6 +57,7 @@
   "stats_maxlevel": "Max Level Unlocked",
   "stats_back": "Back",
 
+  "hud_hp": "Health",
   "hud_gears": "Gears",
   "gameover_title": "GAME OVER",
   "gameover_retry": "Press R to retry",

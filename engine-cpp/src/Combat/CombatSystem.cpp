@@ -1,5 +1,6 @@
 #include "CombatSystem.h"
 #include "CollisionMath.h"
+#include "../Entities/Entity.h"
 #include "../Entities/Player.h"
 #include "../Entities/Enemy.h"
 #include "../Entities/ExplosiveBarrel.h"
@@ -21,25 +22,49 @@ Hitbox CombatSystem::BuildMeleeHitbox(Vector3 origin, Vector3 direction, float d
     return hitbox;
 }
 
-std::optional<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std::vector<std::unique_ptr<Enemy>>& enemies) {
+std::vector<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std::vector<std::unique_ptr<Enemy>>& enemies,
+                                                               const std::vector<std::unique_ptr<Entity>>& obstacles) {
+    std::vector<MeleeHitResult> hits;
+
     const Hitbox* hitbox = player.GetActiveHitbox();
-    if (!hitbox) return std::nullopt;
+    if (!hitbox) return hits;
 
-    // Un solo enemigo por golpe: para en el primer solape de la lista
-    // (orden de spawn, no distancia), no reparte daño en área.
+    Vector3 origin = player.GetPosition();
+
+    // Cleave: recorre TODOS los enemigos, sin cortar en el primer solape --
+    // antes paraba ahí (orden de spawn, no distancia) y el resto de
+    // enemigos dentro del área de ataque quedaban intactos.
     for (auto& enemy : enemies) {
-        if (enemy->IsAlive() && CollisionMath::AABBIntersects(enemy->GetBoundingBox(), hitbox->box)) {
-            enemy->TakeDamage(hitbox->damage, hitbox->knockbackDir);
-            player.CloseAttackHitbox();
+        if (!enemy->IsAlive() || !CollisionMath::AABBIntersects(enemy->GetBoundingBox(), hitbox->box)) continue;
 
-            MeleeHitResult result;
-            result.impactPoint = enemy->GetPosition();
-            result.impactPoint.y += 1.0f; // altura de pecho, mismo offset que la barra de HP flotante del HUD
-            result.hitEnemy = enemy.get();
-            return result;
+        // Línea de visión: un Obstacle entre el jugador y ESTE enemigo
+        // descarta el golpe solo para él -- el resto del cleave sigue
+        // aplicándose con normalidad a quien sí tenga línea libre.
+        bool blocked = false;
+        for (const auto& obstacle : obstacles) {
+            if (CollisionMath::SegmentIntersectsBoxXZ(origin, enemy->GetPosition(), obstacle->GetBoundingBox())) {
+                blocked = true;
+                break;
+            }
         }
+        if (blocked) continue;
+
+        enemy->TakeDamage(hitbox->damage, hitbox->knockbackDir);
+
+        MeleeHitResult result;
+        result.impactPoint = enemy->GetPosition();
+        result.impactPoint.y += 1.0f; // altura de pecho, mismo offset que la barra de HP flotante del HUD
+        result.hitEnemy = enemy.get();
+        hits.push_back(result);
     }
-    return std::nullopt;
+
+    // La hitbox se cierra una sola vez, tras procesar a todos -- es el mismo
+    // swing, no uno por enemigo golpeado. Si no golpeó a nadie, se deja
+    // abierta para que siga probando en los frames siguientes hasta que
+    // expire por tiempo (ver Hitbox::remainingTime).
+    if (!hits.empty()) player.CloseAttackHitbox();
+
+    return hits;
 }
 
 std::optional<Vector3> CombatSystem::ResolveMeleeAttackOnBarrels(Player& player, std::vector<std::unique_ptr<ExplosiveBarrel>>& barrels) {
@@ -71,7 +96,8 @@ void CombatSystem::ResolveEnemyAttacks(Player& player, std::vector<std::unique_p
 }
 
 void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, Player& player,
-                                    std::vector<std::unique_ptr<Enemy>>& enemies) {
+                                    std::vector<std::unique_ptr<Enemy>>& enemies,
+                                    std::vector<std::unique_ptr<ExplosiveBarrel>>& barrels) {
     constexpr float kAreaKnockbackForce = 7.0f;
 
     if (CollisionMath::IsWithinRadius(player.GetPosition(), center, radius)) {
@@ -90,9 +116,23 @@ void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, P
             enemy->GetPosition().x - center.x, 0.0f, enemy->GetPosition().z - center.z });
         enemy->TakeDamage(damage, Vector3{ dir.x * kAreaKnockbackForce, 0.0f, dir.z * kAreaKnockbackForce });
     }
+
+    // Mismo criterio que con los Enemy: un barril ya explotado (incluido el
+    // propio emisor, si esta llamada viene de su propia explosión) no puede
+    // volver a recibir daño -- HasExploded() es una puerta de una sola vía.
+    for (auto& barrel : barrels) {
+        if (barrel->HasExploded()) continue;
+        if (!CollisionMath::IsWithinRadius(barrel->GetPosition(), center, radius)) continue;
+
+        Vector3 dir = CollisionMath::Normalize2D(Vector3{
+            barrel->GetPosition().x - center.x, 0.0f, barrel->GetPosition().z - center.z });
+        barrel->TakeDamage(damage, Vector3{ dir.x * kAreaKnockbackForce, 0.0f, dir.z * kAreaKnockbackForce });
+    }
 }
 
-void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projectiles, Player& player) {
+void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projectiles, Player& player,
+                                      const std::vector<std::unique_ptr<Entity>>& obstacles,
+                                      std::vector<std::unique_ptr<ExplosiveBarrel>>& barrels) {
     constexpr float kProjectileKnockbackForce = 4.0f;
 
     for (Projectile& projectile : projectiles) {
@@ -106,7 +146,34 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
             Vector3{ projectile.position.x + Projectile::kRadius, projectile.position.y + Projectile::kRadius, projectile.position.z + Projectile::kRadius }
         };
 
-        if (CollisionMath::AABBIntersects(projectileBox, player.GetBoundingBox())) {
+        // Contra un obstáculo primero: se destruye sin atravesarlo ni dañar
+        // a lo que pueda estar cubierto detrás.
+        bool hitObstacle = false;
+        for (const auto& obstacle : obstacles) {
+            if (CollisionMath::AABBIntersects(projectileBox, obstacle->GetBoundingBox())) {
+                hitObstacle = true;
+                break;
+            }
+        }
+
+        // Contra un barril, solo si no hubo obstáculo antes: aplica daño de
+        // verdad (no solo destruye el proyectil) para que un Spitter pueda
+        // encadenar la explosión de un barril cercano.
+        bool hitBarrel = false;
+        if (!hitObstacle) {
+            for (auto& barrel : barrels) {
+                if (!barrel->HasExploded() && CollisionMath::AABBIntersects(projectileBox, barrel->GetBoundingBox())) {
+                    Vector3 dir = CollisionMath::Normalize2D(projectile.velocity);
+                    barrel->TakeDamage(projectile.damage, Vector3{ dir.x * kProjectileKnockbackForce, 0.0f, dir.z * kProjectileKnockbackForce });
+                    hitBarrel = true;
+                    break;
+                }
+            }
+        }
+
+        if (hitObstacle || hitBarrel) {
+            projectile.lifetime = 0.0f;
+        } else if (CollisionMath::AABBIntersects(projectileBox, player.GetBoundingBox())) {
             Vector3 dir = CollisionMath::Normalize2D(projectile.velocity);
             player.TakeDamage(projectile.damage, Vector3{ dir.x * kProjectileKnockbackForce, 0.0f, dir.z * kProjectileKnockbackForce });
             projectile.lifetime = 0.0f; // marca para el erase-remove de abajo
@@ -119,26 +186,15 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
         projectiles.end());
 }
 
-void CombatSystem::ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazards, Player& player,
-                                      std::vector<std::unique_ptr<Enemy>>& enemies) {
+void CombatSystem::ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazards, Player& player) {
     constexpr float kHazardKnockbackForce = 3.0f;
 
     for (auto& hazard : hazards) {
         if (!hazard->ConsumeTick()) continue;
+        if (!CollisionMath::AABBIntersects(player.GetBoundingBox(), hazard->GetBoundingBox())) continue;
 
-        if (CollisionMath::AABBIntersects(player.GetBoundingBox(), hazard->GetBoundingBox())) {
-            Vector3 dir = CollisionMath::Normalize2D(Vector3{
-                player.GetPosition().x - hazard->GetPosition().x, 0.0f, player.GetPosition().z - hazard->GetPosition().z });
-            player.TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
-        }
-
-        for (auto& enemy : enemies) {
-            if (!enemy->IsAlive()) continue;
-            if (!CollisionMath::AABBIntersects(enemy->GetBoundingBox(), hazard->GetBoundingBox())) continue;
-
-            Vector3 dir = CollisionMath::Normalize2D(Vector3{
-                enemy->GetPosition().x - hazard->GetPosition().x, 0.0f, enemy->GetPosition().z - hazard->GetPosition().z });
-            enemy->TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
-        }
+        Vector3 dir = CollisionMath::Normalize2D(Vector3{
+            player.GetPosition().x - hazard->GetPosition().x, 0.0f, player.GetPosition().z - hazard->GetPosition().z });
+        player.TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
     }
 }

@@ -1,0 +1,403 @@
+{
+  "levelName": "level_6",
+  "player": {
+    "spawn": {
+      "x": 0,
+      "y": 0,
+      "z": 10
+    },
+    "maxHP": 100,
+    "speed": 4.5,
+    "attackDamage": 45
+  },
+  "obstacles": [
+    {
+      "position": {
+        "x": 5.7,
+        "y": 0,
+        "z": 0.26666668
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": -6,
+        "y": 0,
+        "z": 0
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 6
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -6
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 4.2,
+        "y": 0,
+        "z": 4.2
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": -4.2,
+        "y": 0,
+        "z": 4.2
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 4.233333,
+        "y": 0,
+        "z": -3.6666667
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": -4.2,
+        "y": 0,
+        "z": -4.2
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 12
+      },
+      "type": "box",
+      "size": {
+        "x": 26,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -12
+      },
+      "type": "box",
+      "size": {
+        "x": 26,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 12,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 26
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -12,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 26
+      },
+      "radius": 0.5,
+      "height": 1
+    }
+  ],
+  "enemies": [
+    {
+      "spawn": {
+        "x": 0,
+        "y": 0,
+        "z": -3
+      },
+      "type": "Tank",
+      "maxHP": 200,
+      "visionRadius": 5,
+      "speed": 1.2,
+      "attackDamage": 25,
+      "patrolRoute": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": -3
+        },
+        {
+          "x": 2.5,
+          "y": 0,
+          "z": -2
+        },
+        {
+          "x": -2.5,
+          "y": 0,
+          "z": -2
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -3
+        }
+      ]
+    }
+  ],
+  "gears": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 8
+      }
+    },
+    {
+      "position": {
+        "x": 7,
+        "y": 0,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": -7,
+        "y": 0,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 3.5,
+        "y": 0,
+        "z": -8.5
+      }
+    },
+    {
+      "position": {
+        "x": -3.5,
+        "y": 0,
+        "z": -8.5
+      }
+    }
+  ],
+  "spawners": [
+    {
+      "position": {
+        "x": -5,
+        "y": 0,
+        "z": -8
+      },
+      "enemyType": "Spitter",
+      "interval": 5,
+      "maxEnemies": 2
+    },
+    {
+      "position": {
+        "x": 5,
+        "y": 0,
+        "z": -8
+      },
+      "enemyType": "Kamikaze",
+      "interval": 7,
+      "maxEnemies": 2
+    }
+  ],
+  "healthKits": [
+    {
+      "position": {
+        "x": 5,
+        "y": 0,
+        "z": 5
+      }
+    },
+    {
+      "position": {
+        "x": -5,
+        "y": 0,
+        "z": 5
+      }
+    },
+    {
+      "position": {
+        "x": 5.3333335,
+        "y": 0,
+        "z": -2.8666666
+      }
+    },
+    {
+      "position": {
+        "x": -4.4666667,
+        "y": 0,
+        "z": -3.1
+      }
+    }
+  ],
+  "barrels": [
+    {
+      "position": {
+        "x": 2.9333334,
+        "y": 0,
+        "z": 2.9333334
+      }
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": 3,
+        "y": 0,
+        "z": -1.5
+      }
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": -1.5
+      }
+    }
+  ],
+  "hazards": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "size": {
+        "x": 3,
+        "y": 0.1,
+        "z": 3
+      },
+      "damagePerTick": 15
+    },
+    {
+      "position": {
+        "x": 3,
+        "y": 0,
+        "z": -6.5
+      },
+      "size": {
+        "x": 2,
+        "y": 0.1,
+        "z": 2
+      },
+      "damagePerTick": 12
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": -6.5
+      },
+      "size": {
+        "x": 2,
+        "y": 0.1,
+        "z": 2
+      },
+      "damagePerTick": 12
+    }
+  ],
+  "door": {
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -9.5
+    },
+    "halfExtents": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
+  }
+}

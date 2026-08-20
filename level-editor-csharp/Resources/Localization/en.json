@@ -21,6 +21,12 @@
   "group_properties": "Properties",
   "group_language": "Language",
 
+  "variant_Default": "Default",
+  "variant_Tank": "Tank",
+  "variant_Runner": "Runner",
+  "variant_Spitter": "Spitter",
+  "variant_Kamikaze": "Kamikaze",
+
   "hint_delete": "Right click: delete entity\n(or nearest patrol point)",
 
   "btn_open": "Open Level",

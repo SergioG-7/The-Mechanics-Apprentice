@@ -1,4 +1,6 @@
 #include "MenuScreen.h"
+#include "../Core/AudioSettings.h"
+#include <algorithm>
 
 namespace {
 
@@ -6,7 +8,28 @@ constexpr float kButtonWidth = 300.0f;
 constexpr float kButtonHeight = 60.0f;
 constexpr float kButtonGap = 20.0f;
 
+constexpr float kEditorButtonWidth = 260.0f; // suficiente para "Editor de Niveles" (el más largo de los 3 idiomas) a 24px
+constexpr float kEditorButtonHeight = 40.0f;
+constexpr float kEditorButtonMargin = 20.0f;
+
 } // namespace
+
+MenuScreen::~MenuScreen() {
+    if (m_clickSound.frameCount > 0) UnloadSound(m_clickSound);
+}
+
+void MenuScreen::LoadSfx() {
+    m_clickSound = LoadSound("assets/audio/sfx/click.mp3");
+    RefreshSfxVolume();
+}
+
+void MenuScreen::RefreshSfxVolume() {
+    if (m_clickSound.frameCount > 0) SetSoundVolume(m_clickSound, AudioSettings::GetSfxVolume());
+}
+
+void MenuScreen::PlayClickSound() const {
+    if (m_clickSound.frameCount > 0) PlaySound(m_clickSound);
+}
 
 Rectangle MenuScreen::StackedButton(int index, int count) {
     float screenW = static_cast<float>(GetScreenWidth());
@@ -18,10 +41,20 @@ Rectangle MenuScreen::StackedButton(int index, int count) {
     return Rectangle{ x, y, kButtonWidth, kButtonHeight };
 }
 
-Rectangle MenuScreen::VolumeSliderBounds() {
+Rectangle MenuScreen::BgmVolumeSliderBounds() {
+    // Fija, no relativa a screenH/2: el título "OPCIONES" también se dibuja
+    // a una Y fija (80.0f, ver DrawOptions) con tamaño 50 -- anclar aquí al
+    // título en vez de al centro de la pantalla es lo que garantiza que no
+    // se pisen sea cual sea la resolución. 200.0f deja ~60px de aire bajo el
+    // título (que termina sobre los 140) antes de la etiqueta de esta barra
+    // (que se dibuja en bounds.y - 30, ver DrawVolumeSlider).
     float screenW = static_cast<float>(GetScreenWidth());
-    float screenH = static_cast<float>(GetScreenHeight());
-    return Rectangle{ (screenW - kButtonWidth) / 2.0f, screenH / 2.0f - 180.0f, kButtonWidth, 30.0f };
+    return Rectangle{ (screenW - kButtonWidth) / 2.0f, 200.0f, kButtonWidth, 30.0f };
+}
+
+Rectangle MenuScreen::SfxVolumeSliderBounds() {
+    Rectangle bgm = BgmVolumeSliderBounds();
+    return Rectangle{ bgm.x, bgm.y + 80.0f, bgm.width, bgm.height };
 }
 
 Rectangle MenuScreen::BackButtonBounds() {
@@ -30,13 +63,32 @@ Rectangle MenuScreen::BackButtonBounds() {
     return Rectangle{ (screenW - kButtonWidth) / 2.0f, screenH - 100.0f, kButtonWidth, kButtonHeight };
 }
 
-const char* MenuScreen::NativeLanguageName(const std::string& code) {
-    // Nombres nativos, no traducidos -- el nombre propio de un idioma se
-    // muestra igual sea cual sea el idioma activo de la UI (como en
-    // cualquier selector de idioma real).
-    if (code == "en") return "English";
-    if (code == "jp") return "日本語";
-    return "Español";
+namespace {
+// 150.0f, no centrado a pantalla completa como StackedButton: con
+// kLevelSelectVirtualRows filas virtuales fijas (5 niveles + 1 fila de
+// paginación), el centrado puro dejaría el primer botón pegado al título
+// (y=80). Ancla en su lugar justo debajo del título, mismo margen que ya
+// usa MainMenu entre su título y su primer botón.
+constexpr float kLevelSelectStartY = 150.0f;
+constexpr float kLevelNavGap = 20.0f;
+} // namespace
+
+Rectangle MenuScreen::EditorButtonBounds() {
+    return Rectangle{ kEditorButtonMargin, kEditorButtonMargin, kEditorButtonWidth, kEditorButtonHeight };
+}
+
+Rectangle MenuScreen::LevelSelectNavButtonBounds(bool isNext) {
+    // Fila compartida (la última de las virtuales), partida en dos mitades
+    // -- Anterior a la izquierda, Siguiente a la derecha, con un hueco entre
+    // ambas. Si solo una de las dos existe esta página, se queda en su lado
+    // natural en vez de recentrarse: más simple, y no hay confusión posible
+    // sobre cuál es cuál.
+    float screenW = static_cast<float>(GetScreenWidth());
+    float x = (screenW - kButtonWidth) / 2.0f;
+    float y = kLevelSelectStartY + (kLevelSelectVirtualRows - 1) * (kButtonHeight + kButtonGap);
+    float halfWidth = (kButtonWidth - kLevelNavGap) / 2.0f;
+    float buttonX = isNext ? x + halfWidth + kLevelNavGap : x;
+    return Rectangle{ buttonX, y, halfWidth, kButtonHeight };
 }
 
 bool MenuScreen::IsButtonClicked(Rectangle bounds) {
@@ -44,6 +96,10 @@ bool MenuScreen::IsButtonClicked(Rectangle bounds) {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildMainMenuButtons() const {
+    // El botón del editor de niveles NO está aquí -- vive fuera del flujo
+    // vertical apilado, anclado a la esquina superior izquierda (ver
+    // EditorButtonBounds/DrawMainMenu/UpdateMainMenu), para no empujar estos
+    // 5 botones hasta pisar el título.
     return {
         { StackedButton(0, 5), "menu_story", MenuAction::OpenLevelSelect, false },
         { StackedButton(1, 5), "menu_endless", MenuAction::StartEndless, false },
@@ -54,26 +110,44 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildMainMenuButtons() const {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildLevelSelectButtons(int maxUnlockedLevel) const {
-    int unlockedCount = maxUnlockedLevel;
-    if (unlockedCount > kStoryLevelCount) unlockedCount = kStoryLevelCount;
-    if (unlockedCount < 1) unlockedCount = 1; // nunca menos de 1: el nivel 1 siempre está desbloqueado
+    int unlockedCount = std::max(1, maxUnlockedLevel); // nunca menos de 1: el nivel 1 siempre está desbloqueado
+    int totalPages = (unlockedCount + kLevelsPerPage - 1) / kLevelsPerPage; // división entera hacia arriba
+    int page = std::clamp(m_levelSelectPage, 0, totalPages - 1);
 
-    int buttonCount = unlockedCount + 1; // + botón Volver
+    int pageStart = page * kLevelsPerPage + 1;
+    int pageEnd = std::min(pageStart + kLevelsPerPage - 1, unlockedCount);
+    int levelsThisPage = pageEnd - pageStart + 1;
+
+    bool hasPrev = page > 0;
+    bool hasNext = page < totalPages - 1;
+
+    // Vertical, apilados uno debajo del otro como el resto del menú. La fila
+    // (0..4) de cada botón de nivel usa el número VIRTUAL de filas fijo
+    // (kLevelSelectVirtualRows), no levelsThisPage -- así la posición no
+    // cambia entre páginas aunque una tenga menos niveles que otra. Página
+    // Anterior/Siguiente solo si de verdad hay a dónde ir -- no se muestran
+    // deshabilitados, directamente no existen. Volver en su posición fija
+    // de siempre, igual que en Controles/Estadísticas.
     std::vector<MenuButton> buttons;
-    buttons.reserve(static_cast<size_t>(buttonCount));
+    buttons.reserve(static_cast<size_t>(levelsThisPage) + 3);
 
-    for (int level = 1; level <= unlockedCount; level++) {
-        MenuButton button{ StackedButton(level - 1, buttonCount), "level_label", MenuAction::StartStory, false };
+    for (int level = pageStart; level <= pageEnd; level++) {
+        int row = level - pageStart;
+        Rectangle bounds{ (static_cast<float>(GetScreenWidth()) - kButtonWidth) / 2.0f,
+                           kLevelSelectStartY + row * (kButtonHeight + kButtonGap), kButtonWidth, kButtonHeight };
+        MenuButton button{ bounds, "level_label", MenuAction::StartStory, false };
         button.levelNumber = level;
         buttons.push_back(button);
     }
-    buttons.push_back({ StackedButton(unlockedCount, buttonCount), "levelselect_back", MenuAction::BackToMainMenu, false });
+    if (hasPrev) buttons.push_back({ LevelSelectNavButtonBounds(false), "levelselect_prev", MenuAction::LevelSelectPrevPage, false });
+    if (hasNext) buttons.push_back({ LevelSelectNavButtonBounds(true), "levelselect_next", MenuAction::LevelSelectNextPage, false });
+    buttons.push_back({ BackButtonBounds(), "levelselect_back", MenuAction::BackToMainMenu, false });
 
     return buttons;
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildOptionsButtons() const {
-    Rectangle slider = VolumeSliderBounds();
+    Rectangle slider = SfxVolumeSliderBounds();
     float x = slider.x;
     float startY = slider.y + slider.height + 40.0f;
 
@@ -81,6 +155,14 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildOptionsButtons() const {
         { Rectangle{ x, startY, kButtonWidth, kButtonHeight }, "options_language", MenuAction::CycleLanguage, true },
         { Rectangle{ x, startY + (kButtonHeight + kButtonGap), kButtonWidth, kButtonHeight }, "options_controls", MenuAction::OpenControls, false },
         { Rectangle{ x, startY + 2.0f * (kButtonHeight + kButtonGap), kButtonWidth, kButtonHeight }, "options_back", MenuAction::BackToMainMenu, false },
+    };
+}
+
+std::vector<MenuScreen::MenuButton> MenuScreen::BuildPauseButtons() const {
+    return {
+        { StackedButton(0, 3), "pause_resume", MenuAction::ResumeGame, false },
+        { StackedButton(1, 3), "menu_options", MenuAction::OpenOptions, false },
+        { StackedButton(2, 3), "pause_exit", MenuAction::BackToMainMenu, false },
     };
 }
 
@@ -126,12 +208,14 @@ MenuAction MenuScreen::UpdateButtonList(const std::vector<MenuButton>& buttons) 
     if (confirmPressed) {
         const MenuButton& chosen = buttons[static_cast<size_t>(m_selectedIndex)];
         if (chosen.levelNumber > 0) m_lastSelectedLevel = chosen.levelNumber;
+        PlayClickSound();
         return chosen.action;
     }
 
     for (const MenuButton& button : buttons) {
         if (IsButtonClicked(button.bounds)) {
             if (button.levelNumber > 0) m_lastSelectedLevel = button.levelNumber;
+            PlayClickSound();
             return button.action;
         }
     }
@@ -145,7 +229,12 @@ void MenuScreen::DrawButtonList(const std::vector<MenuButton>& buttons, const Ui
         std::string label = ui.localization.GetText(button.labelKey);
         if (button.isLanguageButton) {
             label += ": ";
-            label += NativeLanguageName(ui.localization.GetCurrentLanguage());
+            // "language_name" es el nombre nativo que cada idioma declara de
+            // sí mismo en su propio JSON (ver assets/lang/*.json) -- se lee
+            // siempre del idioma ACTIVO, así que nunca hace falta indexar
+            // por código: un botón "Idioma: Español" en español, "Language:
+            // English" en inglés, "言語: 日本語" en japonés.
+            label += ui.localization.GetText("language_name");
         }
         if (button.levelNumber > 0) {
             label += " ";
@@ -161,8 +250,9 @@ void MenuScreen::DrawButton(Rectangle bounds, const char* label, bool selected, 
     DrawRectangleLinesEx(bounds, selected ? 3.0f : 2.0f, selected ? SKYBLUE : RAYWHITE);
 
     constexpr float textSize = 24.0f;
-    Vector2 textDim = MeasureTextEx(ui.font, label, textSize, 1.0f);
-    DrawTextEx(ui.font, label,
+    const Font& font = ui.localization.GetFontForSize(textSize);
+    Vector2 textDim = MeasureTextEx(font, label, textSize, 1.0f);
+    DrawTextEx(font, label,
                Vector2{ bounds.x + (bounds.width - textDim.x) / 2.0f, bounds.y + (bounds.height - textSize) / 2.0f },
                textSize, 1.0f, RAYWHITE);
 }
@@ -170,51 +260,94 @@ void MenuScreen::DrawButton(Rectangle bounds, const char* label, bool selected, 
 // --- Menú principal ---
 
 MenuAction MenuScreen::UpdateMainMenu() {
+    // Fuera de UpdateButtonList a propósito: el botón del editor no es parte
+    // de la navegación por teclado/mando de la lista apilada (ver
+    // EditorButtonBounds), así que su clic se comprueba aparte, antes de la
+    // lista normal.
+    if (IsButtonClicked(EditorButtonBounds())) {
+        PlayClickSound();
+        return MenuAction::OpenLevelEditor;
+    }
     return UpdateButtonList(BuildMainMenuButtons());
 }
 
 void MenuScreen::DrawMainMenu(const UiContext& ui) const {
     const char* title = ui.localization.GetText("menu_title");
     constexpr float titleSize = 50.0f;
-    Vector2 titleDim = MeasureTextEx(ui.font, title, titleSize, 1.0f);
-    DrawTextEx(ui.font, title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 100.0f }, titleSize, 1.0f, RAYWHITE);
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 100.0f }, titleSize, 1.0f, RAYWHITE);
 
     DrawButtonList(BuildMainMenuButtons(), ui);
+
+    // Independiente de la lista apilada (ver EditorButtonBounds): nunca
+    // aparece "seleccionado" (false fijo), solo resaltado al pasar el ratón
+    // por encima (DrawButton ya comprueba el hover por su cuenta).
+    DrawButton(EditorButtonBounds(), ui.localization.GetText("menu_editor"), false, ui);
 }
 
 // --- Opciones ---
 
-MenuAction MenuScreen::UpdateOptions() {
-    Rectangle slider = VolumeSliderBounds();
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), slider)) {
-        float ratio = (GetMousePosition().x - slider.x) / slider.width;
-        if (ratio < 0.0f) ratio = 0.0f;
-        if (ratio > 1.0f) ratio = 1.0f;
-        SetMasterVolume(ratio);
-    }
+void MenuScreen::UpdateVolumeSliderDrag(Rectangle bounds, float& volume) {
+    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) || !CheckCollisionPointRec(GetMousePosition(), bounds)) return;
+
+    float ratio = (GetMousePosition().x - bounds.x) / bounds.width;
+    if (ratio < 0.0f) ratio = 0.0f;
+    if (ratio > 1.0f) ratio = 1.0f;
+    volume = ratio;
+}
+
+MenuAction MenuScreen::UpdateOptions(float& bgmVolume, float& sfxVolume) {
+    UpdateVolumeSliderDrag(BgmVolumeSliderBounds(), bgmVolume);
+    UpdateVolumeSliderDrag(SfxVolumeSliderBounds(), sfxVolume);
 
     return UpdateButtonList(BuildOptionsButtons());
 }
 
-void MenuScreen::DrawOptions(const UiContext& ui) const {
+void MenuScreen::DrawVolumeSlider(const UiContext& ui, Rectangle bounds, const char* labelKey, float volume) const {
+    std::string label = std::string(ui.localization.GetText(labelKey)) +
+                         TextFormat(": %d%%", static_cast<int>(volume * 100.0f));
+    constexpr float labelSize = 20.0f;
+    const Font& font = ui.localization.GetFontForSize(labelSize);
+    Vector2 labelDim = MeasureTextEx(font, label.c_str(), labelSize, 1.0f);
+    DrawTextEx(font, label.c_str(), Vector2{ (GetScreenWidth() - labelDim.x) / 2.0f, bounds.y - 30.0f }, labelSize, 1.0f, RAYWHITE);
+
+    DrawRectangleRec(bounds, Color{ 40, 40, 48, 255 });
+    DrawRectangleRec(Rectangle{ bounds.x, bounds.y, bounds.width * volume, bounds.height }, SKYBLUE);
+    DrawRectangleLinesEx(bounds, 2.0f, RAYWHITE);
+}
+
+void MenuScreen::DrawOptions(const UiContext& ui, float bgmVolume, float sfxVolume) const {
     const char* title = ui.localization.GetText("options_title");
     constexpr float titleSize = 50.0f;
-    Vector2 titleDim = MeasureTextEx(ui.font, title, titleSize, 1.0f);
-    DrawTextEx(ui.font, title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
-    float volume = GetMasterVolume();
-    Rectangle slider = VolumeSliderBounds();
-
-    std::string volumeLabel = std::string(ui.localization.GetText("options_volume")) +
-                               TextFormat(": %d%%", static_cast<int>(volume * 100.0f));
-    Vector2 volDim = MeasureTextEx(ui.font, volumeLabel.c_str(), 20.0f, 1.0f);
-    DrawTextEx(ui.font, volumeLabel.c_str(), Vector2{ (GetScreenWidth() - volDim.x) / 2.0f, slider.y - 30.0f }, 20.0f, 1.0f, RAYWHITE);
-
-    DrawRectangleRec(slider, Color{ 40, 40, 48, 255 });
-    DrawRectangleRec(Rectangle{ slider.x, slider.y, slider.width * volume, slider.height }, SKYBLUE);
-    DrawRectangleLinesEx(slider, 2.0f, RAYWHITE);
+    DrawVolumeSlider(ui, BgmVolumeSliderBounds(), "options_volume_bgm", bgmVolume);
+    DrawVolumeSlider(ui, SfxVolumeSliderBounds(), "options_volume_sfx", sfxVolume);
 
     DrawButtonList(BuildOptionsButtons(), ui);
+}
+
+// --- Pausa ---
+
+MenuAction MenuScreen::UpdatePause() {
+    return UpdateButtonList(BuildPauseButtons());
+}
+
+void MenuScreen::DrawPause(const UiContext& ui) const {
+    int screenW = GetScreenWidth();
+    int screenH = GetScreenHeight();
+
+    // Mismo overlay que DrawCenteredOverlay (fin de partida): oscurece la
+    // escena congelada detrás sin ocultarla del todo.
+    DrawRectangle(0, 0, screenW, screenH, Color{ 0, 0, 0, 150 });
+
+    const char* title = ui.localization.GetText("pause_title");
+    constexpr float titleSize = 50.0f;
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (screenW - titleDim.x) / 2.0f, 150.0f }, titleSize, 1.0f, RAYWHITE);
+
+    DrawButtonList(BuildPauseButtons(), ui);
 }
 
 // --- Controles ---
@@ -227,8 +360,8 @@ MenuAction MenuScreen::UpdateControls() {
 void MenuScreen::DrawControls(const UiContext& ui) const {
     const char* title = ui.localization.GetText("controls_title");
     constexpr float titleSize = 50.0f;
-    Vector2 titleDim = MeasureTextEx(ui.font, title, titleSize, 1.0f);
-    DrawTextEx(ui.font, title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
     float screenCenter = static_cast<float>(GetScreenWidth()) / 2.0f;
     float colActionX = screenCenter - 350.0f;
@@ -237,19 +370,20 @@ void MenuScreen::DrawControls(const UiContext& ui) const {
     float rowY = 200.0f;
     constexpr float rowHeight = 60.0f;
     constexpr float textSize = 22.0f;
+    const Font& font = ui.localization.GetFontForSize(textSize);
 
-    DrawTextEx(ui.font, ui.localization.GetText("controls_column_kb"), Vector2{ colKbX, rowY }, textSize, 1.0f, SKYBLUE);
-    DrawTextEx(ui.font, ui.localization.GetText("controls_column_pad"), Vector2{ colPadX, rowY }, textSize, 1.0f, SKYBLUE);
+    DrawTextEx(font, ui.localization.GetText("controls_column_kb"), Vector2{ colKbX, rowY }, textSize, 1.0f, SKYBLUE);
+    DrawTextEx(font, ui.localization.GetText("controls_column_pad"), Vector2{ colPadX, rowY }, textSize, 1.0f, SKYBLUE);
     rowY += rowHeight;
 
-    const char* actionKeys[] = { "ctrl_move", "ctrl_attack", "ctrl_dash" };
-    const char* kbKeys[] = { "ctrl_move_kb", "ctrl_attack_kb", "ctrl_dash_kb" };
-    const char* padKeys[] = { "ctrl_move_pad", "ctrl_attack_pad", "ctrl_dash_pad" };
+    const char* actionKeys[] = { "ctrl_move", "ctrl_attack", "ctrl_dash", "ctrl_pause", "ctrl_retry" };
+    const char* kbKeys[] = { "ctrl_move_kb", "ctrl_attack_kb", "ctrl_dash_kb", "ctrl_pause_kb", "ctrl_retry_kb" };
+    const char* padKeys[] = { "ctrl_move_pad", "ctrl_attack_pad", "ctrl_dash_pad", "ctrl_pause_pad", "ctrl_retry_pad" };
 
-    for (int i = 0; i < 3; i++) {
-        DrawTextEx(ui.font, ui.localization.GetText(actionKeys[i]), Vector2{ colActionX, rowY }, textSize, 1.0f, RAYWHITE);
-        DrawTextEx(ui.font, ui.localization.GetText(kbKeys[i]), Vector2{ colKbX, rowY }, textSize, 1.0f, RAYWHITE);
-        DrawTextEx(ui.font, ui.localization.GetText(padKeys[i]), Vector2{ colPadX, rowY }, textSize, 1.0f, RAYWHITE);
+    for (int i = 0; i < 5; i++) {
+        DrawTextEx(font, ui.localization.GetText(actionKeys[i]), Vector2{ colActionX, rowY }, textSize, 1.0f, RAYWHITE);
+        DrawTextEx(font, ui.localization.GetText(kbKeys[i]), Vector2{ colKbX, rowY }, textSize, 1.0f, RAYWHITE);
+        DrawTextEx(font, ui.localization.GetText(padKeys[i]), Vector2{ colPadX, rowY }, textSize, 1.0f, RAYWHITE);
         rowY += rowHeight;
     }
 
@@ -267,8 +401,8 @@ MenuAction MenuScreen::UpdateStats() {
 void MenuScreen::DrawStats(const UiContext& ui, const SaveData& saveData) const {
     const char* title = ui.localization.GetText("stats_title");
     constexpr float titleSize = 50.0f;
-    Vector2 titleDim = MeasureTextEx(ui.font, title, titleSize, 1.0f);
-    DrawTextEx(ui.font, title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
     float screenCenter = static_cast<float>(GetScreenWidth()) / 2.0f;
     float labelX = screenCenter - 300.0f;
@@ -276,10 +410,11 @@ void MenuScreen::DrawStats(const UiContext& ui, const SaveData& saveData) const 
     float rowY = 220.0f;
     constexpr float rowHeight = 50.0f;
     constexpr float textSize = 24.0f;
+    const Font& font = ui.localization.GetFontForSize(textSize);
 
     auto drawRow = [&](const char* labelKey, int value) {
-        DrawTextEx(ui.font, ui.localization.GetText(labelKey), Vector2{ labelX, rowY }, textSize, 1.0f, RAYWHITE);
-        DrawTextEx(ui.font, TextFormat("%d", value), Vector2{ valueX, rowY }, textSize, 1.0f, GOLD);
+        DrawTextEx(font, ui.localization.GetText(labelKey), Vector2{ labelX, rowY }, textSize, 1.0f, RAYWHITE);
+        DrawTextEx(font, TextFormat("%d", value), Vector2{ valueX, rowY }, textSize, 1.0f, GOLD);
         rowY += rowHeight;
     };
 
@@ -296,14 +431,32 @@ void MenuScreen::DrawStats(const UiContext& ui, const SaveData& saveData) const 
 // --- Selector de nivel (Modo Historia) ---
 
 MenuAction MenuScreen::UpdateLevelSelect(int maxUnlockedLevel) {
-    return UpdateButtonList(BuildLevelSelectButtons(maxUnlockedLevel));
+    // Clamp de página ANTES de construir/leer botones: si maxUnlockedLevel
+    // pudiera bajar entre visitas (no ocurre hoy, pero es barato cubrirlo),
+    // una página ya no válida no debe quedarse fuera de rango.
+    int unlockedCount = std::max(1, maxUnlockedLevel);
+    int totalPages = (unlockedCount + kLevelsPerPage - 1) / kLevelsPerPage;
+    m_levelSelectPage = std::clamp(m_levelSelectPage, 0, totalPages - 1);
+
+    // Página Anterior/Siguiente son estado puramente de MenuScreen -- se
+    // consumen aquí mismo y nunca llegan a Application como acción real.
+    MenuAction action = UpdateButtonList(BuildLevelSelectButtons(maxUnlockedLevel));
+    if (action == MenuAction::LevelSelectNextPage) {
+        m_levelSelectPage++;
+        return MenuAction::None;
+    }
+    if (action == MenuAction::LevelSelectPrevPage) {
+        m_levelSelectPage--;
+        return MenuAction::None;
+    }
+    return action;
 }
 
 void MenuScreen::DrawLevelSelect(const UiContext& ui, int maxUnlockedLevel) const {
     const char* title = ui.localization.GetText("levelselect_title");
     constexpr float titleSize = 50.0f;
-    Vector2 titleDim = MeasureTextEx(ui.font, title, titleSize, 1.0f);
-    DrawTextEx(ui.font, title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
     DrawButtonList(BuildLevelSelectButtons(maxUnlockedLevel), ui);
 }

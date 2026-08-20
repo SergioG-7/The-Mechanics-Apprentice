@@ -11,9 +11,14 @@
 
   <ItemGroup>
     <None Include="Resources\Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
-    <!-- Misma fuente que ya usa el motor C++ (verificada con glifos CJK reales),
-         enlazada en vez de duplicada para no tener dos copias de 9+ MB divergiendo. -->
-    <None Include="..\engine-cpp\assets\fonts\font.ttf" Link="Resources\Fonts\font.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Misma fuente que ya usa el motor C++ (MainFont.ttf, copiada de Tactical
+         Soccer, verificada con glifos CJK reales), enlazada en vez de
+         duplicada para no tener dos copias de 5+ MB divergiendo. -->
+    <None Include="..\engine-cpp\assets\fonts\MainFont.ttf" Link="Resources\Fonts\MainFont.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Stats base por arquetipo, la misma fuente que usa EnemyFactory en el
+         motor C++: enlazada, no duplicada, para que el editor no pueda
+         desincronizarse de estos valores (ver Core/EnemyVariantCatalog.cs). -->
+    <None Include="..\engine-cpp\assets\data\enemy_variants.json" Link="Resources\Data\enemy_variants.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

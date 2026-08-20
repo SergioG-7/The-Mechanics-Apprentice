@@ -1,16 +1,24 @@
 {
+  "language_name": "Español",
+
   "menu_title": "THE MECHANIC'S APPRENTICE",
   "menu_story": "Modo Historia",
   "menu_endless": "Modo Infinito",
   "menu_options": "Opciones",
   "menu_stats": "Estadísticas",
+  "menu_editor": "Editor de Niveles",
   "menu_quit": "Salir",
 
   "options_title": "OPCIONES",
-  "options_volume": "Volumen",
+  "options_volume_bgm": "Música",
+  "options_volume_sfx": "Efectos",
   "options_language": "Idioma",
   "options_controls": "Controles",
   "options_back": "Volver",
+
+  "pause_title": "PAUSA",
+  "pause_resume": "Continuar",
+  "pause_exit": "Salir al Menú Principal",
 
   "controls_title": "CONTROLES",
   "controls_column_kb": "Teclado",
@@ -25,10 +33,21 @@
   "ctrl_dash": "Esquivar",
   "ctrl_dash_kb": "Shift",
   "ctrl_dash_pad": "RB / Botón B",
+  "ctrl_pause": "Pausar/Atrás",
+  "ctrl_pause_kb": "ESC",
+  "ctrl_pause_pad": "Botón Start",
+  "ctrl_retry": "Reiniciar",
+  "ctrl_retry_kb": "R",
+  "ctrl_retry_pad": "Botón Select",
 
-  "levelselect_title": "SELECCIONA NIVEL",
+  "levelselect_title": "Selecciona un nivel",
   "level_label": "NIVEL",
+  "levelselect_prev": "< Anterior",
+  "levelselect_next": "Siguiente >",
   "levelselect_back": "Volver",
+
+  "ready_title": "¡PREPÁRATE!",
+  "ready_subtitle": "Pulsa ATACAR para empezar",
 
   "stats_title": "ESTADÍSTICAS",
   "stats_highscore": "Puntuación máxima",
@@ -38,6 +57,7 @@
   "stats_maxlevel": "Nivel máximo desbloqueado",
   "stats_back": "Volver",
 
+  "hud_hp": "Vida",
   "hud_gears": "Engranajes",
   "gameover_title": "GAME OVER",
   "gameover_retry": "Pulsa R para reintentar",

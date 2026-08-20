@@ -21,6 +21,12 @@ public:
     // Application tras construir el Player, una vez cargado el ShaderManager.
     void SetShader(Shader shader);
 
+    // Reaplica AudioSettings::GetSfxVolume() a los Sound ya cargados -- el
+    // slider de Efectos en Opciones puede tocarse durante una partida en
+    // pausa (sin recrear el Player), así que el volumen fijado en el
+    // constructor no basta por sí solo.
+    void RefreshSfxVolume();
+
     // Valores finales de calibración del arma (ver Player::DrawWeapon).
     // Públicas por si hace falta retocarlas a ojo más adelante.
     Vector3 m_weaponScale = { 250.0f, 250.0f, 250.0f };
@@ -71,6 +77,5 @@ private:
 
     Sound m_attackSound{};
     Sound m_hurtSound{};
-    static constexpr float kAttackSoundVolume = 0.5f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
-    static constexpr float kHurtSoundVolume = 0.5f;
+    Sound m_dashSound{};
 };

@@ -7,8 +7,10 @@
 #include <vector>
 
 // Genera enemigos de un arquetipo fijo (ver EnemyFactory) a intervalos
-// regulares, hasta un tope de vivos simultáneos "propios". No es un Entity:
-// no ocupa espacio ni se dibuja, solo lo tickea Application.
+// regulares, hasta un tope de vivos simultáneos "propios". No es un Entity
+// (no ocupa espacio, no bloquea el paso, no tiene HP), pero sí dibuja un
+// marcador simple en el suelo -- ver Draw() -- para que el jugador sepa de
+// dónde salen los enemigos.
 class Spawner {
 public:
     Spawner(Vector3 position, std::string enemyType, float spawnInterval, int maxEnemies,
@@ -18,6 +20,12 @@ public:
     // que dibuja/actualiza Application (m_level.enemies), así el recién
     // nacido entra en el resto del juego sin ningún camino aparte.
     void Update(float dt, std::vector<std::unique_ptr<Enemy>>& activeEnemies);
+
+    // Círculo plano + anillo en el suelo, en la posición del spawner --
+    // Application lo llama junto al resto de entidades del nivel.
+    void Draw() const;
+
+    Vector3 GetPosition() const { return m_position; }
 
     // Reduce el intervalo multiplicándolo por factor (< 1 lo acorta), con un
     // suelo mínimo para no degenerar en spawns cada frame. La usa

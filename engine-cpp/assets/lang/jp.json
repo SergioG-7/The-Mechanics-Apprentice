@@ -1,16 +1,24 @@
 {
+  "language_name": "日本語",
+
   "menu_title": "THE MECHANIC'S APPRENTICE",
   "menu_story": "ストーリーモード",
   "menu_endless": "エンドレスモード",
   "menu_options": "オプション",
   "menu_stats": "統計",
+  "menu_editor": "レベルエディタ",
   "menu_quit": "終了",
 
   "options_title": "オプション",
-  "options_volume": "音量",
+  "options_volume_bgm": "音楽",
+  "options_volume_sfx": "効果音",
   "options_language": "言語",
   "options_controls": "操作方法",
   "options_back": "戻る",
+
+  "pause_title": "ポーズ",
+  "pause_resume": "再開",
+  "pause_exit": "メインメニューに戻る",
 
   "controls_title": "操作方法",
   "controls_column_kb": "キーボード",
@@ -25,10 +33,21 @@
   "ctrl_dash": "ダッシュ",
   "ctrl_dash_kb": "シフト",
   "ctrl_dash_pad": "RB / Bボタン",
+  "ctrl_pause": "ポーズ / 戻る",
+  "ctrl_pause_kb": "ESC",
+  "ctrl_pause_pad": "スタートボタン",
+  "ctrl_retry": "リトライ",
+  "ctrl_retry_kb": "R",
+  "ctrl_retry_pad": "セレクトボタン",
 
   "levelselect_title": "レベル選択",
   "level_label": "レベル",
+  "levelselect_prev": "< 前へ",
+  "levelselect_next": "次へ >",
   "levelselect_back": "戻る",
+
+  "ready_title": "準備しろ！",
+  "ready_subtitle": "攻撃ボタンで開始",
 
   "stats_title": "統計",
   "stats_highscore": "ハイスコア",
@@ -38,6 +57,7 @@
   "stats_maxlevel": "解放した最大レベル",
   "stats_back": "戻る",
 
+  "hud_hp": "体力",
   "hud_gears": "歯車",
   "gameover_title": "ゲームオーバー",
   "gameover_retry": "Rキーでリトライ",

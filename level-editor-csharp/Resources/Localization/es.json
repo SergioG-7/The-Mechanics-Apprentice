@@ -21,6 +21,12 @@
   "group_properties": "Propiedades",
   "group_language": "Idioma",
 
+  "variant_Default": "Por defecto",
+  "variant_Tank": "Tanque",
+  "variant_Runner": "Corredor",
+  "variant_Spitter": "Escupidor",
+  "variant_Kamikaze": "Kamikaze",
+
   "hint_delete": "Click derecho: borrar entidad\n(o punto de patrulla más cercano)",
 
   "btn_open": "Abrir Nivel",

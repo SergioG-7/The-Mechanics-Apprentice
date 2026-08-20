@@ -11,4 +11,11 @@ namespace CollisionMath {
     // de movimiento sobre el suelo). Player y Enemy la comparten para no
     // duplicar la misma normalización a mano en los dos .cpp.
     Vector3 Normalize2D(Vector3 v);
+
+    // Línea de visión en el plano XZ (Y se ignora, igual que Normalize2D):
+    // true si el segmento start->end atraviesa box. Método de las franjas
+    // (slab test) recortado a 2D. La usa CombatSystem::ResolveMeleeAttack
+    // para descartar un golpe cuerpo a cuerpo si un Obstacle se interpone
+    // entre el jugador y el enemigo, aunque ambos sigan dentro del alcance.
+    bool SegmentIntersectsBoxXZ(Vector3 start, Vector3 end, const BoundingBox& box);
 }

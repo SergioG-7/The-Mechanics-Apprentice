@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "AudioSettings.h"
 #include "../Combat/CombatSystem.h"
 #include "../Combat/CollisionMath.h"
 #include "../Entities/Gear.h"
@@ -13,24 +14,46 @@ Application::Application(int width, int height, const std::string& title) {
     SetTargetFPS(60);
     InitAudioDevice();
 
+    // Explícito, no confiado al valor por defecto de miniaudio: el volumen
+    // real que oye el jugador es SetMasterVolume × MusicController/SFX, así
+    // que si esto no fuera 1.0 ningún slider de Opciones podría llegar
+    // nunca al 100% real por mucho que la UI marcara 100%.
+    SetMasterVolume(1.0f);
+
+    // Sin esto, ESC cierra la ventana de golpe (comportamiento por defecto
+    // de raylib) en vez de abrir el menú de pausa -- ver UpdateGameplay.
+    SetExitKey(KEY_NULL);
+
     m_camera.position   = { 0.0f, 4.0f, 8.0f };
     m_camera.target     = { 0.0f, 1.0f, 0.0f };
     m_camera.up         = { 0.0f, 1.0f, 0.0f };
     m_camera.fovy       = 45.0f;
     m_camera.projection = CAMERA_PERSPECTIVE;
 
+    // m_saveManager ya se ha construido (lee save_data.json en su propio
+    // constructor, antes que nada aquí) -- el volumen y el idioma arrancan
+    // directamente en lo guardado, no siempre en los valores por defecto.
+    AudioSettings::SetSfxVolume(m_saveManager.Data().sfxVolume);
+
     // Construido en el cuerpo, no en la lista de inicialización: necesita
     // InitAudioDevice() ya llamado (arriba), igual que m_toonShader necesita
-    // la ventana/contexto GL ya creados por InitWindow().
-    m_music = std::make_unique<MusicController>("assets/audio/music/theme.ogg", kMusicVolume);
+    // la ventana/contexto GL ya creados por InitWindow(). La ruta se
+    // escanea en disco (FindMusicFile), no un nombre fijo -- ver el
+    // comentario de esa función.
+    m_music = std::make_unique<MusicController>(FindMusicFile(), m_saveManager.Data().bgmVolume);
+
+    // m_menuScreen es un miembro por VALOR (no unique_ptr), así que ya se
+    // construyó antes de InitAudioDevice() -- su SFX de clic se carga aquí,
+    // explícitamente, ahora que el dispositivo de audio ya está listo.
+    m_menuScreen.LoadSfx();
 
     m_toonShader = std::make_unique<ShaderManager>("shaders/toon.vs", "shaders/toon.fs");
 
-    // m_saveManager ya se ha construido (lee save_data.json en su propio
-    // constructor, antes que nada aquí) -- LocalizationManager arranca
-    // directamente en el idioma guardado, no siempre en español.
+    // m_localization es igualmente un miembro por VALOR construido antes de
+    // InitWindow() -- LoadFonts() necesita el contexto GL ya creado, así
+    // que también se llama aquí, explícitamente, después de InitWindow().
     m_localization.LoadAll(m_saveManager.Data().currentLanguage);
-    LoadUiFont();
+    m_localization.LoadFonts();
 
     // Arranca en el menú (m_appState = AppState::MainMenu por defecto): no
     // hay LoadLevel aquí, se dispara al elegir Historia/Infinito.
@@ -48,31 +71,27 @@ Application::~Application() {
     m_level = LevelData{};
     m_toonShader.reset();
     m_music.reset();
-    if (IsFontValid(m_font)) UnloadFont(m_font);
+    m_localization.UnloadFonts();
 
     CloseAudioDevice();
     CloseWindow();
 }
 
-void Application::LoadUiFont() {
-    // La unión de los tres idiomas a la vez: cambiar de idioma en caliente
-    // (CycleLanguage) nunca deja huecos en la fuente ya cargada, porque el
-    // japonés y los acentos del español ya están dentro desde el arranque.
-    const std::string& allText = m_localization.GetAllTextForCodepoints();
+std::string Application::FindMusicFile() {
+    constexpr const char* kMusicDir = "assets/audio/music";
+    // Filtro con la sintaxis de IsFileExtension (".ext1;.ext2;..."), no una
+    // lista de comas -- ver el comentario de LoadDirectoryFilesEx en raylib.h.
+    FilePathList files = LoadDirectoryFilesEx(kMusicDir, ".ogg;.wav;.mp3", false);
 
-    int codepointCount = 0;
-    int* codepoints = LoadCodepoints(allText.c_str(), &codepointCount);
-
-    constexpr int kFontSize = 48;
-    m_font = LoadFontEx("assets/fonts/font.ttf", kFontSize, codepoints, codepointCount);
-    if (IsFontValid(m_font)) {
-        SetTextureFilter(m_font.texture, TEXTURE_FILTER_BILINEAR);
+    std::string path;
+    if (files.count > 0) {
+        path = files.paths[0]; // el primero que haya: solo se espera un tema de fondo
     } else {
-        TraceLog(LOG_WARNING, "Application: no se pudo cargar assets/fonts/font.ttf, usando la fuente por defecto");
-        m_font = GetFontDefault();
+        TraceLog(LOG_WARNING, "Application: no se encontró ningún archivo de música en '%s'", kMusicDir);
     }
 
-    UnloadCodepoints(codepoints);
+    UnloadDirectoryFiles(files);
+    return path;
 }
 
 void Application::LoadLevel(const std::string& path) {
@@ -111,7 +130,13 @@ void Application::LoadLevel(const std::string& path) {
     }
 
     m_totalGears = static_cast<int>(m_level.gears.size());
-    m_matchState = GameState::Gameplay;
+
+    // Arranca en espera, no en juego: el jugador puede moverse desde ya,
+    // pero enemigos/trampas/spawners no se activan hasta que se pulsa
+    // Atacar (ver Application::UpdateWaitingToStart) -- un respiro antes de
+    // que empiece a moverse nada, en cada carga de nivel Y en cada
+    // reintento.
+    m_matchState = GameState::WaitingToStart;
 
     // Spawners data-driven, leídos del propio nivel (ver LevelLoader.cpp) --
     // ya se limpiaron arriba, antes de reasignar m_level.
@@ -163,13 +188,17 @@ void Application::LaunchLevelEditor() const {
         return;
     }
 
-    std::string command = std::string("start \"\" \"") + kEditorPath + "\"";
+    // Idioma actual como argumento posicional (args[0] en Program.cs) --
+    // así el editor abre ya en el mismo idioma que el juego en vez de
+    // arrancar siempre en el último que se usó dentro del propio editor.
+    std::string command = std::string("start \"\" \"") + kEditorPath + "\" " + m_localization.GetCurrentLanguage();
     std::system(command.c_str());
 }
 
 void Application::UpdateMenu() {
-    // Atajo oculto de desarrollo, no un botón de menú: no tiene sentido para
-    // un jugador y solo funciona con el editor compilado en la misma máquina.
+    // Atajo de teclado, redundante con el botón "Editor de Niveles" del
+    // menú principal (ver MenuAction::OpenLevelEditor más abajo) -- se deja
+    // como acceso rápido para quien ya sabe que existe.
     if (IsKeyPressed(KEY_F12)) {
         LaunchLevelEditor();
     }
@@ -177,21 +206,45 @@ void Application::UpdateMenu() {
     MenuAction action = MenuAction::None;
     switch (m_appState) {
         case AppState::MainMenu:     action = m_menuScreen.UpdateMainMenu();    break;
-        case AppState::Options:      action = m_menuScreen.UpdateOptions();     break;
+        case AppState::Options:      action = m_menuScreen.UpdateOptions(m_saveManager.Data().bgmVolume, m_saveManager.Data().sfxVolume); break;
         case AppState::Controls:     action = m_menuScreen.UpdateControls();    break;
         case AppState::Stats:        action = m_menuScreen.UpdateStats();       break;
         case AppState::LevelSelect:  action = m_menuScreen.UpdateLevelSelect(m_saveManager.Data().maxLevelUnlocked); break;
-        default: break; // StoryMode/EndlessMode no llegan aquí (ver Run())
+        default: break; // StoryMode/EndlessMode/Paused no llegan aquí (ver Run())
+    }
+
+    // Mientras Opciones está abierta (venga del menú principal o de la
+    // pausa), cada frame vuelca el volumen a MusicController/AudioSettings y
+    // lo reaplica a lo que ya esté cargado -- y al soltar el ratón sobre el
+    // slider, persiste. Guardar en cada frame de arrastre sería una
+    // escritura a disco 60 veces por segundo; al soltar es un solo punto,
+    // igual de inmediato de cara al jugador.
+    if (m_appState == AppState::Options) {
+        ApplyLiveAudioSettings();
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+            m_saveManager.Save();
+        }
     }
 
     switch (action) {
         case MenuAction::OpenLevelSelect: m_appState = AppState::LevelSelect; break;
         case MenuAction::StartStory:      StartStoryMode(m_menuScreen.GetSelectedLevel()); break;
         case MenuAction::StartEndless:    StartEndlessMode(); break;
-        case MenuAction::OpenOptions:     m_appState = AppState::Options; break;
+        case MenuAction::OpenOptions:
+            m_optionsReturnTo = AppState::MainMenu;
+            m_appState = AppState::Options;
+            break;
         case MenuAction::OpenControls:    m_appState = AppState::Controls; break;
         case MenuAction::OpenStats:       m_appState = AppState::Stats; break;
-        case MenuAction::BackToMainMenu:  m_appState = AppState::MainMenu; break;
+        case MenuAction::OpenLevelEditor: LaunchLevelEditor(); break;
+        case MenuAction::BackToMainMenu:
+            // Desde Opciones, "Volver" respeta de dónde se abrió (menú
+            // principal o pausa); desde cualquier otra pantalla (Stats,
+            // LevelSelect) siempre es el menú principal. m_appState todavía
+            // no se ha reasignado en este punto, así que sigue siendo la
+            // pantalla que acaba de devolver la acción.
+            m_appState = (m_appState == AppState::Options) ? m_optionsReturnTo : AppState::MainMenu;
+            break;
         case MenuAction::BackToOptions:   m_appState = AppState::Options; break;
         case MenuAction::CycleLanguage:
             m_localization.CycleLanguage();
@@ -202,7 +255,7 @@ void Application::UpdateMenu() {
             m_saveManager.Save();
             break;
         case MenuAction::Quit: m_quitRequested = true; break;
-        case MenuAction::None: break;
+        default: break;
     }
 }
 
@@ -213,7 +266,7 @@ void Application::DrawMenu() const {
     UiContext ui = BuildUiContext();
     switch (m_appState) {
         case AppState::MainMenu:    m_menuScreen.DrawMainMenu(ui); break;
-        case AppState::Options:     m_menuScreen.DrawOptions(ui);  break;
+        case AppState::Options:     m_menuScreen.DrawOptions(ui, m_saveManager.Data().bgmVolume, m_saveManager.Data().sfxVolume); break;
         case AppState::Controls:    m_menuScreen.DrawControls(ui); break;
         case AppState::Stats:       m_menuScreen.DrawStats(ui, m_saveManager.Data()); break;
         case AppState::LevelSelect: m_menuScreen.DrawLevelSelect(ui, m_saveManager.Data().maxLevelUnlocked); break;
@@ -251,16 +304,89 @@ void Application::UpdateGameplay(float dt) {
         }
     }
 
+    if (m_appState == AppState::Paused) {
+        UpdatePauseMenu();
+        return;
+    }
+
+    if (m_matchState == GameState::WaitingToStart) {
+        UpdateWaitingToStart();
+        return;
+    }
+
     if (m_matchState != GameState::Gameplay) {
         HandleGameplayPauseInput();
+        return;
+    }
+
+    // Solo se puede pausar con la partida realmente en curso -- durante
+    // GameOver/Victory el rebote de arriba ya se ha llevado el frame, así
+    // que ESC ahí no hace nada (se usa 'R' para esas pantallas). Botón
+    // Start del mando como alternativa a ESC (ver ctrl_pause en la
+    // pantalla de Controles).
+    bool pausePressed = IsKeyPressed(KEY_ESCAPE)
+        || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT));
+    if (pausePressed) {
+        m_pausedFromState = m_appState;
+        m_appState = AppState::Paused;
         return;
     }
 
     UpdateActiveMatch(dt);
 }
 
+void Application::UpdateWaitingToStart() {
+    // El Player NO se actualiza durante la espera -- ni movimiento, ni dash,
+    // ni ataque -- para que "Pulsa ATACAR para empezar" sea literal: no se
+    // puede merodear ni golpear al aire antes de que la partida arranque de
+    // verdad. Solo se escucha el propio botón de Atacar, fuera de la FSM
+    // del Player (que ni siquiera llega a correr este frame).
+    bool attackPressed = IsKeyPressed(KEY_SPACE)
+        || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
+    if (attackPressed) {
+        m_matchState = GameState::Gameplay;
+    }
+}
+
+void Application::UpdatePauseMenu() {
+    MenuAction action = m_menuScreen.UpdatePause();
+    switch (action) {
+        case MenuAction::ResumeGame:
+            m_appState = m_pausedFromState;
+            break;
+        case MenuAction::OpenOptions:
+            m_optionsReturnTo = AppState::Paused;
+            m_appState = AppState::Options;
+            break;
+        case MenuAction::BackToMainMenu:
+            m_music->Stop();
+            m_appState = AppState::MainMenu;
+            break;
+        default:
+            break;
+    }
+}
+
+void Application::ApplyLiveAudioSettings() {
+    m_music->SetVolume(m_saveManager.Data().bgmVolume);
+    AudioSettings::SetSfxVolume(m_saveManager.Data().sfxVolume);
+    m_menuScreen.RefreshSfxVolume();
+
+    // El resto solo importa si hay una partida cargada de verdad (se abrió
+    // Opciones desde la pausa): un Player/Enemy/ExplosiveBarrel ya
+    // construido tiene su Sound cargado con el volumen de cuando se creó, y
+    // no vuelve a leerlo por sí solo.
+    if (m_level.player) m_level.player->RefreshSfxVolume();
+    for (auto& enemy : m_level.enemies) enemy->RefreshSfxVolume();
+    for (auto& barrel : m_level.barrels) barrel->RefreshSfxVolume();
+}
+
 void Application::HandleGameplayPauseInput() {
-    if (!IsKeyPressed(KEY_R)) return;
+    // Botón Select del mando como alternativa a 'R' (ver ctrl_retry en la
+    // pantalla de Controles).
+    bool retryPressed = IsKeyPressed(KEY_R)
+        || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_LEFT));
+    if (!retryPressed) return;
 
     // Infinito no se reintenta in situ: el punto era justo terminar y
     // enseñar la puntuación, así que 'R' devuelve al menú.
@@ -300,23 +426,31 @@ void Application::UpdateActiveMatch(float dt) {
     constexpr int kMinHitParticles = 5;
     constexpr int kMaxHitParticles = 10;
 
-    if (auto hit = CombatSystem::ResolveMeleeAttack(*m_level.player, m_level.enemies)) {
+    std::vector<MeleeHitResult> meleeHits = CombatSystem::ResolveMeleeAttack(*m_level.player, m_level.enemies, m_level.obstacles);
+    if (!meleeHits.empty()) {
+        // Una vez por swing, no por enemigo golpeado -- TriggerHitStop ya es
+        // idempotente (toma el máximo) y AddCameraShake reescribe los mismos
+        // valores cada vez, así que llamarlos por enemigo no cambiaría nada
+        // salvo repetir trabajo.
         TriggerHitStop(kHitStopDuration);
         AddCameraShake(kHitShakeDuration, kHitShakeIntensity);
-        m_particles.Emit(hit->impactPoint, GetRandomValue(kMinHitParticles, kMaxHitParticles));
 
-        if (hit->hitEnemy && !hit->hitEnemy->IsAlive()) {
-            m_saveManager.Data().zombiesKilled++;
+        for (const MeleeHitResult& hit : meleeHits) {
+            m_particles.Emit(hit.impactPoint, GetRandomValue(kMinHitParticles, kMaxHitParticles));
 
-            // Solo en Infinito: cada baja deja un engranaje (95%) o, más
-            // raro, un botiquín (5%) -- así el modo se sostiene solo, sin
-            // depender de los objetos fijos de un nivel.
-            if (m_appState == AppState::EndlessMode) {
-                constexpr int kHealthKitDropChancePercent = 5;
-                if (GetRandomValue(1, 100) <= kHealthKitDropChancePercent) {
-                    m_level.healthKits.push_back(std::make_unique<HealthKit>(hit->hitEnemy->GetPosition()));
-                } else {
-                    m_level.gears.push_back(std::make_unique<Gear>(hit->hitEnemy->GetPosition()));
+            if (hit.hitEnemy && !hit.hitEnemy->IsAlive()) {
+                m_saveManager.Data().zombiesKilled++;
+
+                // Solo en Infinito: cada baja deja un engranaje (95%) o, más
+                // raro, un botiquín (5%) -- así el modo se sostiene solo, sin
+                // depender de los objetos fijos de un nivel.
+                if (m_appState == AppState::EndlessMode) {
+                    constexpr int kHealthKitDropChancePercent = 5;
+                    if (GetRandomValue(1, 100) <= kHealthKitDropChancePercent) {
+                        m_level.healthKits.push_back(std::make_unique<HealthKit>(hit.hitEnemy->GetPosition()));
+                    } else {
+                        m_level.gears.push_back(std::make_unique<Gear>(hit.hitEnemy->GetPosition()));
+                    }
                 }
             }
         }
@@ -338,16 +472,16 @@ void Application::UpdateActiveMatch(float dt) {
 
         if (enemy->ConsumeExplosionTrigger()) {
             CombatSystem::ApplyAreaDamage(enemy->GetPosition(), Enemy::kExplodeRadius, enemy->GetExplosionDamage(),
-                                           *m_level.player, m_level.enemies);
+                                           *m_level.player, m_level.enemies, m_level.barrels);
             m_particles.Emit(enemy->GetPosition(), GetRandomValue(15, 25));
         }
     }
 
     CombatSystem::ResolveEnemyAttacks(*m_level.player, m_level.enemies);
-    CombatSystem::UpdateProjectiles(entityDt, m_projectiles, *m_level.player);
+    CombatSystem::UpdateProjectiles(entityDt, m_projectiles, *m_level.player, m_level.obstacles, m_level.barrels);
 
     for (auto& hazard : m_level.hazards) hazard->Update(entityDt);
-    CombatSystem::ApplyHazardDamage(m_level.hazards, *m_level.player, m_level.enemies);
+    CombatSystem::ApplyHazardDamage(m_level.hazards, *m_level.player);
 
     for (auto& spawner : m_spawners) {
         spawner.Update(entityDt, m_level.enemies);
@@ -363,7 +497,7 @@ void Application::UpdateActiveMatch(float dt) {
     for (auto& barrel : m_level.barrels) {
         if (!barrel->HasExploded()) continue;
         CombatSystem::ApplyAreaDamage(barrel->GetPosition(), ExplosiveBarrel::kExplosionRadius,
-                                       ExplosiveBarrel::kExplosionDamage, *m_level.player, m_level.enemies);
+                                       ExplosiveBarrel::kExplosionDamage, *m_level.player, m_level.enemies, m_level.barrels);
         m_particles.Emit(barrel->GetPosition(), GetRandomValue(15, 25));
         m_saveManager.Data().barrelsExploded++;
     }
@@ -455,6 +589,7 @@ void Application::DrawGameplay() const {
     for (auto& enemy : m_level.enemies) enemy->Draw();
     for (auto& obstacle : m_level.obstacles) obstacle->Draw();
     for (auto& hazard : m_level.hazards) hazard->Draw();
+    for (const Spawner& spawner : m_spawners) spawner.Draw();
     for (auto& gear : m_level.gears) gear->Draw();
     for (auto& healthKit : m_level.healthKits) healthKit->Draw();
     for (auto& barrel : m_level.barrels) barrel->Draw();
@@ -467,6 +602,9 @@ void Application::DrawGameplay() const {
     m_hud.DrawHud(ui, m_level, m_totalGears, m_appState, m_endlessDirector, m_camera);
 
     switch (m_matchState) {
+        case GameState::WaitingToStart:
+            m_hud.DrawCenteredOverlay(ui, "ready_title", SKYBLUE, "ready_subtitle");
+            break;
         case GameState::GameOver:
             m_hud.DrawCenteredOverlay(ui, "gameover_title", RED,
                 (m_appState == AppState::EndlessMode) ? "gameover_menu" : "gameover_retry");
@@ -478,7 +616,20 @@ void Application::DrawGameplay() const {
             break;
     }
 
-    DrawFPS(10, 10);
+    if (m_appState == AppState::Paused) {
+        m_menuScreen.DrawPause(ui);
+    }
+
+    // DrawFPS() de raylib dibuja a tamaño fijo (20px) con su propia fuente
+    // interna -- no se puede agrandar. Se sustituye por un DrawTextEx
+    // propio, en la esquina superior DERECHA (la izquierda ya la ocupa el
+    // texto de Vida de DrawHud, ver HudRenderer.cpp) para que el contador
+    // de FPS crezca junto al resto de texto del HUD sin solaparse.
+    constexpr float kFpsTextSize = 26.0f;
+    const Font& fpsFont = ui.localization.GetFontForSize(kFpsTextSize);
+    const char* fpsText = TextFormat("FPS: %d", GetFPS());
+    Vector2 fpsDim = MeasureTextEx(fpsFont, fpsText, kFpsTextSize, 1.0f);
+    DrawTextEx(fpsFont, fpsText, Vector2{ GetScreenWidth() - fpsDim.x - 10.0f, 10.0f }, kFpsTextSize, 1.0f, LIME);
     EndDrawing();
 }
 
@@ -507,6 +658,7 @@ void Application::Run() {
 
             case AppState::StoryMode:
             case AppState::EndlessMode:
+            case AppState::Paused:
                 UpdateGameplay(GetFrameTime());
                 DrawGameplay();
                 break;

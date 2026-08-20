@@ -33,4 +33,4 @@ Un motor de Action-RPG 3D hecho desde cero en C++ y una herramienta de creación
 4. Visual Studio detectará `CMakeLists.txt` y descargará las dependencias automáticamente (Raylib y JSON).
 5. Selecciona `Level5Portfolio.exe` como elemento de inicio y pulsa `F5`.
 
-*(Nota: Para crear nuevos niveles, compila y ejecuta el proyecto `level-editor-cs` de la carpeta raíz, diseña tu nivel y expórtalo a `engine-cpp/assets/sample_level.json`).*
+*(Nota: Para crear nuevos niveles, compila y ejecuta el proyecto `level-editor-csharp` de la carpeta raíz (o ábrelo desde el propio juego con el botón "Editor de Niveles" del menú principal / F12), diseña tu nivel y expórtalo a `engine-cpp/assets/data/level_<N>.json` o `engine-cpp/assets/data/endless.json` -- son los únicos archivos que el motor C++ carga.)*

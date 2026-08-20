@@ -53,12 +53,31 @@ add_executable(${PROJECT_NAME}
     src/Entities/ExplosiveBarrel.cpp
     src/Core/SaveManager.cpp
     src/Core/LocalizationManager.cpp
+    src/Core/AudioSettings.cpp
     src/Audio/MusicController.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib nlohmann_json::nlohmann_json)
 target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+
+# --- Build de Release: máxima optimización y sin ventana de consola ---
+# Solo en Release ($<CONFIG:Release>) -- en Debug se quiere la consola
+# abierta para ver TraceLog/std::cout mientras se desarrolla. main.cpp
+# sigue siendo un int main() normal: /ENTRY:mainCRTStartup redirige el
+# punto de entrada al arranque de la CRT compatible con main() aunque el
+# subsistema sea WINDOWS (que por defecto esperaría WinMain), así que no
+# hace falta reescribir main() para ocultar la consola.
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/O2>)
+    target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Release>:/SUBSYSTEM:WINDOWS>
+        $<$<CONFIG:Release>:/ENTRY:mainCRTStartup>
+    )
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:-O3>)
+    target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:-mwindows>)
+endif()
 
 # Copia shaders/assets junto al ejecutable en cada build. VS2022 depura con
 # el "working directory" apuntando por defecto a la carpeta del propio .exe,

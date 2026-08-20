@@ -11,6 +11,7 @@
 class ExplosiveBarrel : public Actor {
 public:
     explicit ExplosiveBarrel(Vector3 position, float maxHP = 30.0f);
+    ~ExplosiveBarrel();
 
     void Update(float) override {}
     void Draw() const override;
@@ -18,9 +19,14 @@ public:
 
     bool HasExploded() const { return m_exploded; }
 
+    // Reaplica AudioSettings::GetSfxVolume() al Sound ya cargado -- ver
+    // Player::RefreshSfxVolume, mismo motivo.
+    void RefreshSfxVolume();
+
     static constexpr float kExplosionRadius = 3.5f;
     static constexpr float kExplosionDamage = 50.0f;
 
 private:
     bool m_exploded = false;
+    Sound m_deathSound{};
 };

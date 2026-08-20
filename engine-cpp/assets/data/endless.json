@@ -20,7 +20,12 @@
     { "position": { "x": 5, "y": 0, "z": -5 }, "type": "cylinder", "radius": 0.8, "height": 3 },
     { "position": { "x": -5, "y": 0, "z": -5 }, "type": "cylinder", "radius": 0.8, "height": 3 },
     { "position": { "x": 0, "y": 0, "z": 3 }, "type": "cylinder", "radius": 0.6, "height": 2.5 },
-    { "position": { "x": 0, "y": 0, "z": -3 }, "type": "cylinder", "radius": 0.6, "height": 2.5 }
+    { "position": { "x": 0, "y": 0, "z": -3 }, "type": "cylinder", "radius": 0.6, "height": 2.5 },
+
+    { "position": { "x": 0, "y": 0, "z": 12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
+    { "position": { "x": 0, "y": 0, "z": -12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
+    { "position": { "x": 12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } },
+    { "position": { "x": -12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } }
   ],
   "hazards": [
     { "position": { "x": 0, "y": 0, "z": 0 }, "size": { "x": 3, "y": 0.1, "z": 3 }, "damagePerTick": 15 },

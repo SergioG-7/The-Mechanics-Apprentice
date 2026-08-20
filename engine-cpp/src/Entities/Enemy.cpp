@@ -1,8 +1,10 @@
 #include "Enemy.h"
 #include "../Combat/CollisionMath.h"
 #include "../Combat/CombatSystem.h"
+#include "../Core/AudioSettings.h"
 #include "../Renderer/ModelUtils.h"
 #include "raylib.h"
+#include "rlgl.h"
 #include <iostream>
 
 Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, float visionRadius,
@@ -17,13 +19,27 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
     // solo. El color base del material ya nace en blanco.
     m_model = LoadModel("assets/models/enemy/character_l.glb");
 
-    m_hurtSound = LoadSound("assets/audio/sfx/hurt.ogg");
-    if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, kHurtSoundVolume);
+    // "hurt.ogg" (de una sesión anterior) no existe en disco -- LoadSound
+    // fallaba en silencio (frameCount 0) y este sonido nunca llegaba a
+    // sonar. "attach_zombie.wav" es el archivo real de reacción al daño del
+    // zombie (nombre tal cual está en assets/audio/sfx/).
+    m_hurtSound = LoadSound("assets/audio/sfx/attach_zombie.wav");
+    m_deathSound = LoadSound("assets/audio/sfx/dead_zombie.ogg");
+    RefreshSfxVolume();
+}
+
+void Enemy::RefreshSfxVolume() {
+    // Directo, sin multiplicador propio -- ver Player::RefreshSfxVolume,
+    // mismo motivo: al 100% de SFX, SetSoundVolume tiene que recibir 1.0.
+    float sfxVolume = AudioSettings::GetSfxVolume();
+    if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, sfxVolume);
+    if (m_deathSound.frameCount > 0) SetSoundVolume(m_deathSound, sfxVolume);
 }
 
 Enemy::~Enemy() {
     ModelUtils::UnloadModelAndTextures(m_model);
     if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
+    if (m_deathSound.frameCount > 0) UnloadSound(m_deathSound);
 }
 
 void Enemy::SetupStates() {
@@ -235,11 +251,12 @@ void Enemy::UpdateHurt(float dt) {
 void Enemy::EnterDead() {
     std::cout << "[Combate] Zombie derrotado." << std::endl;
     m_deathTimer = 0.0f;
+    if (m_deathSound.frameCount > 0) PlaySound(m_deathSound);
 }
 
 void Enemy::UpdateDead(float dt) {
     m_deathTimer += dt;
-    if (m_deathTimer >= kCorpseGroundDuration + kCorpseFadeDuration) {
+    if (m_deathTimer >= kCorpseFadeDuration) {
         m_pendingDestruction = true;
     }
 }
@@ -268,19 +285,24 @@ void Enemy::Draw() const {
     if (m_fsm.Is(EnemyState::Hurt)) {
         tint = RED;
     } else if (m_fsm.Is(EnemyState::Dead)) {
-        tint = Color{ 80, 20, 20, 255 };
+        // Sin pausa: el fade-out arranca en el instante mismo de la muerte
+        // (m_deathTimer = 0) y dura kCorpseFadeDuration completo, sin un
+        // tramo previo opaco. Mientras el alpha baja, el color parpadea a
+        // velocidad constante (no acelerada, a diferencia de Explode más
+        // abajo) entre WHITE puro -- un flash tipo stun -- y el tinte de
+        // muerte de siempre; ambos frames comparten el MISMO alpha del
+        // instante, así que el parpadeo no interfiere con el fade.
+        constexpr Color kDeadTint = Color{ 80, 20, 20, 255 };
+        constexpr float kCorpseFlickerPeriod = 0.2f;
 
-        // Corpse cleanup: los primeros kCorpseGroundDuration segundos el
-        // cadáver queda opaco en el suelo; después se desvanece durante
-        // kCorpseFadeDuration. La sombra se desvanece a la par para no dejar
-        // una mancha oscura flotando sin cuerpo encima.
-        float fadeElapsed = m_deathTimer - kCorpseGroundDuration;
-        if (fadeElapsed > 0.0f) {
-            float alphaFloat = 1.0f - (fadeElapsed / kCorpseFadeDuration);
-            if (alphaFloat < 0.0f) alphaFloat = 0.0f;
-            tint.a = (unsigned char)(alphaFloat * 255.0f);
-            shadowAlpha = (unsigned char)(alphaFloat * 100.0f);
-        }
+        float alphaFloat = 1.0f - (m_deathTimer / kCorpseFadeDuration);
+        if (alphaFloat < 0.0f) alphaFloat = 0.0f;
+        unsigned char alpha = (unsigned char)(alphaFloat * 255.0f);
+
+        bool flickerOn = fmodf(m_deathTimer, kCorpseFlickerPeriod) < (kCorpseFlickerPeriod * 0.5f);
+        tint = flickerOn ? WHITE : kDeadTint;
+        tint.a = alpha;
+        shadowAlpha = (unsigned char)(alphaFloat * 100.0f);
     } else if (m_fsm.Is(EnemyState::Explode)) {
         // Parpadeo cada vez más rápido: el período baja de 0.3s a 0.05s a
         // medida que se acerca la detonación (progress 0..1).
@@ -293,10 +315,25 @@ void Enemy::Draw() const {
 
     // Hit-flash: destello breve de impacto, independiente del tinte de
     // estado de arriba (incluida la propia muerte) -- por eso se aplica el
-    // último y sin "else", manda sobre cualquier cosa durante sus 0.1s.
+    // último y sin "else", manda sobre cualquier cosa durante sus 0.1s. Solo
+    // se tocan los canales RGB: si esto reescribiera tint entero (WHITE
+    // incluye alpha 255), pisaría el alpha del fade de muerte de arriba y el
+    // cadáver "resucitaría" a opaco durante ese destello.
     if (m_damageFlashTimer.IsActive()) {
-        tint = WHITE;
+        tint.r = 255;
+        tint.g = 255;
+        tint.b = 255;
     }
+
+    // Mientras el cadáver se desvanece (alpha < 255), el depth write se
+    // desactiva: si no, cada píxel semitransparente sigue escribiendo el
+    // depth buffer como si fuera opaco, y cualquier cosa dibujada después
+    // detrás/alrededor del cadáver (otro enemigo, una partícula) se recorta
+    // contra un cuerpo que ya casi no se ve -- el "parpadeo" reportado. El
+    // depth TEST se deja activo (rlDisableDepthMask, no rlDisableDepthTest):
+    // el cadáver sigue ocultándose correctamente detrás de un Obstacle real.
+    bool isFading = tint.a < 255;
+    if (isFading) rlDisableDepthMask();
 
     // Sombra falsa: ancla al zombie al suelo sin necesitar un shader de
     // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
@@ -306,6 +343,8 @@ void Enemy::Draw() const {
     // ModelUtils::DrawModelWithOutline. Negro puro con el mismo alpha que el
     // cuerpo para que se desvanezca a la par durante el fade del cadáver.
     ModelUtils::DrawModelWithOutline(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
+
+    if (isFading) rlEnableDepthMask();
 }
 
 void Enemy::TakeDamage(float amount, Vector3 knockbackDir) {

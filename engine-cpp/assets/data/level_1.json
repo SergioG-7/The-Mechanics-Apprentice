@@ -12,7 +12,12 @@
     { "position": { "x": -3, "y": 0, "z": -1.7 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
     { "position": { "x": 4.5, "y": 0, "z": 6.8 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
     { "position": { "x": 5, "y": 0, "z": 4 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-    { "position": { "x": 4.6, "y": 0, "z": -0.5 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } }
+    { "position": { "x": 4.6, "y": 0, "z": -0.5 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
+
+    { "position": { "x": 0, "y": 0, "z": 12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
+    { "position": { "x": 0, "y": 0, "z": -12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
+    { "position": { "x": 12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } },
+    { "position": { "x": -12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } }
   ],
   "hazards": [],
   "enemies": [

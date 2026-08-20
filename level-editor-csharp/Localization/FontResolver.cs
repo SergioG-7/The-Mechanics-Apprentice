@@ -13,7 +13,7 @@ namespace LevelEditor.Localization
         // Asia Oriental instalado dan mejor legibilidad nativa. Ninguna
         // instalada -> se cae a la fuente embebida del proyecto (paso 2).
         private static readonly string[] CjkFamilyCandidates = { "Yu Gothic UI", "Yu Gothic", "MS Gothic", "Meiryo" };
-        private static readonly string EmbeddedFontPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Fonts", "font.ttf");
+        private static readonly string EmbeddedFontPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Fonts", "MainFont.ttf");
 
         private static string? _resolvedOsFamilyName;
         private static bool _osFamilyResolutionAttempted;
@@ -61,7 +61,7 @@ namespace LevelEditor.Localization
 
         // Red de seguridad para una máquina sin el paquete de idioma de
         // Asia Oriental: el mismo .ttf que ya usa el motor C++
-        // (engine-cpp/assets/fonts/font.ttf), enlazado al proyecto del
+        // (engine-cpp/assets/fonts/MainFont.ttf), enlazado al proyecto del
         // editor -- ver LevelEditor.csproj.
         private static Font? LoadEmbeddedFont(float emSize, FontStyle style)
         {

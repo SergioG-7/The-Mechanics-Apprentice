@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "../Combat/CollisionMath.h"
 #include "../Combat/CombatSystem.h"
+#include "../Core/AudioSettings.h"
 #include "../Renderer/ModelUtils.h"
 #include "raylib.h"
 #include <iostream>
@@ -22,10 +23,24 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
         m_weaponModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     }
 
-    m_attackSound = LoadSound("assets/audio/sfx/attack.ogg");
-    m_hurtSound = LoadSound("assets/audio/sfx/hurt.ogg");
-    if (m_attackSound.frameCount > 0) SetSoundVolume(m_attackSound, kAttackSoundVolume);
-    if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, kHurtSoundVolume);
+    // Nombres reales en disco -- "attack.ogg"/"hurt.ogg" (de una sesión
+    // anterior) ya no existen ahí, así que LoadSound fallaba en silencio
+    // (frameCount 0, guardado por el "if" de abajo) y estos dos sonidos
+    // nunca llegaban a sonar.
+    m_attackSound = LoadSound("assets/audio/sfx/attack_player.ogg");
+    m_hurtSound = LoadSound("assets/audio/sfx/hurt_player.wav");
+    m_dashSound = LoadSound("assets/audio/sfx/dash_player.wav");
+    RefreshSfxVolume();
+}
+
+void Player::RefreshSfxVolume() {
+    // Directo, sin multiplicador propio de por medio: si la UI manda 1.0
+    // (SFX al 100%), SetSoundVolume tiene que recibir 1.0, no una fracción
+    // atenuada por un "balance" interno que el slider no puede compensar.
+    float sfxVolume = AudioSettings::GetSfxVolume();
+    if (m_attackSound.frameCount > 0) SetSoundVolume(m_attackSound, sfxVolume);
+    if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, sfxVolume);
+    if (m_dashSound.frameCount > 0) SetSoundVolume(m_dashSound, sfxVolume);
 }
 
 Player::~Player() {
@@ -33,6 +48,7 @@ Player::~Player() {
     ModelUtils::UnloadModelAndTextures(m_weaponModel);
     if (m_attackSound.frameCount > 0) UnloadSound(m_attackSound);
     if (m_hurtSound.frameCount > 0) UnloadSound(m_hurtSound);
+    if (m_dashSound.frameCount > 0) UnloadSound(m_dashSound);
 }
 
 void Player::SetShader(Shader shader) {
@@ -134,6 +150,7 @@ void Player::UpdateRun(float dt) {
 void Player::EnterDash() {
     m_dashTimer = 0.0f;
     m_dashDirection = m_facingDirection; // congelada al entrar: ignora input durante el dash
+    if (m_dashSound.frameCount > 0) PlaySound(m_dashSound);
 }
 
 void Player::UpdateDash(float dt) {
@@ -197,6 +214,11 @@ void Player::Update(float dt) {
     m_damageFlashTimer.Tick(dt);
     ApplyKnockback(dt);
     m_fsm.Update(dt);
+
+    // El límite del mapa ya no es un clamp aquí -- son muros de Obstacle
+    // reales alrededor del perímetro de cada nivel (ver assets/data/*.json),
+    // así que la colisión normal contra obstáculos (TryMoveAgainstObstacles,
+    // más arriba en cada Update* de estado) ya se encarga.
 }
 
 void Player::Draw() const {

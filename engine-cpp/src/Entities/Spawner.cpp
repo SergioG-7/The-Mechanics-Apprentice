@@ -21,7 +21,14 @@ void Spawner::Update(float dt, std::vector<std::unique_ptr<Enemy>>& activeEnemie
 
     if (static_cast<int>(m_spawnedEnemies.size()) >= m_maxEnemies) return;
 
-    auto enemy = EnemyFactory::CreateEnemy(m_enemyType, m_position);
+    // Ruta de un solo punto hacia el centro del mapa: sin ella, un enemigo
+    // generado lejos del jugador se queda plantado en su esquina (patrolRoute
+    // vacía = no patrulla, ver Enemy::UpdatePatrol) hasta que alguien entre
+    // por casualidad en su radio de visión -- que en Infinito, con spawners
+    // repartidos por el borde del mapa, podía no pasar nunca. Al llegar al
+    // centro se queda ahí (una ruta de un punto no tiene a dónde más ir), con
+    // muchas más posibilidades de cruzarse con el jugador de camino.
+    auto enemy = EnemyFactory::CreateEnemy(m_enemyType, m_position, { Vector3{ 0.0f, 0.0f, 0.0f } });
     if (!enemy) return; // variante desconocida; EnemyFactory ya lo avisó por log
 
     enemy->SetObstacles(m_obstacles);
@@ -33,4 +40,14 @@ void Spawner::Update(float dt, std::vector<std::unique_ptr<Enemy>>& activeEnemie
 
 void Spawner::ScaleSpawnInterval(float factor) {
     m_spawnInterval = std::max(kMinSpawnInterval, m_spawnInterval * factor);
+}
+
+void Spawner::Draw() const {
+    // Disco plano + anillo, mismo tono (Magenta) que su marcador en el
+    // editor de niveles -- a ras de suelo (0.02f, como la sombra falsa de
+    // Enemy) para no competir en altura con nada que camine por encima.
+    constexpr float kRadius = 1.0f;
+    Vector3 base{ m_position.x, 0.02f, m_position.z };
+    DrawCylinder(base, kRadius, kRadius, 0.02f, 24, Fade(MAGENTA, 0.35f));
+    DrawCylinderWires(base, kRadius, kRadius, 0.02f, 24, MAGENTA);
 }

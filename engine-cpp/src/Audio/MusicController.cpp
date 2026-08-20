@@ -24,3 +24,7 @@ void MusicController::Stop() {
 void MusicController::Update() {
     if (m_loaded) UpdateMusicStream(m_music);
 }
+
+void MusicController::SetVolume(float volume) {
+    if (m_loaded) SetMusicVolume(m_music, volume);
+}

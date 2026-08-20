@@ -1,13 +1,12 @@
 #pragma once
-#include "raylib.h"
 #include "../Core/LocalizationManager.h"
 
-// Dependencias que casi cualquier pantalla de UI necesita para dibujar
-// texto: la fuente cargada (con los glifos de los tres idiomas, incluido
-// japonés) y el gestor de idioma activo. Un solo parámetro compuesto en vez
-// de dos sueltos porque casi todos los métodos de MenuScreen los necesitan
-// juntos -- ver Application::BuildFontCodepoints / m_font.
+// Dependencia que casi cualquier pantalla de UI necesita para dibujar texto:
+// el gestor de idioma activo, que ahora también es dueño de la fuente (dos
+// tamaños horneados, ver LocalizationManager::GetFontForSize) -- antes había
+// un campo `font` aparte aquí, pero como la fuente correcta depende del
+// tamaño de dibujado de cada texto, cada sitio pide la suya con
+// ui.localization.GetFontForSize(size) en vez de recibir una sola fija.
 struct UiContext {
-    const Font& font;
     const LocalizationManager& localization;
 };

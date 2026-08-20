@@ -10,5 +10,6 @@ enum class AppState {
     Stats,       // se abre desde MainMenu; su "Volver" regresa al menú principal
     LevelSelect, // se abre desde MainMenu ("Modo Historia"); su "Volver" regresa al menú principal
     StoryMode,
-    EndlessMode
+    EndlessMode,
+    Paused // ESC durante StoryMode/EndlessMode; ver Application::m_pausedFromState
 };

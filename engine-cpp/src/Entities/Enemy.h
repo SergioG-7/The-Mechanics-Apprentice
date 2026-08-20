@@ -39,6 +39,10 @@ public:
     // tras construir el Enemy, una vez cargado el ShaderManager.
     void SetShader(Shader shader);
 
+    // Reaplica AudioSettings::GetSfxVolume() al Sound ya cargado -- ver
+    // Player::RefreshSfxVolume, mismo motivo.
+    void RefreshSfxVolume();
+
     // true una vez terminado el fade-out del cadáver (ver UpdateDead):
     // Application lo usa como criterio del erase-remove en m_level.enemies.
     bool IsPendingDestruction() const { return m_pendingDestruction; }
@@ -116,17 +120,16 @@ private:
     float m_explodeTimer = 0.0f;
     bool m_pendingExplosion = false;
 
-    // Corpse cleanup: tiempo en el suelo tal cual, seguido de un fade-out
-    // (ver Draw) antes de marcarse para destrucción. Sin esto, el Modo
-    // Infinito acumularía cadáveres sin límite en m_level.enemies.
+    // Corpse cleanup: fade-out continuo desde el instante de la muerte (ver
+    // Draw) antes de marcarse para destrucción. Sin esto, el Modo Infinito
+    // acumularía cadáveres sin límite en m_level.enemies.
     float m_deathTimer = 0.0f;
     bool m_pendingDestruction = false;
-    static constexpr float kCorpseGroundDuration = 3.0f;
-    static constexpr float kCorpseFadeDuration = 1.5f;
+    static constexpr float kCorpseFadeDuration = 2.0f;
 
     Hitbox m_activeHitbox{};
     bool m_hitboxWindowOpen = false;
     Model m_model;
     Sound m_hurtSound{};
-    static constexpr float kHurtSoundVolume = 0.5f; // 0.0 (silencio) - 1.0 (volumen original del archivo)
+    Sound m_deathSound{};
 };

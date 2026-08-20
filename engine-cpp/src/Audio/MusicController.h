@@ -18,6 +18,11 @@ public:
     void Stop();
     void Update();
 
+    // Reaplica el volumen en caliente (el slider de Música en Opciones puede
+    // tocarse durante una partida en pausa, sin recargar el nivel) --
+    // SetMusicVolume es barato y válido sobre un Music ya cargado.
+    void SetVolume(float volume);
+
 private:
     Music m_music{};
     bool m_loaded = false;

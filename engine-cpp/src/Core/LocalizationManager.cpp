@@ -6,6 +6,10 @@
 
 using json = nlohmann::json;
 
+LocalizationManager::~LocalizationManager() {
+    UnloadFonts();
+}
+
 const std::vector<std::string>& LocalizationManager::SupportedLanguages() {
     // El orden es el orden de ciclado de CycleLanguage().
     static const std::vector<std::string> languages = { "es", "en", "jp" };
@@ -50,7 +54,56 @@ void LocalizationManager::LoadAll(const std::string& initialLanguage) {
         }
     }
 
+    // ASCII imprimible completo (32-126): dígitos, ':', '%' y demás
+    // puntuación que el texto compone en tiempo de ejecución (TextFormat
+    // del volumen, del contador de engranajes, etc.) no aparecen
+    // literalmente en ninguna traducción, así que la unión de arriba no
+    // los cubre. Sin esto, GetGlyphIndex no encuentra el codepoint y cae
+    // a su fallback -- que a su vez solo es '?' si '?' está cargado; si
+    // tampoco lo está, cae al glifo 0 (el primero insertado, orden no
+    // determinista de unordered_map), que es el bug observado ("音量R
+    // RRR": ':', '%' y los dígitos ausentes dibujando todos el mismo
+    // glifo arbitrario).
+    for (char c = 32; c <= 126; ++c) {
+        m_allText += c;
+    }
+
     SetLanguage(initialLanguage);
+}
+
+void LocalizationManager::LoadFonts() {
+    int codepointCount = 0;
+    int* codepoints = LoadCodepoints(m_allText.c_str(), &codepointCount);
+
+    LoadFontAtSize(m_smallFont, kSmallFontSize, codepoints, codepointCount);
+    LoadFontAtSize(m_largeFont, kLargeFontSize, codepoints, codepointCount);
+
+    UnloadCodepoints(codepoints);
+}
+
+void LocalizationManager::LoadFontAtSize(Font& outFont, int size, int* codepoints, int codepointCount) {
+    // MainFont.ttf (copiada de Tactical Soccer, Assets/Resources/MainFont.ttf):
+    // sustituye a la font.ttf original tras el playtest 6, que reportó trazos
+    // finos perdidos ("letras rotas") incluso en los tamaños horneados exactos
+    // -- el problema no era solo de escalado (ya resuelto por el propio
+    // horneado a dos tamaños), sino del diseño de glifo de la fuente anterior
+    // a tamaños pequeños. Cobertura CJK verificada con fontTools antes de
+    // adoptarla (16732 glifos, cubre los 129 codepoints japoneses que usa
+    // este proyecto).
+    outFont = LoadFontEx("assets/fonts/MainFont.ttf", size, codepoints, codepointCount);
+    if (!IsFontValid(outFont)) {
+        TraceLog(LOG_WARNING, "LocalizationManager: no se pudo cargar assets/fonts/MainFont.ttf a %dpx, usando la fuente por defecto", size);
+        outFont = GetFontDefault();
+    }
+}
+
+void LocalizationManager::UnloadFonts() {
+    if (IsFontValid(m_smallFont)) { UnloadFont(m_smallFont); m_smallFont = Font{}; }
+    if (IsFontValid(m_largeFont)) { UnloadFont(m_largeFont); m_largeFont = Font{}; }
+}
+
+const Font& LocalizationManager::GetFontForSize(float drawSize) const {
+    return (drawSize < kFontSizeThreshold) ? m_smallFont : m_largeFont;
 }
 
 void LocalizationManager::SetLanguage(const std::string& languageCode) {

@@ -5,9 +5,18 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, int total
                            AppState appState, const EndlessDirector& endlessDirector, const Camera3D& camera) const {
     if (!level.player) return;
 
-    // --- Barra de HP del Player ---
-    constexpr int barX = 10, barY = 40, barWidth = 200, barHeight = 20;
+    // --- Barra de HP del Player, con etiqueta encima -- antes la barra no
+    // llevaba número, solo color, y en el playtest pidieron que "Vida" fuera
+    // uno de los textos grandes del HUD. ---
+    constexpr int barX = 10, barY = 60, barWidth = 200, barHeight = 20;
+    constexpr float kHudTextSize = 28.0f;
+    const Font& hudFont = ui.localization.GetFontForSize(kHudTextSize);
     float hpRatio = level.player->GetHP() / level.player->GetMaxHP();
+
+    std::string hpText = TextFormat("%s: %d / %d", ui.localization.GetText("hud_hp"),
+                                     static_cast<int>(level.player->GetHP()), static_cast<int>(level.player->GetMaxHP()));
+    DrawTextEx(hudFont, hpText.c_str(), Vector2{ static_cast<float>(barX), 10.0f }, kHudTextSize, 1.0f, RAYWHITE);
+
     DrawRectangle(barX, barY, barWidth, barHeight, DARKGRAY);
     DrawRectangle(barX, barY, static_cast<int>(barWidth * hpRatio), barHeight, RED);
     DrawRectangleLines(barX, barY, barWidth, barHeight, BLACK);
@@ -18,7 +27,7 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, int total
     std::string gearsText = (appState == AppState::EndlessMode)
         ? TextFormat("%s: %d", gearsLabel, endlessDirector.GetScore())
         : TextFormat("%s: %d / %d", gearsLabel, totalGears - static_cast<int>(level.gears.size()), totalGears);
-    DrawTextEx(ui.font, gearsText.c_str(), Vector2{ static_cast<float>(barX), static_cast<float>(barY + barHeight + 10) }, 20.0f, 1.0f, BLACK);
+    DrawTextEx(hudFont, gearsText.c_str(), Vector2{ static_cast<float>(barX), static_cast<float>(barY + barHeight + 10) }, kHudTextSize, 1.0f, ORANGE);
 
     // --- Barra de HP flotante sobre cada Enemy dañado ---
     for (auto& enemy : level.enemies) {
@@ -46,12 +55,14 @@ void HudRenderer::DrawCenteredOverlay(const UiContext& ui, const char* titleKey,
     DrawRectangle(0, 0, screenW, screenH, Color{ 0, 0, 0, 150 });
 
     const char* title = ui.localization.GetText(titleKey);
-    constexpr float titleSize = 60.0f;
-    Vector2 titleDim = MeasureTextEx(ui.font, title, titleSize, 1.0f);
-    DrawTextEx(ui.font, title, Vector2{ (screenW - titleDim.x) / 2.0f, screenH / 2.0f - 40.0f }, titleSize, 1.0f, titleColor);
+    constexpr float titleSize = 90.0f;
+    const Font& titleFont = ui.localization.GetFontForSize(titleSize);
+    Vector2 titleDim = MeasureTextEx(titleFont, title, titleSize, 1.0f);
+    DrawTextEx(titleFont, title, Vector2{ (screenW - titleDim.x) / 2.0f, screenH / 2.0f - 60.0f }, titleSize, 1.0f, titleColor);
 
     const char* subtitle = ui.localization.GetText(subtitleKey);
-    constexpr float subSize = 20.0f;
-    Vector2 subDim = MeasureTextEx(ui.font, subtitle, subSize, 1.0f);
-    DrawTextEx(ui.font, subtitle, Vector2{ (screenW - subDim.x) / 2.0f, screenH / 2.0f + 30.0f }, subSize, 1.0f, RAYWHITE);
+    constexpr float subSize = 32.0f;
+    const Font& subFont = ui.localization.GetFontForSize(subSize);
+    Vector2 subDim = MeasureTextEx(subFont, subtitle, subSize, 1.0f);
+    DrawTextEx(subFont, subtitle, Vector2{ (screenW - subDim.x) / 2.0f, screenH / 2.0f + 50.0f }, subSize, 1.0f, RAYWHITE);
 }

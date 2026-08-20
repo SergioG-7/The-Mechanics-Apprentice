@@ -29,7 +29,18 @@ namespace LevelEditor
         // Arquetipos disponibles para el ComboBox de variante y para el tipo
         // de enemigo de un Spawner. "Default" es el único que NO pasa por
         // EnemyFactory en el motor C++: usa los stats propios del EnemyData.
+        // Son identificadores consumidos tal cual por el motor (no se
+        // traducen NUNCA como valor) -- lo que se traduce es solo su
+        // representación en el ComboBox, ver BuildVariantItems.
         private static readonly string[] EnemyVariantNames = { "Default", "Tank", "Runner", "Spitter", "Kamikaze" };
+
+        // Envuelve cada código de variante en un ComboBoxItem cuyo texto
+        // visible sale de "variant_{code}" (variant_Default, variant_Tank...)
+        // en el idioma activo, pero cuyo Value se queda en el código en
+        // inglés que espera EnemyFactory -- así el ComboBox se relocaliza
+        // sin arrastrar el valor serializado.
+        private static ComboBoxItem<string>[] BuildVariantItems(IEnumerable<string> codes) =>
+            codes.Select(code => new ComboBoxItem<string>(code, LocalizationManager.GetText($"variant_{code}"))).ToArray();
 
         // --- Estado del nivel en memoria ---
         private PlayerData? _player;
@@ -87,6 +98,7 @@ namespace LevelEditor
         private readonly TabPage _systemTab;
         private readonly GroupBox _editGroup;
         private readonly GroupBox _variantGroup;
+        private readonly ComboBox _variantCombo;
         private readonly GroupBox _languageGroup;
         private readonly Label _hintLabel;
         private readonly Button _openButton;
@@ -189,18 +201,21 @@ namespace LevelEditor
                 Location = new Point(toolsX, _editGroup.Bottom + 10),
                 Size = new Size(190, 55)
             };
-            var variantCombo = new ComboBox
+            _variantCombo = new ComboBox
             {
                 Location = new Point(10, 20),
                 Width = 160,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            // Identificadores consumidos por EnemyFactory en el motor C++
-            // (ver LevelLoader.cpp), no texto de interfaz -- no se traducen.
-            variantCombo.Items.AddRange(EnemyVariantNames);
-            variantCombo.SelectedIndex = 0;
-            variantCombo.SelectedIndexChanged += (s, e) => _selectedVariant = (string)variantCombo.SelectedItem!;
-            _variantGroup.Controls.Add(variantCombo);
+            // El VALOR (EnemyVariantNames) es el identificador que consume
+            // EnemyFactory en el motor C++ (ver LevelLoader.cpp) y nunca se
+            // traduce; el TEXTO visible sí, vía ComboBoxItem (ver
+            // BuildVariantItems) -- RefreshVariantCombo lo reetiqueta al
+            // cambiar de idioma sin tocar _selectedVariant.
+            _variantCombo.Items.AddRange(BuildVariantItems(EnemyVariantNames));
+            _variantCombo.SelectedIndex = 0;
+            _variantCombo.SelectedIndexChanged += OnVariantComboChanged;
+            _variantGroup.Controls.Add(_variantCombo);
             Controls.Add(_variantGroup);
 
             _hintLabel = new Label
@@ -318,6 +333,28 @@ namespace LevelEditor
             ApplyLanguage();
         }
 
+        private void OnVariantComboChanged(object? sender, EventArgs e)
+        {
+            _selectedVariant = ((ComboBoxItem<string>)_variantCombo.SelectedItem!).Value;
+        }
+
+        // Reetiqueta el ComboBox de variante superior (fuera del panel de
+        // propiedades, así que ApplyLanguage no lo reconstruye gratis como
+        // hace con BuildEnemyProperties/BuildSpawnerProperties vía
+        // RefreshPropertiesPanel). Se desengancha el handler mientras
+        // reconstruye los Items: un Items.Clear() dispara SelectedIndexChanged
+        // con SelectedItem a null, y el cast de OnVariantComboChanged
+        // reventaría con ese estado transitorio.
+        private void RefreshVariantCombo()
+        {
+            _variantCombo.SelectedIndexChanged -= OnVariantComboChanged;
+            _variantCombo.Items.Clear();
+            _variantCombo.Items.AddRange(BuildVariantItems(EnemyVariantNames));
+            int index = Array.IndexOf(EnemyVariantNames, _selectedVariant);
+            _variantCombo.SelectedIndex = index >= 0 ? index : 0;
+            _variantCombo.SelectedIndexChanged += OnVariantComboChanged;
+        }
+
         // Escribe el texto correcto en cada control fijo del formulario para
         // el idioma activo, resolviendo la fuente por CONTENIDO (no por
         // idioma activo -- ver Meta/patrones/localizacion-cjk-unity.md):
@@ -364,6 +401,7 @@ namespace LevelEditor
 
             ApplyLocalizedText(_editGroup, "group_edit");
             ApplyLocalizedText(_variantGroup, "group_variant");
+            RefreshVariantCombo();
             ApplyLocalizedText(_languageGroup, "group_language");
             ApplyLocalizedText(_hintLabel, "hint_delete");
             ApplyLocalizedText(_openButton, "btn_open");
@@ -421,14 +459,19 @@ namespace LevelEditor
                     break;
 
                 case EditorTool.PlaceEnemy:
+                    // Stats base del arquetipo elegido (ver EnemyVariantCatalog) si
+                    // existe una en enemy_variants.json; si no ("Default", o una
+                    // variante que el catálogo no reconoce), los valores de
+                    // siempre -- mismo criterio de degradar sin reventar.
+                    EnemyVariantStatsData? placedVariantStats = EnemyVariantCatalog.TryGet(_selectedVariant);
                     _enemies.Add(new EnemyData
                     {
                         Spawn = worldPos,
                         Type = _selectedVariant,
-                        MaxHP = 30.0f,
-                        VisionRadius = 6.0f,
-                        Speed = 2.5f,
-                        AttackDamage = 10.0f,
+                        MaxHP = placedVariantStats?.MaxHP ?? 30.0f,
+                        VisionRadius = placedVariantStats?.VisionRadius ?? 6.0f,
+                        Speed = placedVariantStats?.Speed ?? 2.5f,
+                        AttackDamage = placedVariantStats?.AttackDamage ?? 10.0f,
                         PatrolRoute = new List<Vector3Data>()
                     });
                     MarkDirty();
@@ -772,10 +815,31 @@ namespace LevelEditor
                 Location = new Point(10, InputY(0)), Width = 160,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            typeCombo.Items.AddRange(EnemyVariantNames);
-            typeCombo.SelectedItem = enemy.Type;
+            typeCombo.Items.AddRange(BuildVariantItems(EnemyVariantNames));
+            typeCombo.SelectedIndex = Array.IndexOf(EnemyVariantNames, enemy.Type);
             if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0; // Type de un JSON externo que no reconocemos
-            typeCombo.SelectedIndexChanged += (s, e) => { enemy.Type = (string)typeCombo.SelectedItem!; MarkDirty(); };
+            typeCombo.SelectedIndexChanged += (s, e) =>
+            {
+                enemy.Type = ((ComboBoxItem<string>)typeCombo.SelectedItem!).Value;
+
+                // Cambiar de variante actualiza HP/Velocidad/Rango/Daño a los
+                // base del arquetipo nuevo -- si no, "Tank" se quedaría con
+                // los números de lo que hubiera antes (o los del primer
+                // enemigo colocado en la sesión), que es justo lo reportado
+                // en el playtest. "Default" (sin entrada en el catálogo) deja
+                // los valores tal cual, para poder ajustarlos a mano.
+                EnemyVariantStatsData? stats = EnemyVariantCatalog.TryGet(enemy.Type);
+                if (stats != null)
+                {
+                    enemy.MaxHP = stats.MaxHP;
+                    enemy.VisionRadius = stats.VisionRadius;
+                    enemy.Speed = stats.Speed;
+                    enemy.AttackDamage = stats.AttackDamage;
+                }
+
+                MarkDirty();
+                RefreshPropertiesPanel(); // reconstruye los NumericUpDown con los valores nuevos
+            };
 
             var hpInput = new NumericUpDown
             {
@@ -831,10 +895,11 @@ namespace LevelEditor
             // "Default" no aparece aquí: un Spawner siempre necesita una
             // variante real de EnemyFactory, no tiene sentido para él (ver
             // el mismo criterio en OnCanvasMouseClick al colocarlo).
-            typeCombo.Items.AddRange(EnemyVariantNames.Where(n => n != "Default").ToArray());
-            typeCombo.SelectedItem = spawner.EnemyType;
+            string[] spawnerVariants = EnemyVariantNames.Where(n => n != "Default").ToArray();
+            typeCombo.Items.AddRange(BuildVariantItems(spawnerVariants));
+            typeCombo.SelectedIndex = Array.IndexOf(spawnerVariants, spawner.EnemyType);
             if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0;
-            typeCombo.SelectedIndexChanged += (s, e) => { spawner.EnemyType = (string)typeCombo.SelectedItem!; MarkDirty(); };
+            typeCombo.SelectedIndexChanged += (s, e) => { spawner.EnemyType = ((ComboBoxItem<string>)typeCombo.SelectedItem!).Value; MarkDirty(); };
 
             var intervalInput = new NumericUpDown
             {
@@ -1277,7 +1342,14 @@ namespace LevelEditor
             {
                 saveFileDialog.Filter = LocalizationManager.GetText("dialog_json_filter");
                 saveFileDialog.Title = LocalizationManager.GetText("dialog_save_title");
-                saveFileDialog.FileName = "sample_level.json"; // Nombre esperado por el motor C++
+                // Basado en el nombre de nivel en memoria, no un nombre fijo
+                // ("sample_level.json"): ese nombre fijo era justo lo que
+                // llenaba engine-cpp/assets/ de niveles de prueba residuales
+                // cada vez que se exportaba sin cambiarlo a mano -- el motor
+                // C++ solo lee assets/data/level_<N>.json y
+                // assets/data/endless.json (ver Application::BuildStoryLevelPath),
+                // nunca este archivo por su nombre.
+                saveFileDialog.FileName = $"{_levelName}.json";
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
