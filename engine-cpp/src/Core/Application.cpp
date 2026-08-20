@@ -625,7 +625,7 @@ void Application::DrawGameplay() const {
     // propio, en la esquina superior DERECHA (la izquierda ya la ocupa el
     // texto de Vida de DrawHud, ver HudRenderer.cpp) para que el contador
     // de FPS crezca junto al resto de texto del HUD sin solaparse.
-    constexpr float kFpsTextSize = 26.0f;
+    constexpr float kFpsTextSize = LocalizationManager::kFontSizeFps;
     const Font& fpsFont = ui.localization.GetFontForSize(kFpsTextSize);
     const char* fpsText = TextFormat("FPS: %d", GetFPS());
     Vector2 fpsDim = MeasureTextEx(fpsFont, fpsText, kFpsTextSize, 1.0f);

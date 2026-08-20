@@ -9,7 +9,7 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, int total
     // llevaba número, solo color, y en el playtest pidieron que "Vida" fuera
     // uno de los textos grandes del HUD. ---
     constexpr int barX = 10, barY = 60, barWidth = 200, barHeight = 20;
-    constexpr float kHudTextSize = 28.0f;
+    constexpr float kHudTextSize = LocalizationManager::kFontSizeHud;
     const Font& hudFont = ui.localization.GetFontForSize(kHudTextSize);
     float hpRatio = level.player->GetHP() / level.player->GetMaxHP();
 
@@ -55,13 +55,13 @@ void HudRenderer::DrawCenteredOverlay(const UiContext& ui, const char* titleKey,
     DrawRectangle(0, 0, screenW, screenH, Color{ 0, 0, 0, 150 });
 
     const char* title = ui.localization.GetText(titleKey);
-    constexpr float titleSize = 90.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeOverlayTitle;
     const Font& titleFont = ui.localization.GetFontForSize(titleSize);
     Vector2 titleDim = MeasureTextEx(titleFont, title, titleSize, 1.0f);
     DrawTextEx(titleFont, title, Vector2{ (screenW - titleDim.x) / 2.0f, screenH / 2.0f - 60.0f }, titleSize, 1.0f, titleColor);
 
     const char* subtitle = ui.localization.GetText(subtitleKey);
-    constexpr float subSize = 32.0f;
+    constexpr float subSize = LocalizationManager::kFontSizeOverlaySubtitle;
     const Font& subFont = ui.localization.GetFontForSize(subSize);
     Vector2 subDim = MeasureTextEx(subFont, subtitle, subSize, 1.0f);
     DrawTextEx(subFont, subtitle, Vector2{ (screenW - subDim.x) / 2.0f, screenH / 2.0f + 50.0f }, subSize, 1.0f, RAYWHITE);

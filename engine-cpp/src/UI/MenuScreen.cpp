@@ -249,7 +249,7 @@ void MenuScreen::DrawButton(Rectangle bounds, const char* label, bool selected, 
     DrawRectangleRec(bounds, (selected || hovered) ? Color{ 80, 80, 95, 255 } : Color{ 50, 50, 60, 255 });
     DrawRectangleLinesEx(bounds, selected ? 3.0f : 2.0f, selected ? SKYBLUE : RAYWHITE);
 
-    constexpr float textSize = 24.0f;
+    constexpr float textSize = LocalizationManager::kFontSizeBody;
     const Font& font = ui.localization.GetFontForSize(textSize);
     Vector2 textDim = MeasureTextEx(font, label, textSize, 1.0f);
     DrawTextEx(font, label,
@@ -273,7 +273,7 @@ MenuAction MenuScreen::UpdateMainMenu() {
 
 void MenuScreen::DrawMainMenu(const UiContext& ui) const {
     const char* title = ui.localization.GetText("menu_title");
-    constexpr float titleSize = 50.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 100.0f }, titleSize, 1.0f, RAYWHITE);
 
@@ -306,7 +306,7 @@ MenuAction MenuScreen::UpdateOptions(float& bgmVolume, float& sfxVolume) {
 void MenuScreen::DrawVolumeSlider(const UiContext& ui, Rectangle bounds, const char* labelKey, float volume) const {
     std::string label = std::string(ui.localization.GetText(labelKey)) +
                          TextFormat(": %d%%", static_cast<int>(volume * 100.0f));
-    constexpr float labelSize = 20.0f;
+    constexpr float labelSize = LocalizationManager::kFontSizeSliderLabel;
     const Font& font = ui.localization.GetFontForSize(labelSize);
     Vector2 labelDim = MeasureTextEx(font, label.c_str(), labelSize, 1.0f);
     DrawTextEx(font, label.c_str(), Vector2{ (GetScreenWidth() - labelDim.x) / 2.0f, bounds.y - 30.0f }, labelSize, 1.0f, RAYWHITE);
@@ -318,7 +318,7 @@ void MenuScreen::DrawVolumeSlider(const UiContext& ui, Rectangle bounds, const c
 
 void MenuScreen::DrawOptions(const UiContext& ui, float bgmVolume, float sfxVolume) const {
     const char* title = ui.localization.GetText("options_title");
-    constexpr float titleSize = 50.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
@@ -343,7 +343,7 @@ void MenuScreen::DrawPause(const UiContext& ui) const {
     DrawRectangle(0, 0, screenW, screenH, Color{ 0, 0, 0, 150 });
 
     const char* title = ui.localization.GetText("pause_title");
-    constexpr float titleSize = 50.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (screenW - titleDim.x) / 2.0f, 150.0f }, titleSize, 1.0f, RAYWHITE);
 
@@ -359,7 +359,7 @@ MenuAction MenuScreen::UpdateControls() {
 
 void MenuScreen::DrawControls(const UiContext& ui) const {
     const char* title = ui.localization.GetText("controls_title");
-    constexpr float titleSize = 50.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
@@ -369,7 +369,7 @@ void MenuScreen::DrawControls(const UiContext& ui) const {
     float colPadX = screenCenter + 220.0f;
     float rowY = 200.0f;
     constexpr float rowHeight = 60.0f;
-    constexpr float textSize = 22.0f;
+    constexpr float textSize = LocalizationManager::kFontSizeControlsRow;
     const Font& font = ui.localization.GetFontForSize(textSize);
 
     DrawTextEx(font, ui.localization.GetText("controls_column_kb"), Vector2{ colKbX, rowY }, textSize, 1.0f, SKYBLUE);
@@ -400,7 +400,7 @@ MenuAction MenuScreen::UpdateStats() {
 
 void MenuScreen::DrawStats(const UiContext& ui, const SaveData& saveData) const {
     const char* title = ui.localization.GetText("stats_title");
-    constexpr float titleSize = 50.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
@@ -409,7 +409,7 @@ void MenuScreen::DrawStats(const UiContext& ui, const SaveData& saveData) const 
     float valueX = screenCenter + 120.0f;
     float rowY = 220.0f;
     constexpr float rowHeight = 50.0f;
-    constexpr float textSize = 24.0f;
+    constexpr float textSize = LocalizationManager::kFontSizeBody;
     const Font& font = ui.localization.GetFontForSize(textSize);
 
     auto drawRow = [&](const char* labelKey, int value) {
@@ -454,7 +454,7 @@ MenuAction MenuScreen::UpdateLevelSelect(int maxUnlockedLevel) {
 
 void MenuScreen::DrawLevelSelect(const UiContext& ui, int maxUnlockedLevel) const {
     const char* title = ui.localization.GetText("levelselect_title");
-    constexpr float titleSize = 50.0f;
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
