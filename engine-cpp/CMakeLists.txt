@@ -52,6 +52,7 @@ add_executable(${PROJECT_NAME}
     src/Entities/HealthKit.cpp
     src/Entities/ExplosiveBarrel.cpp
     src/Entities/PowerUp.cpp
+    src/Entities/ElectricTile.cpp
     src/Core/SaveManager.cpp
     src/Core/LocalizationManager.cpp
     src/Core/AudioSettings.cpp

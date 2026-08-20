@@ -293,7 +293,12 @@
       },
       "enemyType": "Runner",
       "interval": 3,
-      "maxEnemies": 5
+      "maxEnemies": 5,
+      "weights": {
+        "Runner": 6,
+        "Kamikaze": 2,
+        "Trapper": 2
+      }
     },
     {
       "position": {
@@ -303,7 +308,12 @@
       },
       "enemyType": "Tank",
       "interval": 6,
-      "maxEnemies": 2
+      "maxEnemies": 2,
+      "weights": {
+        "Spitter": 4,
+        "Runner": 4,
+        "Shielder": 2
+      }
     },
     {
       "position": {
@@ -313,7 +323,13 @@
       },
       "enemyType": "Spitter",
       "interval": 5,
-      "maxEnemies": 3
+      "maxEnemies": 3,
+      "weights": {
+        "Trapper": 4,
+        "Shielder": 3,
+        "Tank": 2,
+        "Buffer": 1
+      }
     },
     {
       "position": {
@@ -323,7 +339,13 @@
       },
       "enemyType": "Kamikaze",
       "interval": 7,
-      "maxEnemies": 2
+      "maxEnemies": 2,
+      "weights": {
+        "Tank": 3,
+        "Kamikaze": 4,
+        "Spitter": 2,
+        "Buffer": 1
+      }
     }
   ],
   "healthKits": [
@@ -446,6 +468,120 @@
         "z": 2
       },
       "damagePerTick": 10
+    }
+  ],
+  "powerUps": [
+    {
+      "position": {
+        "x": -6.5,
+        "y": 0.0,
+        "z": 6.5
+      },
+      "type": "Overclock"
+    },
+    {
+      "position": {
+        "x": 6.5,
+        "y": 0.0,
+        "z": 6.5
+      },
+      "type": "Frenzy"
+    },
+    {
+      "position": {
+        "x": -6.5,
+        "y": 0.0,
+        "z": -6.5
+      },
+      "type": "Frenzy"
+    },
+    {
+      "position": {
+        "x": 6.5,
+        "y": 0.0,
+        "z": -6.5
+      },
+      "type": "Overclock"
+    },
+    {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 6.5
+      },
+      "type": "Shield"
+    }
+  ],
+  "electricTiles": [
+    {
+      "position": {
+        "x": -9.5,
+        "y": 0.0,
+        "z": 3.5
+      },
+      "size": {
+        "x": 3.0,
+        "y": 0.1,
+        "z": 3.0
+      },
+      "damage": 18.0,
+      "cycleInterval": 6.0
+    },
+    {
+      "position": {
+        "x": 9.5,
+        "y": 0.0,
+        "z": 3.5
+      },
+      "size": {
+        "x": 3.0,
+        "y": 0.1,
+        "z": 3.0
+      },
+      "damage": 18.0,
+      "cycleInterval": 6.0
+    },
+    {
+      "position": {
+        "x": -9.5,
+        "y": 0.0,
+        "z": -3.5
+      },
+      "size": {
+        "x": 3.0,
+        "y": 0.1,
+        "z": 3.0
+      },
+      "damage": 18.0,
+      "cycleInterval": 7.5
+    },
+    {
+      "position": {
+        "x": 9.5,
+        "y": 0.0,
+        "z": -3.5
+      },
+      "size": {
+        "x": 3.0,
+        "y": 0.1,
+        "z": 3.0
+      },
+      "damage": 18.0,
+      "cycleInterval": 7.5
+    },
+    {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 9.5
+      },
+      "size": {
+        "x": 4.0,
+        "y": 0.1,
+        "z": 2.0
+      },
+      "damage": 20.0,
+      "cycleInterval": 5.0
     }
   ]
 }

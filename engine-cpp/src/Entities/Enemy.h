@@ -32,9 +32,13 @@ public:
     // Kamikaze sin que nadie se lo haya pedido explícitamente. baseTint es el
     // código de color del arquetipo (mismo modelo 3D para todos, así que es
     // lo único que los distingue a distancia junto con la geometría de Draw).
+    // turnRateDegPerSec = 0 significa giro INSTANTÁNEO (el comportamiento de
+    // siempre, y el de todos los arquetipos salvo el Shielder): la dirección
+    // de encaramiento se fija de golpe a la del objetivo. Un valor > 0 la
+    // hace rotar como mucho esos grados por segundo -- ver FaceTowards.
     Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, float visionRadius,
           float speed, float attackDamage, float scale = 1.0f, EnemyBehavior behavior = EnemyBehavior::Melee,
-          Color baseTint = WHITE);
+          Color baseTint = WHITE, float turnRateDegPerSec = 0.0f);
     ~Enemy();
     void Update(float dt) override;
     void Draw() const override;
@@ -110,6 +114,13 @@ private:
     // desplazamiento del Enemy pasa por aquí, igual que en el Player.
     float CurrentSpeed() const { return m_speed * m_speedMultiplier; }
 
+    // Gira m_facingDirection hacia targetDirection respetando el límite de
+    // grados por segundo del arquetipo (instantáneo si es 0). TODO cambio de
+    // encaramiento pasa por aquí: si algún estado escribiera
+    // m_facingDirection a pelo, ese estado se saltaría el límite y el
+    // Shielder volvería a plantar la placa de golpe.
+    void FaceTowards(Vector3 targetDirection, float dt);
+
     // Geometría adjunta que distingue al arquetipo por forma, no solo por
     // color: placa del Shielder, aro de aura del Buffer, depósito del
     // Trapper. Sin efecto para el resto de comportamientos.
@@ -126,6 +137,7 @@ private:
     EnemyBehavior m_behavior = EnemyBehavior::Melee;
     Color m_baseTint = WHITE;
     float m_speedMultiplier = 1.0f;
+    float m_turnRateDegPerSec = 0.0f;
 
     float m_visionRadius;
     Vector3 m_lastKnownPlayerPosition{};

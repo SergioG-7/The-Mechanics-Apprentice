@@ -54,6 +54,9 @@ namespace LevelEditor.Canvas
         public static Vector3Data GetHazardHalfExtents(HazardData hazard) =>
             new(hazard.Size.X * 0.5f, hazard.Size.Y * 0.5f, hazard.Size.Z * 0.5f);
 
+        public static Vector3Data GetElectricTileHalfExtents(ElectricTileData tile) =>
+            new(tile.Size.X * 0.5f, tile.Size.Y * 0.5f, tile.Size.Z * 0.5f);
+
         // Círculo en pantalla de un Obstacle tipo "cylinder": centro + radio en píxeles.
         public static (Point Center, int RadiusPx) GetCylinderScreenCircle(ObstacleData obstacle)
         {

@@ -8,11 +8,12 @@
 #include <iostream>
 
 Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, float visionRadius,
-             float speed, float attackDamage, float scale, EnemyBehavior behavior, Color baseTint)
+             float speed, float attackDamage, float scale, EnemyBehavior behavior, Color baseTint,
+             float turnRateDegPerSec)
     : Actor(position, maxHP, Vector3{ 0.5f * scale, 0.5f * scale, 0.5f * scale }),
       m_patrolRoute(std::move(patrolRoute)), m_speed(speed),
       m_attackDamage(attackDamage), m_scale(scale), m_behavior(behavior), m_baseTint(baseTint),
-      m_visionRadius(visionRadius) {
+      m_turnRateDegPerSec(turnRateDegPerSec), m_visionRadius(visionRadius) {
     SetupStates();
 
     // Arrancado, no en cero: si no, un Trapper soltaría su primer charco en
@@ -105,7 +106,7 @@ void Enemy::UpdatePatrol(float dt) {
     Vector3 toTarget{ target.x - m_position.x, 0.0f, target.z - m_position.z };
     Vector3 dir = CollisionMath::Normalize2D(toTarget);
 
-    m_facingDirection = dir;
+    FaceTowards(dir, dt);
 
     float speed = CurrentSpeed();
     TryMoveAgainstObstacles(Vector3{ dir.x * speed * dt, 0.0f, dir.z * speed * dt });
@@ -136,7 +137,7 @@ void Enemy::UpdateChase(float dt) {
                 // No ataca nunca: al entrar en su radio de mando se planta,
                 // mirando al jugador, y deja que su aura empuje a los demás.
                 if (distSq <= kBufferKeepDistance * kBufferKeepDistance) {
-                    m_facingDirection = DirectionToLastKnownPlayer();
+                    FaceTowards(DirectionToLastKnownPlayer(), dt);
                     return;
                 }
                 break;
@@ -166,10 +167,43 @@ void Enemy::UpdateChase(float dt) {
 
     Vector3 dir = DirectionToLastKnownPlayer();
 
-    m_facingDirection = dir;
+    // Se PERSIGUE en línea recta pero se GIRA con el límite del arquetipo:
+    // ahí está el hueco del Shielder. Sigue viniendo a por ti, pero su placa
+    // tarda en reorientarse, así que un Dash a su espalda llega antes que
+    // ella. Si el movimiento usara el encaramiento en vez de dir, se quedaría
+    // dando vueltas contra las paredes en lugar de resultar esquivable.
+    FaceTowards(dir, dt);
 
     float speed = CurrentSpeed();
     TryMoveAgainstObstacles(Vector3{ dir.x * speed * dt, 0.0f, dir.z * speed * dt });
+}
+
+void Enemy::FaceTowards(Vector3 targetDirection, float dt) {
+    if (targetDirection.x == 0.0f && targetDirection.z == 0.0f) return;
+
+    // 0 = sin límite: el comportamiento de siempre para todo arquetipo que no
+    // sea el Shielder, y el que hay que preservar exactamente (un Melee que
+    // empezara a girar despacio dejaría de conectar sus golpes).
+    if (m_turnRateDegPerSec <= 0.0f) {
+        m_facingDirection = targetDirection;
+        return;
+    }
+
+    float currentAngle = atan2f(m_facingDirection.x, m_facingDirection.z);
+    float targetAngle = atan2f(targetDirection.x, targetDirection.z);
+
+    // Diferencia normalizada a [-PI, PI]: sin esto, girar de +170° a -170°
+    // (20° reales) daría una vuelta de 340° por el lado largo.
+    float delta = targetAngle - currentAngle;
+    while (delta > PI) delta -= 2.0f * PI;
+    while (delta < -PI) delta += 2.0f * PI;
+
+    float maxStep = m_turnRateDegPerSec * (PI / 180.0f) * dt;
+    if (delta > maxStep) delta = maxStep;
+    if (delta < -maxStep) delta = -maxStep;
+
+    float newAngle = currentAngle + delta;
+    m_facingDirection = Vector3{ sinf(newAngle), 0.0f, cosf(newAngle) };
 }
 
 Vector3 Enemy::DirectionToLastKnownPlayer() const {
@@ -190,10 +224,17 @@ Hitbox Enemy::SpawnAttackHitbox() const {
     // Subido de 6.0f: da al jugador más distancia tras un golpe, con margen
     // real para reaccionar con el Dash en vez de quedar pegado al enemigo.
     constexpr float kKnockbackForce = 9.0f;
-    return CombatSystem::BuildMeleeHitbox(m_position, DirectionToLastKnownPlayer(), m_attackDamage, kKnockbackForce);
+    // m_facingDirection, no DirectionToLastKnownPlayer(): el golpe sale por
+    // donde el enemigo MIRA. Para todo arquetipo de giro instantáneo son el
+    // mismo vector (UpdateAttack acaba de encararlo), pero para el Shielder
+    // significa que su ataque también se queda atrás al rodearlo, en vez de
+    // seguir apuntando al jugador con el cuerpo girado.
+    return CombatSystem::BuildMeleeHitbox(m_position, m_facingDirection, m_attackDamage, kKnockbackForce);
 }
 
 void Enemy::UpdateAttack(float dt) {
+    FaceTowards(DirectionToLastKnownPlayer(), dt);
+
     m_attackCooldown -= dt;
     if (m_attackCooldown <= 0.0f) {
         m_activeHitbox = SpawnAttackHitbox();
@@ -217,7 +258,7 @@ void Enemy::UpdateAttackRanged(float dt) {
     // TryMoveAgainstObstacles -- solo gira hacia el jugador y dispara. No
     // retrocede si el jugador se acerca demasiado (simplificación deliberada:
     // un Spitter arrinconado sigue disparando en vez de huir).
-    m_facingDirection = DirectionToLastKnownPlayer();
+    FaceTowards(DirectionToLastKnownPlayer(), dt);
 
     m_attackCooldown -= dt;
     if (m_attackCooldown <= 0.0f) {

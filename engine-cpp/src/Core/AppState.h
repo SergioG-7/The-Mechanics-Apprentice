@@ -8,6 +8,7 @@ enum class AppState {
     Options,
     Controls,    // se abre desde Options; su "Volver" regresa a Options, no al menú principal
     Stats,       // se abre desde MainMenu; su "Volver" regresa al menú principal
+    Guide,       // glosario de mecánicas/enemigos/power-ups; se abre desde MainMenu, vuelve al menú principal
     LevelSelect, // se abre desde MainMenu ("Modo Historia"); su "Volver" regresa al menú principal
     StoryMode,
     EndlessMode,

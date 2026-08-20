@@ -18,6 +18,12 @@ public:
     static std::unique_ptr<Enemy> CreateEnemy(const std::string& variantName, Vector3 position,
                                                std::vector<Vector3> patrolRoute = {});
 
+    // Comportamiento de un arquetipo SIN construirlo. La usa Spawner para
+    // saber si lo que va a generar es un Buffer antes de gastarse el spawn
+    // (ver el cupo de Buffers vivos). Melee si el nombre no existe -- mismo
+    // criterio de degradar sin reventar que el resto del factory.
+    static EnemyBehavior GetBehavior(const std::string& variantName);
+
 private:
     struct EnemyVariant {
         float maxHP = 20.0f;
@@ -31,6 +37,10 @@ private:
         // Código de color del arquetipo ("tint": [r, g, b] en el JSON).
         // WHITE = sin teñir, el aspecto original del modelo.
         Color tint = WHITE;
+        // Límite de giro en grados/segundo ("turnRateDegPerSec"). 0 (por
+        // defecto) = instantáneo, como se ha comportado siempre todo el
+        // mundo; solo el Shielder declara un valor real.
+        float turnRateDegPerSec = 0.0f;
     };
 
     // Carga perezosa cacheada en un static local: la primera llamada parsea

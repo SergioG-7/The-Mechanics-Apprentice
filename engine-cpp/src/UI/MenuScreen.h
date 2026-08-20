@@ -17,6 +17,7 @@ enum class MenuAction {
     OpenOptions,
     OpenControls,
     OpenStats,
+    OpenGuide,       // glosario de mecánicas/enemigos/power-ups (botón "Guía" del menú principal)
     OpenLevelEditor, // botón "Editor de Niveles" anclado en la esquina superior izquierda del menú principal -- Application::LaunchLevelEditor, igual que F12
     BackToMainMenu,
     BackToOptions,
@@ -24,6 +25,8 @@ enum class MenuAction {
     ResumeGame, // botón "Continuar" del menú de pausa
     LevelSelectNextPage, // consumida dentro de MenuScreen::UpdateLevelSelect, nunca llega a Application
     LevelSelectPrevPage,
+    GuideNextPage,       // consumidas dentro de MenuScreen::UpdateGuide, igual que las de LevelSelect
+    GuidePrevPage,
     Quit
 };
 
@@ -68,6 +71,14 @@ public:
     MenuAction UpdateStats();
     void DrawStats(const UiContext& ui, const SaveData& saveData) const;
 
+    // Glosario paginado por categoría (Mecánicas / Enemigos / Power-ups): una
+    // página por categoría, con icono dibujado a mano, nombre y descripción
+    // localizados. Los iconos son primitivas 2D, no un render 3D de la
+    // entidad real: mantienen su color y su silueta característicos sin
+    // arrastrar cámara, shader ni modelos a una pantalla de menú.
+    MenuAction UpdateGuide();
+    void DrawGuide(const UiContext& ui) const;
+
     // maxUnlockedLevel viene de SaveManager::Data().maxLevelUnlocked (MenuScreen
     // no conoce SaveManager, igual que DrawStats recibe SaveData ya resuelto).
     // Solo se listan botones 1..maxUnlockedLevel: no hay niveles
@@ -91,10 +102,33 @@ private:
         int levelNumber = 0;           // > 0 solo en los botones de LevelSelect (ver DrawButtonList/UpdateButtonList)
     };
 
+    // Qué icono dibuja una fila del glosario. No hay un enum de "tipo de
+    // entidad" compartido con el motor (Gear, Enemy... no lo necesitan), así
+    // que el glosario lleva el suyo, mínimo y local.
+    enum class GuideIcon { Door, Gear, Barrel, HealthKit, Spikes, ElectricTile, MudPuddle,
+                           EnemyMelee, EnemyRunner, EnemySpitter, EnemyKamikaze,
+                           EnemyShielder, EnemyBuffer, EnemyTrapper,
+                           PowerOverclock, PowerFrenzy, PowerShield };
+
+    struct GuideEntry {
+        GuideIcon icon;
+        const char* nameKey;
+        const char* descriptionKey;
+    };
+
+    // Las tres páginas del glosario, en el orden en que se muestran.
+    static const std::vector<GuideEntry>& GuidePage(int page);
+    static const char* GuidePageTitleKey(int page);
+    static constexpr int kGuidePageCount = 3;
+
+    // Dibuja el icono de una fila dentro de un cuadrado de kGuideIconSize.
+    static void DrawGuideIcon(GuideIcon icon, Rectangle bounds);
+
     std::vector<MenuButton> BuildMainMenuButtons() const;
     std::vector<MenuButton> BuildOptionsButtons() const;
     std::vector<MenuButton> BuildPauseButtons() const;
     std::vector<MenuButton> BuildLevelSelectButtons(int maxUnlockedLevel) const;
+    std::vector<MenuButton> BuildGuideButtons() const;
 
     // Navegación compartida por las cuatro pantallas: flechas/WASD, D-Pad o
     // el stick izquierdo mueven m_selectedIndex; Enter o el botón de
@@ -114,6 +148,19 @@ private:
 
     static bool IsButtonClicked(Rectangle bounds);
     static Rectangle StackedButton(int index, int count);
+
+    // Y del primer botón de una lista apilada de 'count' elementos: centrada
+    // en pantalla, PERO nunca por encima de kMenuContentTop. Con los 6
+    // botones del menú principal (el de Guía es el sexto) el centrado puro
+    // daba startY = 130, justo dentro del título, que llega hasta los 150 --
+    // los dos se pisaban. Al pasarse del tope, la lista se ancla ahí y crece
+    // hacia abajo; con 3 botones (pausa) sigue quedando centrada como antes.
+    static float StackedListStartY(int count);
+
+    // Primer píxel utilizable bajo el título de una pantalla de menú: el
+    // título se dibuja a y=100 con kFontSizeTitle (50), así que termina sobre
+    // los 150; 170 deja 20px de aire.
+    static constexpr float kMenuContentTop = 170.0f;
     static Rectangle BgmVolumeSliderBounds();
     static Rectangle SfxVolumeSliderBounds();
     static Rectangle BackButtonBounds();
@@ -146,6 +193,7 @@ private:
     int m_selectedIndex = 0;
     int m_lastSelectedLevel = 1;
     int m_levelSelectPage = 0; // 0-indexado; ver UpdateLevelSelect/BuildLevelSelectButtons
+    int m_guidePage = 0;       // 0-indexado, una página por categoría; ver UpdateGuide
 
     // Cooldown del eje analógico: sin él, mantener el stick empujado
     // recorrería toda la lista en un solo frame (60 veces por segundo). Los

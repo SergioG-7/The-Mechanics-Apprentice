@@ -2,7 +2,6 @@
   "tab_entities": "Entities",
   "tab_objects": "Objects",
   "tab_system": "System",
-
   "tool_place_player": "Place Player",
   "tool_place_enemy": "Place Enemy",
   "tool_place_obstacle": "Place Obstacle",
@@ -16,13 +15,11 @@
   "tool_place_spawner": "Place Spawner",
   "tool_define_patrol": "Define Patrol",
   "tool_select": "Select / Edit",
-
   "group_edit": "Editing",
   "group_variant": "Enemy variant",
   "group_powerup": "Power-up type",
   "group_properties": "Properties",
   "group_language": "Language",
-
   "variant_Default": "Default",
   "variant_Tank": "Tank",
   "variant_Runner": "Runner",
@@ -31,19 +28,14 @@
   "variant_Shielder": "Shielder",
   "variant_Buffer": "Commander",
   "variant_Trapper": "Trapper",
-
   "powerup_Overclock": "Overclock",
   "powerup_Frenzy": "Frenzy",
   "powerup_Shield": "Shield",
-
   "hint_delete": "Right click: delete entity\n(or nearest patrol point)",
-
   "btn_open": "Open Level",
   "btn_export": "Export Level",
-
   "title_app": "LEVEL-5 Portfolio - Level Editor",
   "title_unsaved": "unsaved",
-
   "prop_hp": "Max HP:",
   "prop_speed": "Speed:",
   "prop_damage": "Attack damage:",
@@ -60,28 +52,20 @@
   "prop_radius": "Radius:",
   "prop_damagepertick": "Damage per tick:",
   "prop_powerup_type": "Effect:",
-
   "msg_no_enemy_title": "No enemy selected",
   "msg_no_enemy_body": "Please select an enemy first (with the 'Select / Edit' tool) to add patrol points.\n\nLeft click: adds a point. Right click: removes the nearest one.",
-
   "msg_unsaved_title": "Unsaved changes",
   "msg_unsaved_body": "There are unexported changes in the current level. Opening another level will lose them.\n\nContinue anyway?",
-
   "dialog_open_title": "Open C++ engine level",
   "dialog_json_filter": "JSON files (*.json)|*.json|All files (*.*)|*.*",
-
   "error_title": "Error",
   "msg_open_error_body": "Could not open the level:\n{0}",
-
   "msg_missing_player_title": "Missing player",
   "msg_missing_player_body": "Place the player before exporting (\"Place Player\" tool).",
-
   "dialog_save_title": "Save C++ engine level",
-
   "msg_export_success_title": "Export complete",
   "msg_export_success_body": "Level exported to:\n{0}",
   "msg_export_error_body": "Could not export the level:\n{0}",
-
   "status_player": "Player: {0}",
   "status_player_placed": "placed",
   "status_player_unplaced": "not placed",
@@ -95,5 +79,9 @@
   "status_powerups": "Power-Ups: {0}",
   "status_door": "Door: {0}",
   "status_door_placed": "placed",
-  "status_door_unplaced": "not placed"
+  "status_door_unplaced": "not placed",
+  "tool_place_electrictile": "Place Electric Tile",
+  "prop_cycle": "Auto cycle (s, 0=off):",
+  "prop_random": "Random (weights)",
+  "status_electrictiles": "Electric tiles: {0}"
 }

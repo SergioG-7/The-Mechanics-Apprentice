@@ -144,7 +144,28 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
                 spawner.enemyType = n.value("enemyType", std::string("Runner"));
                 spawner.interval = n.value("interval", 4.0f);
                 spawner.maxEnemies = n.value("maxEnemies", 3);
+
+                // "weights": { "Runner": 5, "Tank": 1, ... } -- opcional. Si
+                // está, el spawner sortea arquetipo en cada spawn; si no, se
+                // comporta como siempre (enemyType fijo), que es lo que hace
+                // que los niveles ya existentes no cambien.
+                if (n.contains("weights") && n.at("weights").is_object()) {
+                    for (const auto& [name, weight] : n.at("weights").items()) {
+                        spawner.weightedTypes.push_back(WeightedEnemyType{ name, weight.get<int>() });
+                    }
+                }
+
                 level.spawners.push_back(std::move(spawner));
+            }
+        }
+
+        if (root.contains("electricTiles")) {
+            for (const json& n : root.at("electricTiles")) {
+                Vector3 size = n.contains("size") ? ParseVector3(n.at("size")) : Vector3{ 2.0f, 0.1f, 2.0f };
+                level.electricTiles.push_back(std::make_unique<ElectricTile>(
+                    ParseVector3(n.at("position")), size,
+                    n.value("damage", 20.0f),
+                    n.value("cycleInterval", 0.0f)));
             }
         }
 
@@ -185,11 +206,12 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
                 ParseVector3(doorNode.at("halfExtents")));
         }
 
-        TraceLog(LOG_INFO, "LevelLoader: '%s' cargado -> %d enemigos, %d obstaculos, %d hazards, %d engranajes, %d spawners, %d botiquines, %d barriles, %d power-ups, puerta %s",
+        TraceLog(LOG_INFO, "LevelLoader: '%s' cargado -> %d enemigos, %d obstaculos, %d hazards, %d baldosas, %d engranajes, %d spawners, %d botiquines, %d barriles, %d power-ups, puerta %s",
                  jsonPath.c_str(),
                  static_cast<int>(level.enemies.size()),
                  static_cast<int>(level.obstacles.size()),
                  static_cast<int>(level.hazards.size()),
+                 static_cast<int>(level.electricTiles.size()),
                  static_cast<int>(level.gears.size()),
                  static_cast<int>(level.spawners.size()),
                  static_cast<int>(level.healthKits.size()),

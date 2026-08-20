@@ -12,6 +12,8 @@
 #include "../Entities/ExplosiveBarrel.h"
 #include "../Entities/Hazard.h"
 #include "../Entities/PowerUp.h"
+#include "../Entities/ElectricTile.h"
+#include "../Entities/Spawner.h"
 
 // Datos crudos de un Spawner tal como los deja el JSON -- no es el Spawner
 // en sí (Entities/Spawner.h), que además necesita la lista de obstáculos y
@@ -22,6 +24,9 @@ struct SpawnerData {
     std::string enemyType;
     float interval = 4.0f;
     int maxEnemies = 3;
+    // Vacío = spawner de arquetipo fijo (enemyType). Con entradas, cada
+    // spawn sortea uno por peso -- ver Spawner::PickEnemyType.
+    std::vector<WeightedEnemyType> weightedTypes;
 };
 
 struct LevelData {
@@ -51,6 +56,11 @@ struct LevelData {
     // Lista propia (no Entity genérico) porque CombatSystem necesita
     // GetDamagePerTick()/ConsumeTick(), que no existen fuera de Hazard.
     std::vector<std::unique_ptr<Hazard>> hazards;
+
+    // Baldosas eléctricas: tampoco bloquean el paso, y por el mismo motivo
+    // que los hazards necesitan su propia lista (Trigger/ConsumeDischarge).
+    // A diferencia de un Hazard, dañan también a los enemigos.
+    std::vector<std::unique_ptr<ElectricTile>> electricTiles;
 };
 
 class LevelLoader {

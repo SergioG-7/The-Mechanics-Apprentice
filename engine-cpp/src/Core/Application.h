@@ -88,10 +88,10 @@ private:
     // el AoE del Kamikaze lo aplica CombatSystem desde fuera.
     void ApplyBufferAuras();
 
-    // Tirada de drop al morir un enemigo en Modo Historia: power-up
-    // (ponderado por rareza) o botiquín, o nada. El Modo Infinito tiene su
-    // propia economía (engranaje = puntuación) y no pasa por aquí.
-    void RollStoryModeDrop(Vector3 position);
+    // Botín al morir un enemigo, en LOS DOS modos. Infinito suelta además
+    // siempre un engranaje (es su puntuación, no un extra); la tabla de
+    // power-ups es la misma para ambos.
+    void RollEnemyDrop(Vector3 position);
 
     UiContext BuildUiContext() const { return UiContext{ m_localization }; }
 
@@ -153,7 +153,7 @@ private:
     // maxLevelUnlocked: sin él, superar el último nivel "desbloqueaba" uno
     // más que no existe, y el selector le pintaba un botón que solo servía
     // para rebotar al menú. Añadir un nivel nuevo implica subir esto.
-    static constexpr int kStoryLevelCount = 10;
+    static constexpr int kStoryLevelCount = 15;
 
     // Modo Infinito: dificultad, drop de engranajes y puntuación -- ver
     // EndlessDirector, que vive fuera de Application a propósito.

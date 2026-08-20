@@ -68,6 +68,7 @@ const std::unordered_map<std::string, EnemyFactory::EnemyVariant>& EnemyFactory:
                 // llevan y siguen siendo Melee sin tocarlas.
                 variant.behavior = ParseBehavior(node.value("behavior", std::string("melee")));
                 variant.tint = ParseTint(node);
+                variant.turnRateDegPerSec = node.value("turnRateDegPerSec", 0.0f);
                 result.emplace(name, variant);
             }
         } catch (const json::exception& e) {
@@ -91,5 +92,12 @@ std::unique_ptr<Enemy> EnemyFactory::CreateEnemy(const std::string& variantName,
 
     const EnemyVariant& v = it->second;
     return std::make_unique<Enemy>(position, v.maxHP, std::move(patrolRoute), v.visionRadius,
-                                    v.speed, v.attackDamage, v.scale, v.behavior, v.tint);
+                                    v.speed, v.attackDamage, v.scale, v.behavior, v.tint,
+                                    v.turnRateDegPerSec);
+}
+
+EnemyBehavior EnemyFactory::GetBehavior(const std::string& variantName) {
+    const auto& variants = LoadVariants();
+    auto it = variants.find(variantName);
+    return (it == variants.end()) ? EnemyBehavior::Melee : it->second.behavior;
 }

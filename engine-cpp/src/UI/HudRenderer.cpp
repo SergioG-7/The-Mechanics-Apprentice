@@ -1,9 +1,23 @@
 #include "HudRenderer.h"
 #include <string>
 
-void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, int totalGears,
-                           AppState appState, const EndlessDirector& endlessDirector, const Camera3D& camera) const {
+void HudRenderer::DrawModeHeader(const UiContext& ui, const HudContext& hud) const {
+    constexpr float kHeaderSize = LocalizationManager::kFontSizeHud;
+    const Font& font = ui.localization.GetFontForSize(kHeaderSize);
+
+    std::string header = (hud.appState == AppState::EndlessMode)
+        ? ui.localization.GetText("hud_endless_title")
+        : TextFormat("%s %d", ui.localization.GetText("hud_level"), hud.currentStoryLevel);
+
+    Vector2 dim = MeasureTextEx(font, header.c_str(), kHeaderSize, 1.0f);
+    Color color = (hud.appState == AppState::EndlessMode) ? SKYBLUE : RAYWHITE;
+    DrawTextEx(font, header.c_str(), Vector2{ (GetScreenWidth() - dim.x) / 2.0f, 10.0f }, kHeaderSize, 1.0f, color);
+}
+
+void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, const HudContext& hud, const Camera3D& camera) const {
     if (!level.player) return;
+
+    DrawModeHeader(ui, hud);
 
     // --- Barra de HP del Player, con etiqueta encima -- antes la barra no
     // llevaba número, solo color, y en el playtest pidieron que "Vida" fuera
@@ -21,12 +35,13 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, int total
     DrawRectangle(barX, barY, static_cast<int>(barWidth * hpRatio), barHeight, RED);
     DrawRectangleLines(barX, barY, barWidth, barHeight, BLACK);
 
-    // --- Engranajes: en Infinito es la puntuación (sin total fijo); en
-    // Historia, recolectados / total del nivel. ---
+    // --- Engranajes: en Infinito, puntuación de esta partida junto al récord
+    // guardado (marcador dual); en Historia, recolectados / total del nivel. ---
     const char* gearsLabel = ui.localization.GetText("hud_gears");
-    std::string gearsText = (appState == AppState::EndlessMode)
-        ? TextFormat("%s: %d", gearsLabel, endlessDirector.GetScore())
-        : TextFormat("%s: %d / %d", gearsLabel, totalGears - static_cast<int>(level.gears.size()), totalGears);
+    std::string gearsText = (hud.appState == AppState::EndlessMode)
+        ? TextFormat("%s: %d   %s: %d", gearsLabel, hud.endlessScore,
+                     ui.localization.GetText("hud_endless_best"), hud.endlessHighScore)
+        : TextFormat("%s: %d / %d", gearsLabel, hud.totalGears - static_cast<int>(level.gears.size()), hud.totalGears);
     DrawTextEx(hudFont, gearsText.c_str(), Vector2{ static_cast<float>(barX), static_cast<float>(barY + barHeight + 10) }, kHudTextSize, 1.0f, ORANGE);
 
     // --- Power-ups activos: una línea por efecto, apiladas bajo el contador

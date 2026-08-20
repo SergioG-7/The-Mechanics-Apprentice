@@ -40,7 +40,8 @@
       "attackDamage": 14.0,
       "visionRadius": 7.0,
       "behavior": "shielder",
-      "tint": [120, 165, 235]
+      "tint": [120, 165, 235],
+      "turnRateDegPerSec": 100.0
     },
     "Buffer": {
       "maxHP": 45.0,

@@ -143,7 +143,7 @@ void Application::LoadLevel(const std::string& path) {
     // ya se limpiaron arriba, antes de reasignar m_level.
     for (const SpawnerData& data : m_level.spawners) {
         m_spawners.emplace_back(data.position, data.enemyType, data.interval, data.maxEnemies,
-                                 &m_level.obstacles, m_toonShader->Get());
+                                 &m_level.obstacles, m_toonShader->Get(), data.weightedTypes);
     }
 
     // Arranca (o reinicia desde el principio) la música al entrar en
@@ -170,13 +170,17 @@ void Application::StartEndlessMode() {
 void Application::AdvanceToNextStoryLevel() {
     m_currentLevel++;
 
-    // Se acabó la historia: volver al menú sin tocar maxLevelUnlocked. Antes
-    // se marcaba como desbloqueado un nivel que no existe en disco, y el
-    // selector le pintaba un botón que al pulsarlo solo rebotaba al menú (vía
-    // el "nivel no disponible" de LoadLevel).
+    // Se acabó la historia: al SELECTOR DE NIVELES, no al menú principal --
+    // quien acaba de terminar el último nivel casi siempre quiere rejugar
+    // alguno, y el menú principal le obligaba a entrar otra vez en "Modo
+    // Historia" para llegar al mismo sitio. maxLevelUnlocked no se toca:
+    // marcar como desbloqueado un nivel que no existe en disco le pintaba al
+    // selector un botón que solo rebotaba al menú (vía el "nivel no
+    // disponible" de LoadLevel).
     if (m_currentLevel > kStoryLevelCount) {
         m_saveManager.Save();
-        m_appState = AppState::MainMenu;
+        m_music->Stop();
+        m_appState = AppState::LevelSelect;
         return;
     }
 
@@ -221,6 +225,7 @@ void Application::UpdateMenu() {
         case AppState::Options:      action = m_menuScreen.UpdateOptions(m_saveManager.Data().bgmVolume, m_saveManager.Data().sfxVolume); break;
         case AppState::Controls:     action = m_menuScreen.UpdateControls();    break;
         case AppState::Stats:        action = m_menuScreen.UpdateStats();       break;
+        case AppState::Guide:        action = m_menuScreen.UpdateGuide();       break;
         case AppState::LevelSelect:  action = m_menuScreen.UpdateLevelSelect(m_saveManager.Data().maxLevelUnlocked); break;
         default: break; // StoryMode/EndlessMode/Paused no llegan aquí (ver Run())
     }
@@ -248,6 +253,7 @@ void Application::UpdateMenu() {
             break;
         case MenuAction::OpenControls:    m_appState = AppState::Controls; break;
         case MenuAction::OpenStats:       m_appState = AppState::Stats; break;
+        case MenuAction::OpenGuide:       m_appState = AppState::Guide; break;
         case MenuAction::OpenLevelEditor: LaunchLevelEditor(); break;
         case MenuAction::BackToMainMenu:
             // Desde Opciones, "Volver" respeta de dónde se abrió (menú
@@ -281,6 +287,7 @@ void Application::DrawMenu() const {
         case AppState::Options:     m_menuScreen.DrawOptions(ui, m_saveManager.Data().bgmVolume, m_saveManager.Data().sfxVolume); break;
         case AppState::Controls:    m_menuScreen.DrawControls(ui); break;
         case AppState::Stats:       m_menuScreen.DrawStats(ui, m_saveManager.Data()); break;
+        case AppState::Guide:       m_menuScreen.DrawGuide(ui); break;
         case AppState::LevelSelect: m_menuScreen.DrawLevelSelect(ui, m_saveManager.Data().maxLevelUnlocked); break;
         default: break;
     }
@@ -400,10 +407,13 @@ void Application::HandleGameplayPauseInput() {
         || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_LEFT));
     if (!retryPressed) return;
 
-    // Infinito no se reintenta in situ: el punto era justo terminar y
-    // enseñar la puntuación, así que 'R' devuelve al menú.
+    // Infinito: 'R' rearranca el modo en el sitio (contador a cero, dificultad
+    // reiniciada) en vez de devolver al menú. Volver al menú para tener que
+    // navegar de nuevo hasta "Modo Infinito" era pura fricción entre intento
+    // e intento; el récord ya se ha guardado al morir, así que no se pierde
+    // nada. Para salir sigue estando ESC -> Salir al Menú Principal.
     if (m_matchState == GameState::GameOver && m_appState == AppState::EndlessMode) {
-        m_appState = AppState::MainMenu;
+        StartEndlessMode();
         return;
     }
 
@@ -437,14 +447,24 @@ void Application::ApplyBufferAuras() {
     }
 }
 
-void Application::RollStoryModeDrop(Vector3 position) {
-    // Tabla ponderada por una sola tirada de 1-100, en orden de rareza: los
-    // dos power-ups ofensivos/de movilidad son el drop habitual, el escudo y
-    // la cura son el premio raro. El 65% restante no suelta nada.
-    constexpr int kOverclockChance = 13;
-    constexpr int kFrenzyChance = 12;
-    constexpr int kShieldChance = 5;
-    constexpr int kHealthKitChance = 5;
+void Application::RollEnemyDrop(Vector3 position) {
+    // Infinito: cada baja deja SIEMPRE un engranaje, porque ahí el engranaje
+    // ES la puntuación del modo, no un extra. El sorteo de power-ups de abajo
+    // se aplica igual en los dos modos, así que Infinito también los recibe.
+    // Ambos caen en la misma posición sin pisarse: el engranaje se dibuja a
+    // ras de suelo y el power-up flota 0.6 por encima.
+    if (m_appState == AppState::EndlessMode) {
+        m_level.gears.push_back(std::make_unique<Gear>(position));
+    }
+
+    // Tabla ponderada por una sola tirada de 1-100, en orden de rareza. Total
+    // ~12%: bajado del 35% del playtest anterior, donde caían tantos que los
+    // efectos temporales estaban casi siempre activos y dejaban de sentirse
+    // como un golpe de suerte. El 88% restante no suelta nada.
+    constexpr int kOverclockChance = 4;
+    constexpr int kFrenzyChance = 4;
+    constexpr int kShieldChance = 2;
+    constexpr int kHealthKitChance = 2;
 
     int roll = GetRandomValue(1, 100);
     if (roll <= kOverclockChance) {
@@ -494,20 +514,7 @@ void Application::UpdateActiveMatch(float dt) {
 
             if (hit.hitEnemy && !hit.hitEnemy->IsAlive()) {
                 m_saveManager.Data().zombiesKilled++;
-
-                // Solo en Infinito: cada baja deja un engranaje (95%) o, más
-                // raro, un botiquín (5%) -- así el modo se sostiene solo, sin
-                // depender de los objetos fijos de un nivel.
-                if (m_appState == AppState::EndlessMode) {
-                    constexpr int kHealthKitDropChancePercent = 5;
-                    if (GetRandomValue(1, 100) <= kHealthKitDropChancePercent) {
-                        m_level.healthKits.push_back(std::make_unique<HealthKit>(hit.hitEnemy->GetPosition()));
-                    } else {
-                        m_level.gears.push_back(std::make_unique<Gear>(hit.hitEnemy->GetPosition()));
-                    }
-                } else {
-                    RollStoryModeDrop(hit.hitEnemy->GetPosition());
-                }
+                RollEnemyDrop(hit.hitEnemy->GetPosition());
             }
         }
     } else if (auto barrelHit = CombatSystem::ResolveMeleeAttackOnBarrels(*m_level.player, m_level.barrels)) {
@@ -546,6 +553,7 @@ void Application::UpdateActiveMatch(float dt) {
     for (auto& hazard : m_level.hazards) hazard->Update(entityDt);
     CombatSystem::ApplyHazardDamage(m_level.hazards, *m_level.player);
     CombatSystem::UpdateMudPuddles(entityDt, m_puddles, *m_level.player);
+    CombatSystem::UpdateElectricTiles(entityDt, m_level.electricTiles, *m_level.player, m_level.enemies);
 
     for (auto& spawner : m_spawners) {
         spawner.Update(entityDt, m_level.enemies);
@@ -680,6 +688,7 @@ void Application::DrawGameplay() const {
     for (auto& enemy : m_level.enemies) enemy->Draw();
     for (auto& obstacle : m_level.obstacles) obstacle->Draw();
     for (auto& hazard : m_level.hazards) hazard->Draw();
+    for (auto& tile : m_level.electricTiles) tile->Draw();
     for (const Spawner& spawner : m_spawners) spawner.Draw();
     for (auto& gear : m_level.gears) gear->Draw();
     for (auto& powerUp : m_level.powerUps) powerUp->Draw();
@@ -691,15 +700,27 @@ void Application::DrawGameplay() const {
     EndMode3D();
 
     UiContext ui = BuildUiContext();
-    m_hud.DrawHud(ui, m_level, m_totalGears, m_appState, m_endlessDirector, m_camera);
+    HudContext hudContext;
+    // Durante la pausa, m_appState es Paused y no dice de qué modo venimos --
+    // el HUD se sigue dibujando detrás del overlay, así que sin esto pausar
+    // en Infinito le cambiaba la cabecera a "Nivel N" y el marcador dual al
+    // formato de Historia.
+    hudContext.appState = (m_appState == AppState::Paused) ? m_pausedFromState : m_appState;
+    hudContext.totalGears = m_totalGears;
+    hudContext.currentStoryLevel = m_currentLevel;
+    hudContext.endlessScore = m_endlessDirector.GetScore();
+    hudContext.endlessHighScore = m_saveManager.Data().highScore;
+    m_hud.DrawHud(ui, m_level, hudContext, m_camera);
 
     switch (m_matchState) {
         case GameState::WaitingToStart:
             m_hud.DrawCenteredOverlay(ui, "ready_title", SKYBLUE, "ready_subtitle");
             break;
         case GameState::GameOver:
-            m_hud.DrawCenteredOverlay(ui, "gameover_title", RED,
-                (m_appState == AppState::EndlessMode) ? "gameover_menu" : "gameover_retry");
+            // Un solo subtítulo para los dos modos: desde que Infinito
+            // reintenta in situ (ver HandleGameplayPauseInput), 'R' significa
+            // lo mismo en ambos y el "vuelve al menú" de antes mentiría.
+            m_hud.DrawCenteredOverlay(ui, "gameover_title", RED, "gameover_retry");
             break;
         case GameState::Victory:
             m_hud.DrawCenteredOverlay(ui, "victory_title", GREEN, "victory_continue");
@@ -743,6 +764,7 @@ void Application::Run() {
             case AppState::Options:
             case AppState::Controls:
             case AppState::Stats:
+            case AppState::Guide:
             case AppState::LevelSelect:
                 UpdateMenu();
                 DrawMenu();

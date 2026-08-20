@@ -17,6 +17,7 @@ namespace LevelEditor
             PlaceObstacle,
             PlaceCylinder,
             PlaceHazard,
+            PlaceElectricTile,
             PlaceGear,
             PlaceHealthKit,
             PlaceBarrel,
@@ -63,6 +64,7 @@ namespace LevelEditor
         private readonly List<BarrelData> _barrels = new();
         private readonly List<HazardData> _hazards = new();
         private readonly List<PowerUpData> _powerUps = new();
+        private readonly List<ElectricTileData> _electricTiles = new();
         private DoorData? _door; // singular, como el Player: colocarla de nuevo reemplaza la anterior
 
         private EditorTool _activeTool = EditorTool.PlacePlayer;
@@ -178,7 +180,7 @@ namespace LevelEditor
             var toolTabs = new TabControl
             {
                 Location = new Point(toolsX, _languageGroup.Bottom + 10),
-                Size = new Size(190, 220) // 220, no 190: la pestaña Entidades pasó de 4 a 6 herramientas
+                Size = new Size(190, 250) // 250: la pestaña Entidades llegó a 7 herramientas (la última en y=190)
             };
 
             _entitiesTab = new TabPage(LocalizationManager.GetText("tab_entities"));
@@ -187,7 +189,8 @@ namespace LevelEditor
             CreateToolRadio("tool_place_obstacle", 70, EditorTool.PlaceObstacle, _entitiesTab);
             CreateToolRadio("tool_place_cylinder", 100, EditorTool.PlaceCylinder, _entitiesTab);
             CreateToolRadio("tool_place_hazard", 130, EditorTool.PlaceHazard, _entitiesTab);
-            CreateToolRadio("tool_place_door", 160, EditorTool.PlaceDoor, _entitiesTab);
+            CreateToolRadio("tool_place_electrictile", 160, EditorTool.PlaceElectricTile, _entitiesTab);
+            CreateToolRadio("tool_place_door", 190, EditorTool.PlaceDoor, _entitiesTab);
             toolTabs.TabPages.Add(_entitiesTab);
 
             _objectsTab = new TabPage(LocalizationManager.GetText("tab_objects"));
@@ -301,7 +304,7 @@ namespace LevelEditor
             _statusLabel = new Label
             {
                 Location = new Point(toolsX, _propertiesGroup.Bottom + 20),
-                Size = new Size(190, 165) // 165: BuildStatusText tiene 10 líneas desde que se añadieron los Power-Ups
+                Size = new Size(190, 185) // 185: BuildStatusText tiene 11 líneas desde que se añadieron las baldosas
             };
             Controls.Add(_statusLabel);
 
@@ -568,6 +571,20 @@ namespace LevelEditor
                     MarkDirty();
                     break;
 
+                case EditorTool.PlaceElectricTile:
+                    // CycleInterval 0 por defecto: se arma solo al pisarla,
+                    // que es el comportamiento más fácil de leer. Ponerle un
+                    // ciclo es una decisión consciente desde Propiedades.
+                    _electricTiles.Add(new ElectricTileData
+                    {
+                        Position = worldPos,
+                        Size = new Vector3Data(2.0f, 0.1f, 2.0f),
+                        Damage = 20.0f,
+                        CycleInterval = 0.0f
+                    });
+                    MarkDirty();
+                    break;
+
                 case EditorTool.PlaceGear:
                     _gears.Add(new GearData { Position = worldPos });
                     MarkDirty();
@@ -669,6 +686,10 @@ namespace LevelEditor
                 if (GetBoxScreenRect(_hazards[i].Position, GetHazardHalfExtents(_hazards[i])).Contains(screenPoint))
                     return _hazards[i];
 
+            for (int i = _electricTiles.Count - 1; i >= 0; i--)
+                if (GetBoxScreenRect(_electricTiles[i].Position, GetElectricTileHalfExtents(_electricTiles[i])).Contains(screenPoint))
+                    return _electricTiles[i];
+
             if (_door is not null && GetBoxScreenRect(_door.Position, _door.HalfExtents).Contains(screenPoint))
                 return _door;
 
@@ -725,6 +746,7 @@ namespace LevelEditor
                 case BarrelData barrel: barrel.Position = worldPos; break;
                 case PowerUpData powerUp: powerUp.Position = worldPos; break;
                 case HazardData hazard: hazard.Position = worldPos; break;
+                case ElectricTileData tile: tile.Position = worldPos; break;
             }
         }
 
@@ -757,6 +779,7 @@ namespace LevelEditor
             else if (entity is BarrelData barrel) { if (!_barrels.Remove(barrel)) return false; }
             else if (entity is PowerUpData powerUp) { if (!_powerUps.Remove(powerUp)) return false; }
             else if (entity is HazardData hazard) { if (!_hazards.Remove(hazard)) return false; }
+            else if (entity is ElectricTileData tile) { if (!_electricTiles.Remove(tile)) return false; }
             else return false;
 
             if (ReferenceEquals(_selectedEntity, entity))
@@ -793,9 +816,25 @@ namespace LevelEditor
         private static int LabelY(int row) => 25 + row * 55;
         private static int InputY(int row) => 45 + row * 55;
 
+        // Alto del panel de propiedades para el caso normal (3 filas). El
+        // Random Spawner lo estira con SetPropertiesHeight porque sus siete
+        // filas de peso no caben aquí.
+        private const int DefaultPropertiesHeight = 300;
+
+        // Cambia el alto del grupo y REUBICA lo que va debajo: el label de
+        // estado se colocó al construir el formulario a partir de
+        // _propertiesGroup.Bottom, así que si el grupo crece sin más, el
+        // panel de pesos le pasa por encima.
+        private void SetPropertiesHeight(int height)
+        {
+            _propertiesGroup.Height = Math.Max(height, 120);
+            _statusLabel.Location = new Point(_statusLabel.Location.X, _propertiesGroup.Bottom + 20);
+        }
+
         private void RefreshPropertiesPanel()
         {
             _propertiesGroup.Controls.Clear();
+            SetPropertiesHeight(DefaultPropertiesHeight);
 
             switch (_selectedEntity)
             {
@@ -837,6 +876,11 @@ namespace LevelEditor
                 case PowerUpData powerUp:
                     _propertiesGroup.Visible = true;
                     BuildPowerUpProperties(powerUp);
+                    break;
+
+                case ElectricTileData tile:
+                    _propertiesGroup.Visible = true;
+                    BuildElectricTileProperties(tile);
                     break;
 
                 default:
@@ -962,6 +1006,21 @@ namespace LevelEditor
             _propertiesGroup.Controls.Add(dmgInput);
         }
 
+        // Tabla de pesos por defecto al marcar "Aleatorio": todos los
+        // arquetipos presentes, la chusma rápida como base y el Buffer casi
+        // testimonial (el motor además solo deja 2 vivos a la vez, ver
+        // Spawner::kMaxLiveBuffers). Es un punto de partida razonable para no
+        // obligar a teclear siete números desde cero.
+        private static Dictionary<string, int> DefaultSpawnerWeights() => new()
+        {
+            { "Runner", 5 }, { "Spitter", 3 }, { "Kamikaze", 3 },
+            { "Tank", 2 }, { "Shielder", 2 }, { "Trapper", 2 }, { "Buffer", 1 },
+        };
+
+        // "Default" nunca aparece en un spawner: siempre necesita una variante
+        // real de EnemyFactory (ver el mismo criterio en OnCanvasMouseClick).
+        private static string[] SpawnerVariants() => EnemyVariantNames.Where(n => n != "Default").ToArray();
+
         private void BuildSpawnerProperties(SpawnerData spawner)
         {
             var typeCombo = new ComboBox
@@ -969,10 +1028,7 @@ namespace LevelEditor
                 Location = new Point(10, InputY(0)), Width = 160,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            // "Default" no aparece aquí: un Spawner siempre necesita una
-            // variante real de EnemyFactory, no tiene sentido para él (ver
-            // el mismo criterio en OnCanvasMouseClick al colocarlo).
-            string[] spawnerVariants = EnemyVariantNames.Where(n => n != "Default").ToArray();
+            string[] spawnerVariants = SpawnerVariants();
             typeCombo.Items.AddRange(BuildVariantItems(spawnerVariants));
             typeCombo.SelectedIndex = Array.IndexOf(spawnerVariants, spawner.EnemyType);
             if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0;
@@ -994,12 +1050,72 @@ namespace LevelEditor
             };
             maxEnemiesInput.ValueChanged += (s, e) => { spawner.MaxEnemies = (int)maxEnemiesInput.Value; MarkDirty(); };
 
+            // Random Spawner. Marcar la casilla rellena la tabla de pesos por
+            // defecto; desmarcarla la borra entera (Weights = null), y el
+            // serializador omite la clave, así que el JSON vuelve a ser el de
+            // un spawner clásico sin dejar restos.
+            var randomCheck = new CheckBox
+            {
+                Location = new Point(10, LabelY(3)),
+                AutoSize = true,
+                Checked = spawner.IsRandom
+            };
+            ApplyLocalizedText(randomCheck, "prop_random");
+            randomCheck.CheckedChanged += (s, e) =>
+            {
+                spawner.Weights = randomCheck.Checked ? DefaultSpawnerWeights() : null;
+                MarkDirty();
+                RefreshPropertiesPanel(); // muestra/oculta las filas de peso
+                _canvasPanel.Invalidate(); // el marcador cambia de color al ser aleatorio
+            };
+
             _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_enemytype", new Point(10, LabelY(0))));
             _propertiesGroup.Controls.Add(typeCombo);
             _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_interval", new Point(10, LabelY(1))));
             _propertiesGroup.Controls.Add(intervalInput);
             _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_maxenemies", new Point(10, LabelY(2))));
             _propertiesGroup.Controls.Add(maxEnemiesInput);
+            _propertiesGroup.Controls.Add(randomCheck);
+
+            if (!spawner.IsRandom)
+            {
+                SetPropertiesHeight(LabelY(3) + 40);
+                return;
+            }
+
+            // Filas de peso COMPACTAS (etiqueta y campo en la misma línea, 26px
+            // de alto): con el paso normal de 55px las siete no cabrían ni de
+            // lejos en el panel lateral. Los pesos son relativos, no
+            // porcentajes: el motor los normaliza contra su propio total.
+            const int compactRowHeight = 26;
+            int weightsTop = LabelY(3) + 32;
+
+            for (int i = 0; i < spawnerVariants.Length; i++)
+            {
+                string variant = spawnerVariants[i];
+                int rowY = weightsTop + i * compactRowHeight;
+
+                Label label = CreateLocalizedLabel($"variant_{variant}", new Point(10, rowY + 3));
+                label.AutoSize = false;
+                label.Size = new Size(92, 20);
+
+                var weightInput = new NumericUpDown
+                {
+                    Location = new Point(106, rowY), Width = 64,
+                    Minimum = 0, Maximum = 100, DecimalPlaces = 0,
+                    Value = spawner.Weights!.TryGetValue(variant, out int w) ? w : 0
+                };
+                weightInput.ValueChanged += (s, e) =>
+                {
+                    spawner.Weights![variant] = (int)weightInput.Value;
+                    MarkDirty();
+                };
+
+                _propertiesGroup.Controls.Add(label);
+                _propertiesGroup.Controls.Add(weightInput);
+            }
+
+            SetPropertiesHeight(weightsTop + spawnerVariants.Length * compactRowHeight + 12);
         }
 
         // Obstacle tipo "box": Ancho/Alto/Largo editables sobre Size
@@ -1100,6 +1216,53 @@ namespace LevelEditor
             _propertiesGroup.Controls.Add(damageInput);
         }
 
+        // Baldosa eléctrica: tamaño de la placa, daño de la descarga y cada
+        // cuánto se arma sola. CycleInterval = 0 significa "solo al pisarla",
+        // así que el NumericUpDown baja hasta 0 a propósito.
+        private void BuildElectricTileProperties(ElectricTileData tile)
+        {
+            var widthInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(0)), Width = 160,
+                Minimum = 0.5m, Maximum = 20, DecimalPlaces = 2, Increment = 0.5m,
+                Value = (decimal)tile.Size.X
+            };
+            widthInput.ValueChanged += (s, e) => { tile.Size.X = (float)widthInput.Value; MarkDirty(); _canvasPanel.Invalidate(); };
+
+            var lengthInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(1)), Width = 160,
+                Minimum = 0.5m, Maximum = 20, DecimalPlaces = 2, Increment = 0.5m,
+                Value = (decimal)tile.Size.Z
+            };
+            lengthInput.ValueChanged += (s, e) => { tile.Size.Z = (float)lengthInput.Value; MarkDirty(); _canvasPanel.Invalidate(); };
+
+            var damageInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(2)), Width = 160,
+                Minimum = 1, Maximum = 200, DecimalPlaces = 0,
+                Value = (decimal)tile.Damage
+            };
+            damageInput.ValueChanged += (s, e) => { tile.Damage = (float)damageInput.Value; MarkDirty(); };
+
+            var cycleInput = new NumericUpDown
+            {
+                Location = new Point(10, InputY(3)), Width = 160,
+                Minimum = 0, Maximum = 60, DecimalPlaces = 1, Increment = 0.5m,
+                Value = (decimal)tile.CycleInterval
+            };
+            cycleInput.ValueChanged += (s, e) => { tile.CycleInterval = (float)cycleInput.Value; MarkDirty(); _canvasPanel.Invalidate(); };
+
+            _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_width", new Point(10, LabelY(0))));
+            _propertiesGroup.Controls.Add(widthInput);
+            _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_length", new Point(10, LabelY(1))));
+            _propertiesGroup.Controls.Add(lengthInput);
+            _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_damage", new Point(10, LabelY(2))));
+            _propertiesGroup.Controls.Add(damageInput);
+            _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_cycle", new Point(10, LabelY(3))));
+            _propertiesGroup.Controls.Add(cycleInput);
+        }
+
         // Power-Up: solo el tipo de efecto. La duración y la magnitud las
         // fija el motor (Player::kPowerUpDuration y compañía), no el nivel:
         // dos escudos que absorbieran distinto según dónde estén colocados
@@ -1158,6 +1321,7 @@ namespace LevelEditor
             DrawGrid(e.Graphics);
             DrawPatrolRoutes(e.Graphics);
             DrawHazards(e.Graphics);
+            DrawElectricTiles(e.Graphics);
             DrawObstacles(e.Graphics);
             DrawDoor(e.Graphics);
             DrawGears(e.Graphics);
@@ -1227,14 +1391,58 @@ namespace LevelEditor
             }
         }
 
+        // Azul acero rayado en vertical, distinto del rayado diagonal
+        // naranja del Hazard: los dos son placas de suelo que no bloquean,
+        // así que tienen que diferenciarse por patrón Y color, no solo color.
+        // Las de ciclo llevan además el intervalo escrito encima -- es el dato
+        // que decide si son cruzables o no, y no se ve de ninguna otra forma.
+        private void DrawElectricTiles(Graphics g)
+        {
+            using var hatchBrush = new HatchBrush(HatchStyle.LightVertical, Color.DeepSkyBlue, Color.FromArgb(30, 40, 60));
+            using var borderPen = new Pen(Color.Gold, 2.0f);
+            using var textBrush = new SolidBrush(Color.Gold);
+            using var font = new Font(Font.FontFamily, 7.0f, FontStyle.Bold);
+
+            foreach (var tile in _electricTiles)
+            {
+                Rectangle rect = GetBoxScreenRect(tile.Position, GetElectricTileHalfExtents(tile));
+                g.FillRectangle(hatchBrush, rect);
+                g.DrawRectangle(borderPen, rect);
+
+                if (tile.CycleInterval > 0.0f)
+                {
+                    g.DrawString($"{tile.CycleInterval:0.#}s", font, textBrush, rect.X + 2, rect.Y + 1);
+                }
+            }
+        }
+
         private void DrawGears(Graphics g)
         {
             foreach (var gear in _gears) DrawEntityMarker(g, Brushes.Orange, gear.Position);
         }
 
+        // Violeta con un anillo exterior para los Random Spawner, magenta liso
+        // para los de arquetipo fijo -- misma distinción que hace Spawner::Draw
+        // en el motor, para que el mapa se lea igual en el editor y en juego.
         private void DrawSpawners(Graphics g)
         {
-            foreach (var spawner in _spawners) DrawEntityMarker(g, Brushes.Magenta, spawner.Position);
+            using var randomBrush = new SolidBrush(Color.FromArgb(170, 90, 255));
+            using var randomPen = new Pen(Color.FromArgb(170, 90, 255), 2.0f);
+
+            foreach (var spawner in _spawners)
+            {
+                if (spawner.IsRandom)
+                {
+                    DrawEntityMarker(g, randomBrush, spawner.Position);
+                    Point p = WorldToScreen(spawner.Position);
+                    int r = MarkerRadius + 4;
+                    g.DrawEllipse(randomPen, p.X - r, p.Y - r, r * 2, r * 2);
+                }
+                else
+                {
+                    DrawEntityMarker(g, Brushes.Magenta, spawner.Position);
+                }
+            }
         }
 
         // Cuadrado verde: distinto en forma Y color de cualquier otra
@@ -1368,6 +1576,13 @@ namespace LevelEditor
                         g.DrawRectangle(highlightPen, rect);
                         break;
                     }
+                case ElectricTileData tile:
+                    {
+                        Rectangle rect = GetBoxScreenRect(tile.Position, GetElectricTileHalfExtents(tile));
+                        rect.Inflate(3, 3);
+                        g.DrawRectangle(highlightPen, rect);
+                        break;
+                    }
             }
         }
 
@@ -1432,6 +1647,8 @@ namespace LevelEditor
                 _hazards.AddRange(level.Hazards);
                 _powerUps.Clear();
                 _powerUps.AddRange(level.PowerUps);
+                _electricTiles.Clear();
+                _electricTiles.AddRange(level.ElectricTiles);
                 _door = level.Door;
 
                 _selectedEntity = null;
@@ -1473,6 +1690,7 @@ namespace LevelEditor
                 Barrels = _barrels,
                 Hazards = _hazards,
                 PowerUps = _powerUps,
+                ElectricTiles = _electricTiles,
                 Door = _door
             };
 
@@ -1523,6 +1741,7 @@ namespace LevelEditor
                    LocalizationManager.GetText("status_barrels", _barrels.Count) + "\n" +
                    LocalizationManager.GetText("status_hazards", _hazards.Count) + "\n" +
                    LocalizationManager.GetText("status_powerups", _powerUps.Count) + "\n" +
+                   LocalizationManager.GetText("status_electrictiles", _electricTiles.Count) + "\n" +
                    LocalizationManager.GetText("status_door", doorStatus);
         }
 

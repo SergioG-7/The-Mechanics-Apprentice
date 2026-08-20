@@ -12,6 +12,7 @@ class Player;
 class Enemy;
 class ExplosiveBarrel;
 class Hazard;
+class ElectricTile;
 
 // Resultado de un golpe conectado: el punto de impacto (juice) y un puntero
 // no propietario al Enemy golpeado (para que Application pueda mirar si
@@ -98,4 +99,11 @@ public:
     // penalización de movilidad, no una trampa: por eso no van por
     // ApplyHazardDamage. Descarta (erase-remove) los ya caducados.
     static void UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, Player& player);
+
+    // Avanza cada baldosa, la arma si alguien la pisa y, en el frame de la
+    // descarga, golpea UNA vez a todo lo que siga encima. A diferencia de
+    // ApplyHazardDamage, incluye a los ENEMIGOS a propósito: poder cebar a un
+    // zombi sobre una baldosa es la mitad de la mecánica.
+    static void UpdateElectricTiles(float dt, std::vector<std::unique_ptr<ElectricTile>>& tiles,
+                                     Player& player, std::vector<std::unique_ptr<Enemy>>& enemies);
 };

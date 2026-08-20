@@ -5,6 +5,7 @@
 #include "../Entities/Enemy.h"
 #include "../Entities/ExplosiveBarrel.h"
 #include "../Entities/Hazard.h"
+#include "../Entities/ElectricTile.h"
 #include <algorithm>
 
 Hitbox CombatSystem::BuildMeleeHitbox(Vector3 origin, Vector3 direction, float damage, float knockbackForce,
@@ -223,4 +224,53 @@ void CombatSystem::UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, P
         std::remove_if(puddles.begin(), puddles.end(),
                         [](const MudPuddle& p) { return p.lifetime <= 0.0f; }),
         puddles.end());
+}
+
+void CombatSystem::UpdateElectricTiles(float dt, std::vector<std::unique_ptr<ElectricTile>>& tiles,
+                                        Player& player, std::vector<std::unique_ptr<Enemy>>& enemies) {
+    constexpr float kTileKnockbackForce = 5.0f;
+
+    for (auto& tile : tiles) {
+        tile->Update(dt);
+
+        BoundingBox tileBox = tile->GetBoundingBox();
+        bool playerOnTile = CollisionMath::AABBIntersects(player.GetBoundingBox(), tileBox);
+
+        // Armar: cualquiera encima sirve de detonante, también un enemigo --
+        // por eso no basta con comprobar al jugador. Trigger() se ignora sola
+        // si la baldosa no está inactiva, así que llamarla cada frame es seguro.
+        if (playerOnTile) {
+            tile->Trigger();
+        } else {
+            for (const auto& enemy : enemies) {
+                if (enemy->IsAlive() && CollisionMath::AABBIntersects(enemy->GetBoundingBox(), tileBox)) {
+                    tile->Trigger();
+                    break;
+                }
+            }
+        }
+
+        if (!tile->ConsumeDischarge()) continue;
+
+        // El solape se vuelve a comprobar AHORA, no se reutiliza el de arriba
+        // para el jugador: entre armarla y descargar hay 2 segundos enteros,
+        // que es justo el tiempo que se da para quitarse de encima.
+        float damage = tile->GetDamage();
+        Vector3 center = tile->GetPosition();
+
+        if (CollisionMath::AABBIntersects(player.GetBoundingBox(), tileBox)) {
+            Vector3 dir = CollisionMath::Normalize2D(Vector3{
+                player.GetPosition().x - center.x, 0.0f, player.GetPosition().z - center.z });
+            player.TakeDamage(damage, Vector3{ dir.x * kTileKnockbackForce, 0.0f, dir.z * kTileKnockbackForce });
+        }
+
+        for (auto& enemy : enemies) {
+            if (!enemy->IsAlive()) continue;
+            if (!CollisionMath::AABBIntersects(enemy->GetBoundingBox(), tileBox)) continue;
+
+            Vector3 dir = CollisionMath::Normalize2D(Vector3{
+                enemy->GetPosition().x - center.x, 0.0f, enemy->GetPosition().z - center.z });
+            enemy->TakeDamage(damage, Vector3{ dir.x * kTileKnockbackForce, 0.0f, dir.z * kTileKnockbackForce });
+        }
+    }
 }

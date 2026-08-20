@@ -1,5 +1,6 @@
 #include "MenuScreen.h"
 #include "../Core/AudioSettings.h"
+#include "../Entities/PowerUp.h" // PowerUp::TypeColor: los iconos del glosario usan el MISMO color que el pickup real
 #include <algorithm>
 
 namespace {
@@ -31,13 +32,20 @@ void MenuScreen::PlayClickSound() const {
     if (m_clickSound.frameCount > 0) PlaySound(m_clickSound);
 }
 
-Rectangle MenuScreen::StackedButton(int index, int count) {
-    float screenW = static_cast<float>(GetScreenWidth());
+float MenuScreen::StackedListStartY(int count) {
     float screenH = static_cast<float>(GetScreenHeight());
     float totalHeight = count * kButtonHeight + (count - 1) * kButtonGap;
-    float startY = (screenH - totalHeight) / 2.0f;
+    float centered = (screenH - totalHeight) / 2.0f;
+
+    // El tope gana sobre el centrado, nunca al revés: una lista larga baja
+    // hasta despegarse del título aunque eso la descentre. Ver kMenuContentTop.
+    return std::max(centered, kMenuContentTop);
+}
+
+Rectangle MenuScreen::StackedButton(int index, int count) {
+    float screenW = static_cast<float>(GetScreenWidth());
     float x = (screenW - kButtonWidth) / 2.0f;
-    float y = startY + index * (kButtonHeight + kButtonGap);
+    float y = StackedListStartY(count) + index * (kButtonHeight + kButtonGap);
     return Rectangle{ x, y, kButtonWidth, kButtonHeight };
 }
 
@@ -98,14 +106,22 @@ bool MenuScreen::IsButtonClicked(Rectangle bounds) {
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildMainMenuButtons() const {
     // El botón del editor de niveles NO está aquí -- vive fuera del flujo
     // vertical apilado, anclado a la esquina superior izquierda (ver
-    // EditorButtonBounds/DrawMainMenu/UpdateMainMenu), para no empujar estos
-    // 5 botones hasta pisar el título.
+    // EditorButtonBounds/DrawMainMenu/UpdateMainMenu).
+    //
+    // 6 filas desde que existe "Guía". El centrado vertical puro ya no cabe
+    // bajo el título con tantas: de eso se encarga StackedListStartY, que
+    // ancla la lista en kMenuContentTop en cuanto el centrado se metería
+    // dentro del título. Añadir una séptima seguirá funcionando (la lista
+    // crece hacia abajo), pero habrá que comprobar que la última no se salga
+    // por debajo: 6 filas terminan en y=630 de 720.
+    constexpr int kRows = 6;
     return {
-        { StackedButton(0, 5), "menu_story", MenuAction::OpenLevelSelect, false },
-        { StackedButton(1, 5), "menu_endless", MenuAction::StartEndless, false },
-        { StackedButton(2, 5), "menu_options", MenuAction::OpenOptions, false },
-        { StackedButton(3, 5), "menu_stats", MenuAction::OpenStats, false },
-        { StackedButton(4, 5), "menu_quit", MenuAction::Quit, false },
+        { StackedButton(0, kRows), "menu_story", MenuAction::OpenLevelSelect, false },
+        { StackedButton(1, kRows), "menu_endless", MenuAction::StartEndless, false },
+        { StackedButton(2, kRows), "menu_guide", MenuAction::OpenGuide, false },
+        { StackedButton(3, kRows), "menu_options", MenuAction::OpenOptions, false },
+        { StackedButton(4, kRows), "menu_stats", MenuAction::OpenStats, false },
+        { StackedButton(5, kRows), "menu_quit", MenuAction::Quit, false },
     };
 }
 
@@ -426,6 +442,231 @@ void MenuScreen::DrawStats(const UiContext& ui, const SaveData& saveData) const 
 
     std::vector<MenuButton> buttons = { { BackButtonBounds(), "stats_back", MenuAction::BackToMainMenu, false } };
     DrawButtonList(buttons, ui);
+}
+
+// --- Guía / Glosario ---
+
+namespace {
+// Layout de una fila del glosario. Todo se deriva del centro de la pantalla
+// para que no dependa de una resolución concreta.
+constexpr float kGuideFirstRowY = 190.0f;
+constexpr float kGuideRowHeight = 52.0f;
+constexpr float kGuideIconSize = 34.0f;
+constexpr int kGuideMaxRows = 7; // la página más larga (Mecánicas y Enemigos tienen 7)
+} // namespace
+
+const std::vector<MenuScreen::GuideEntry>& MenuScreen::GuidePage(int page) {
+    static const std::vector<GuideEntry> mechanics = {
+        { GuideIcon::Door,         "guide_door_name",      "guide_door_desc" },
+        { GuideIcon::Gear,         "guide_gear_name",      "guide_gear_desc" },
+        { GuideIcon::Barrel,       "guide_barrel_name",    "guide_barrel_desc" },
+        { GuideIcon::HealthKit,    "guide_healthkit_name", "guide_healthkit_desc" },
+        { GuideIcon::Spikes,       "guide_spikes_name",    "guide_spikes_desc" },
+        { GuideIcon::ElectricTile, "guide_electric_name",  "guide_electric_desc" },
+        { GuideIcon::MudPuddle,    "guide_mud_name",       "guide_mud_desc" },
+    };
+    static const std::vector<GuideEntry> enemies = {
+        { GuideIcon::EnemyMelee,    "guide_tank_name",     "guide_tank_desc" },
+        { GuideIcon::EnemyRunner,   "guide_runner_name",   "guide_runner_desc" },
+        { GuideIcon::EnemySpitter,  "guide_spitter_name",  "guide_spitter_desc" },
+        { GuideIcon::EnemyKamikaze, "guide_kamikaze_name", "guide_kamikaze_desc" },
+        { GuideIcon::EnemyShielder, "guide_shielder_name", "guide_shielder_desc" },
+        { GuideIcon::EnemyBuffer,   "guide_buffer_name",   "guide_buffer_desc" },
+        { GuideIcon::EnemyTrapper,  "guide_trapper_name",  "guide_trapper_desc" },
+    };
+    static const std::vector<GuideEntry> powerUps = {
+        { GuideIcon::PowerOverclock, "powerup_overclock", "powerup_overclock_desc" },
+        { GuideIcon::PowerFrenzy,    "powerup_frenzy",    "powerup_frenzy_desc" },
+        { GuideIcon::PowerShield,    "powerup_shield",    "powerup_shield_desc" },
+    };
+
+    switch (page) {
+        case 1:  return enemies;
+        case 2:  return powerUps;
+        default: return mechanics;
+    }
+}
+
+const char* MenuScreen::GuidePageTitleKey(int page) {
+    switch (page) {
+        case 1:  return "guide_cat_enemies";
+        case 2:  return "guide_cat_powerups";
+        default: return "guide_cat_mechanics";
+    }
+}
+
+void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
+    // Mismos colores que la entidad real en 3D, en 2D y sin cámara: lo que
+    // importa es que el jugador asocie color+silueta, no un render fiel.
+    float cx = bounds.x + bounds.width / 2.0f;
+    float cy = bounds.y + bounds.height / 2.0f;
+    float r = bounds.width / 2.0f;
+
+    auto drawEnemyIcon = [&](Color body) {
+        // Silueta común de zombie: cuerpo redondeado y "hombros" rectos, para
+        // que las siete variantes se lean como el mismo bicho teñido distinto.
+        DrawRectangleRounded(Rectangle{ bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f }, 0.35f, 6, body);
+        DrawRectangleRoundedLines(Rectangle{ bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f }, 0.35f, 6, BLACK);
+    };
+
+    switch (icon) {
+        case GuideIcon::Door:
+            DrawRectangleRec(Rectangle{ bounds.x + 6.0f, bounds.y, bounds.width - 12.0f, bounds.height }, Color{ 0, 228, 48, 120 });
+            DrawRectangleLinesEx(Rectangle{ bounds.x + 6.0f, bounds.y, bounds.width - 12.0f, bounds.height }, 2.0f, GREEN);
+            break;
+        case GuideIcon::Gear:
+            DrawPoly(Vector2{ cx, cy }, 6, r, 0.0f, GOLD);
+            DrawPolyLines(Vector2{ cx, cy }, 6, r, 0.0f, YELLOW);
+            DrawCircle(static_cast<int>(cx), static_cast<int>(cy), r * 0.35f, Color{ 30, 30, 35, 255 });
+            break;
+        case GuideIcon::Barrel:
+            DrawRectangleRounded(Rectangle{ bounds.x + 7.0f, bounds.y + 2.0f, bounds.width - 14.0f, bounds.height - 4.0f }, 0.4f, 6, Color{ 178, 34, 34, 255 });
+            DrawLineEx(Vector2{ bounds.x + 7.0f, cy }, Vector2{ bounds.x + bounds.width - 7.0f, cy }, 2.0f, ORANGE);
+            break;
+        case GuideIcon::HealthKit:
+            DrawRectangleRec(bounds, GREEN);
+            DrawRectangleRec(Rectangle{ cx - r * 0.55f, cy - r * 0.18f, r * 1.1f, r * 0.36f }, RAYWHITE);
+            DrawRectangleRec(Rectangle{ cx - r * 0.18f, cy - r * 0.55f, r * 0.36f, r * 1.1f }, RAYWHITE);
+            break;
+        case GuideIcon::Spikes:
+            DrawRectangleRec(bounds, Color{ 200, 90, 20, 255 });
+            // DrawPoly de 3 lados en vez de DrawTriangle: raylib culea las
+            // caras traseras, así que un DrawTriangle con el winding al revés
+            // simplemente no se dibuja. DrawPoly emite el suyo correcto solo.
+            // rotation -90 lo hace apuntar hacia arriba (en pantalla, Y crece
+            // hacia abajo, así que "arriba" es -90, no +90).
+            for (int i = 0; i < 3; i++) {
+                float sx = bounds.x + 8.0f + i * (bounds.width - 16.0f) / 2.0f;
+                DrawPoly(Vector2{ sx, cy }, 3, r * 0.45f, -90.0f, LIGHTGRAY);
+            }
+            break;
+        case GuideIcon::ElectricTile:
+            DrawRectangleRec(bounds, Color{ 45, 55, 75, 255 });
+            DrawRectangleLinesEx(bounds, 2.0f, YELLOW);
+            // Rayo en zeta con líneas gruesas -- mismo motivo que arriba para
+            // no usar triángulos a mano.
+            DrawLineEx(Vector2{ cx + r * 0.35f, cy - r * 0.7f }, Vector2{ cx - r * 0.25f, cy }, 3.0f, SKYBLUE);
+            DrawLineEx(Vector2{ cx - r * 0.25f, cy }, Vector2{ cx + r * 0.25f, cy }, 3.0f, SKYBLUE);
+            DrawLineEx(Vector2{ cx + r * 0.25f, cy }, Vector2{ cx - r * 0.35f, cy + r * 0.7f }, 3.0f, SKYBLUE);
+            break;
+        case GuideIcon::MudPuddle:
+            DrawEllipse(static_cast<int>(cx), static_cast<int>(cy), r, r * 0.7f, Color{ 60, 170, 50, 200 });
+            DrawEllipseLines(static_cast<int>(cx), static_cast<int>(cy), r, r * 0.7f, LIME);
+            break;
+
+        case GuideIcon::EnemyMelee:    drawEnemyIcon(Color{ 150, 150, 165, 255 }); break;
+        case GuideIcon::EnemyRunner:   drawEnemyIcon(Color{ 200, 210, 190, 255 }); break;
+        case GuideIcon::EnemySpitter:  drawEnemyIcon(Color{ 190, 120, 235, 255 }); break;
+        case GuideIcon::EnemyKamikaze: drawEnemyIcon(Color{ 255, 110, 100, 255 }); break;
+        case GuideIcon::EnemyShielder:
+            drawEnemyIcon(Color{ 120, 165, 235, 255 });
+            // La placa por delante, que es lo que hay que reconocer en partida.
+            DrawRectangleRec(Rectangle{ bounds.x, cy - r * 0.75f, 6.0f, r * 1.5f }, SKYBLUE);
+            break;
+        case GuideIcon::EnemyBuffer:
+            drawEnemyIcon(Color{ 255, 210, 80, 255 });
+            DrawCircleLines(static_cast<int>(cx), static_cast<int>(cy), r + 3.0f, GOLD);
+            break;
+        case GuideIcon::EnemyTrapper:
+            drawEnemyIcon(Color{ 130, 235, 110, 255 });
+            DrawCircle(static_cast<int>(bounds.x + bounds.width - 5.0f), static_cast<int>(bounds.y + 6.0f), 6.0f, Color{ 70, 210, 70, 255 });
+            break;
+
+        case GuideIcon::PowerOverclock:
+            // Cono/flecha hacia arriba, igual que el pickup en 3D.
+            DrawPoly(Vector2{ cx, cy }, 3, r, -90.0f, PowerUp::TypeColor(PowerUpType::Overclock));
+            break;
+        case GuideIcon::PowerFrenzy:
+            DrawRectangleRec(Rectangle{ cx - r, cy - r * 0.22f, r * 2.0f, r * 0.44f }, PowerUp::TypeColor(PowerUpType::Frenzy));
+            DrawRectangleRec(Rectangle{ cx - r * 0.22f, cy - r, r * 0.44f, r * 2.0f }, PowerUp::TypeColor(PowerUpType::Frenzy));
+            break;
+        case GuideIcon::PowerShield:
+            DrawRectangleRec(Rectangle{ cx - r * 0.55f, cy - r * 0.75f, r * 1.1f, r * 1.5f }, PowerUp::TypeColor(PowerUpType::Shield));
+            DrawRectangleRec(Rectangle{ cx - r * 0.2f, cy - r, r * 0.4f, r * 0.3f }, RAYWHITE);
+            break;
+    }
+}
+
+std::vector<MenuScreen::MenuButton> MenuScreen::BuildGuideButtons() const {
+    // Misma fila compartida de Anterior/Siguiente que el selector de nivel,
+    // pero anclada bajo la última fila de contenido en vez de a una rejilla
+    // de filas virtuales: aquí el número de filas SÍ cambia por página
+    // (Power-ups solo tiene 3), y aun así los botones no deben moverse.
+    float screenW = static_cast<float>(GetScreenWidth());
+    float x = (screenW - kButtonWidth) / 2.0f;
+    float navY = kGuideFirstRowY + kGuideMaxRows * kGuideRowHeight + 12.0f;
+    float halfWidth = (kButtonWidth - kLevelNavGap) / 2.0f;
+    constexpr float kNavHeight = 44.0f;
+
+    std::vector<MenuButton> buttons;
+    if (m_guidePage > 0) {
+        buttons.push_back({ Rectangle{ x, navY, halfWidth, kNavHeight }, "levelselect_prev", MenuAction::GuidePrevPage, false });
+    }
+    if (m_guidePage < kGuidePageCount - 1) {
+        buttons.push_back({ Rectangle{ x + halfWidth + kLevelNavGap, navY, halfWidth, kNavHeight }, "levelselect_next", MenuAction::GuideNextPage, false });
+    }
+    buttons.push_back({ BackButtonBounds(), "guide_back", MenuAction::BackToMainMenu, false });
+    return buttons;
+}
+
+MenuAction MenuScreen::UpdateGuide() {
+    m_guidePage = std::clamp(m_guidePage, 0, kGuidePageCount - 1);
+
+    MenuAction action = UpdateButtonList(BuildGuideButtons());
+    if (action == MenuAction::GuideNextPage) {
+        m_guidePage++;
+        return MenuAction::None;
+    }
+    if (action == MenuAction::GuidePrevPage) {
+        m_guidePage--;
+        return MenuAction::None;
+    }
+    return action;
+}
+
+void MenuScreen::DrawGuide(const UiContext& ui) const {
+    const char* title = ui.localization.GetText("guide_title");
+    constexpr float titleSize = LocalizationManager::kFontSizeTitle;
+    Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
+
+    // Categoría de la página, entre el título (termina en 130) y la primera
+    // fila (190): centrada a 145 con 24px, así que ocupa 145-169. Sin pisar
+    // ninguna de las dos.
+    int page = std::clamp(m_guidePage, 0, kGuidePageCount - 1);
+    constexpr float categorySize = LocalizationManager::kFontSizeBody;
+    const Font& categoryFont = ui.localization.GetFontForSize(categorySize);
+    std::string category = std::string(ui.localization.GetText(GuidePageTitleKey(page))) +
+                            TextFormat("   (%d/%d)", page + 1, kGuidePageCount);
+    Vector2 categoryDim = MeasureTextEx(categoryFont, category.c_str(), categorySize, 1.0f);
+    DrawTextEx(categoryFont, category.c_str(), Vector2{ (GetScreenWidth() - categoryDim.x) / 2.0f, 145.0f }, categorySize, 1.0f, SKYBLUE);
+
+    float screenCenter = static_cast<float>(GetScreenWidth()) / 2.0f;
+    float iconX = screenCenter - 450.0f;
+    float nameX = screenCenter - 395.0f;
+    float descX = screenCenter - 160.0f;
+
+    constexpr float nameSize = LocalizationManager::kFontSizeBody;
+    constexpr float descSize = LocalizationManager::kFontSizeControlsRow;
+    const Font& nameFont = ui.localization.GetFontForSize(nameSize);
+    const Font& descFont = ui.localization.GetFontForSize(descSize);
+
+    const std::vector<GuideEntry>& entries = GuidePage(page);
+    for (size_t i = 0; i < entries.size(); i++) {
+        float rowY = kGuideFirstRowY + static_cast<float>(i) * kGuideRowHeight;
+
+        DrawGuideIcon(entries[i].icon,
+                       Rectangle{ iconX, rowY + (kGuideRowHeight - kGuideIconSize) / 2.0f - 6.0f, kGuideIconSize, kGuideIconSize });
+
+        // Nombre y descripción centrados verticalmente cada uno respecto a su
+        // propio alto, que no es el mismo (24 vs 22).
+        DrawTextEx(nameFont, ui.localization.GetText(entries[i].nameKey),
+                   Vector2{ nameX, rowY + (kGuideIconSize - nameSize) / 2.0f - 6.0f }, nameSize, 1.0f, GOLD);
+        DrawTextEx(descFont, ui.localization.GetText(entries[i].descriptionKey),
+                   Vector2{ descX, rowY + (kGuideIconSize - descSize) / 2.0f - 6.0f }, descSize, 1.0f, RAYWHITE);
+    }
+
+    DrawButtonList(BuildGuideButtons(), ui);
 }
 
 // --- Selector de nivel (Modo Historia) ---

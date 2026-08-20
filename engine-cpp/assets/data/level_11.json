@@ -1,0 +1,421 @@
+{
+  "levelName": "level_11",
+  "player": {
+    "spawn": {
+      "x": -0.15,
+      "y": 0,
+      "z": 13.85
+    },
+    "maxHP": 100,
+    "speed": 4,
+    "attackDamage": 50
+  },
+  "obstacles": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 16
+      },
+      "type": "box",
+      "size": {
+        "x": 34,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -16
+      },
+      "type": "box",
+      "size": {
+        "x": 34,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 16,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -16,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -4.95,
+        "y": 0,
+        "z": 3.45
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1.4,
+        "z": 19
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 5.05,
+        "y": 0,
+        "z": 3.3
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 2,
+        "z": 19
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -10,
+        "y": 0,
+        "z": -6
+      },
+      "type": "box",
+      "size": {
+        "x": 10,
+        "y": 2,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 10,
+        "y": 0,
+        "z": -6
+      },
+      "type": "box",
+      "size": {
+        "x": 10,
+        "y": 2,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -11
+      },
+      "type": "box",
+      "size": {
+        "x": 8,
+        "y": 2,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    }
+  ],
+  "enemies": [
+    {
+      "spawn": {
+        "x": -12,
+        "y": 0,
+        "z": 12
+      },
+      "type": "Runner",
+      "maxHP": 25,
+      "visionRadius": 8,
+      "speed": 6.5,
+      "attackDamage": 6,
+      "patrolRoute": [
+        {
+          "x": -12,
+          "y": 0,
+          "z": 12
+        },
+        {
+          "x": -12,
+          "y": 0,
+          "z": -2
+        },
+        {
+          "x": -12,
+          "y": 0,
+          "z": 12
+        }
+      ]
+    },
+    {
+      "spawn": {
+        "x": 12,
+        "y": 0,
+        "z": 12
+      },
+      "type": "Runner",
+      "maxHP": 25,
+      "visionRadius": 8,
+      "speed": 6.5,
+      "attackDamage": 6,
+      "patrolRoute": [
+        {
+          "x": 12,
+          "y": 0,
+          "z": 12
+        },
+        {
+          "x": 12,
+          "y": 0,
+          "z": -2
+        },
+        {
+          "x": 12,
+          "y": 0,
+          "z": 12
+        }
+      ]
+    },
+    {
+      "spawn": {
+        "x": 0,
+        "y": 0,
+        "z": 2
+      },
+      "type": "Shielder",
+      "maxHP": 90,
+      "visionRadius": 7,
+      "speed": 2.2,
+      "attackDamage": 14,
+      "patrolRoute": []
+    },
+    {
+      "spawn": {
+        "x": 0,
+        "y": 0,
+        "z": -13.5
+      },
+      "type": "Trapper",
+      "maxHP": 40,
+      "visionRadius": 8,
+      "speed": 3,
+      "attackDamage": 8,
+      "patrolRoute": []
+    }
+  ],
+  "gears": [
+    {
+      "position": {
+        "x": -12,
+        "y": 0,
+        "z": 6
+      }
+    },
+    {
+      "position": {
+        "x": 12,
+        "y": 0,
+        "z": 6
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 8
+      }
+    },
+    {
+      "position": {
+        "x": -12,
+        "y": 0,
+        "z": -12
+      }
+    },
+    {
+      "position": {
+        "x": 12,
+        "y": 0,
+        "z": -12
+      }
+    }
+  ],
+  "spawners": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -3
+      },
+      "enemyType": "Kamikaze",
+      "interval": 9,
+      "maxEnemies": 2,
+      "IsRandom": false
+    }
+  ],
+  "healthKits": [
+    {
+      "position": {
+        "x": -12,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "position": {
+        "x": 12,
+        "y": 0,
+        "z": 0
+      }
+    }
+  ],
+  "barrels": [
+    {
+      "position": {
+        "x": -2.5,
+        "y": 0,
+        "z": -8
+      }
+    },
+    {
+      "position": {
+        "x": 2.5,
+        "y": 0,
+        "z": -8
+      }
+    }
+  ],
+  "hazards": [],
+  "powerUps": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 11
+      },
+      "type": "Overclock"
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -8.5
+      },
+      "type": "Shield"
+    }
+  ],
+  "electricTiles": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 6
+      },
+      "size": {
+        "x": 8,
+        "y": 0.1,
+        "z": 2
+      },
+      "damage": 18,
+      "cycleInterval": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "size": {
+        "x": 8,
+        "y": 0.1,
+        "z": 2
+      },
+      "damage": 18,
+      "cycleInterval": 4
+    },
+    {
+      "position": {
+        "x": -12,
+        "y": 0,
+        "z": -9
+      },
+      "size": {
+        "x": 2.5,
+        "y": 0.1,
+        "z": 2.5
+      },
+      "damage": 22,
+      "cycleInterval": 0
+    },
+    {
+      "position": {
+        "x": 12,
+        "y": 0,
+        "z": -9
+      },
+      "size": {
+        "x": 2.5,
+        "y": 0.1,
+        "z": 2.5
+      },
+      "damage": 22,
+      "cycleInterval": 0
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -13.5
+      },
+      "size": {
+        "x": 6,
+        "y": 0.1,
+        "z": 2
+      },
+      "damage": 20,
+      "cycleInterval": 5
+    }
+  ],
+  "door": {
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -14.5
+    },
+    "halfExtents": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
+  }
+}
