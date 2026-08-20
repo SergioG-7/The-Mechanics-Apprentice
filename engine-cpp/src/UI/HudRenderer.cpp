@@ -29,6 +29,29 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, int total
         : TextFormat("%s: %d / %d", gearsLabel, totalGears - static_cast<int>(level.gears.size()), totalGears);
     DrawTextEx(hudFont, gearsText.c_str(), Vector2{ static_cast<float>(barX), static_cast<float>(barY + barHeight + 10) }, kHudTextSize, 1.0f, ORANGE);
 
+    // --- Power-ups activos: una línea por efecto, apiladas bajo el contador
+    // de engranajes. Se pintan con el MISMO color que el pickup y el aura del
+    // Player (PowerUp::TypeColor), para que las tres señales se lean como una
+    // sola. Solo el escudo no muestra segundos: dura hasta absorber un golpe. ---
+    float effectY = static_cast<float>(barY + barHeight + 10) + kHudTextSize + 6.0f;
+    auto drawEffectRow = [&](const char* labelKey, PowerUpType type, float remaining, bool showSeconds) {
+        std::string text = showSeconds
+            ? TextFormat("%s: %.1fs", ui.localization.GetText(labelKey), remaining)
+            : ui.localization.GetText(labelKey);
+        DrawTextEx(hudFont, text.c_str(), Vector2{ static_cast<float>(barX), effectY }, kHudTextSize, 1.0f, PowerUp::TypeColor(type));
+        effectY += kHudTextSize + 6.0f;
+    };
+
+    if (level.player->GetOverclockRemaining() > 0.0f) {
+        drawEffectRow("powerup_overclock", PowerUpType::Overclock, level.player->GetOverclockRemaining(), true);
+    }
+    if (level.player->GetFrenzyRemaining() > 0.0f) {
+        drawEffectRow("powerup_frenzy", PowerUpType::Frenzy, level.player->GetFrenzyRemaining(), true);
+    }
+    if (level.player->HasShield()) {
+        drawEffectRow("powerup_shield", PowerUpType::Shield, 0.0f, false);
+    }
+
     // --- Barra de HP flotante sobre cada Enemy dañado ---
     for (auto& enemy : level.enemies) {
         if (!enemy->IsAlive()) continue;               // un zombie derrotado no necesita barra

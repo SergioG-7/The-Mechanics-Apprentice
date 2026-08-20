@@ -28,6 +28,9 @@ private:
         // "melee" por defecto: las variantes ya existentes (Tank/Runner) no
         // llevan "behavior" en el JSON y deben seguir comportándose igual.
         EnemyBehavior behavior = EnemyBehavior::Melee;
+        // Código de color del arquetipo ("tint": [r, g, b] en el JSON).
+        // WHITE = sin teñir, el aspecto original del modelo.
+        Color tint = WHITE;
     };
 
     // Carga perezosa cacheada en un static local: la primera llamada parsea

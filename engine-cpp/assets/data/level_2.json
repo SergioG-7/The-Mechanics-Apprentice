@@ -1,65 +1,242 @@
 {
   "levelName": "level_2",
   "player": {
-    "spawn": { "x": 0, "y": 0, "z": 7 },
+    "spawn": {
+      "x": 0,
+      "y": 0,
+      "z": 7.9333334
+    },
     "maxHP": 100,
     "speed": 4.5,
     "attackDamage": 45
   },
   "obstacles": [
-    { "position": { "x": -2, "y": 0, "z": 0 }, "type": "cylinder", "radius": 0.7, "height": 2.5 },
-    { "position": { "x": 2, "y": 0, "z": 0 }, "type": "cylinder", "radius": 0.7, "height": 2.5 },
-    { "position": { "x": 0, "y": 0, "z": -2 }, "type": "cylinder", "radius": 0.7, "height": 2.5 },
-
-    { "position": { "x": 0, "y": 0, "z": 12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 0, "y": 0, "z": -12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } },
-    { "position": { "x": -12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } }
+    {
+      "position": {
+        "x": -2,
+        "y": 0,
+        "z": 0
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 2.5
+    },
+    {
+      "position": {
+        "x": 2,
+        "y": 0,
+        "z": 0
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 2.5
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -2
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.7,
+      "height": 2.5
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      },
+      "radius": 0.5,
+      "height": 1
+    }
   ],
-  "hazards": [],
   "enemies": [
     {
-      "spawn": { "x": 0, "y": 0, "z": -4.5 },
+      "spawn": {
+        "x": 0,
+        "y": 0,
+        "z": -4.5
+      },
       "type": "Tank",
       "maxHP": 200,
       "visionRadius": 5,
       "speed": 1.2,
       "attackDamage": 25,
       "patrolRoute": [
-        { "x": 0, "y": 0, "z": -4.5 },
-        { "x": -3, "y": 0, "z": -5.5 },
-        { "x": 3, "y": 0, "z": -5.5 },
-        { "x": 0, "y": 0, "z": -4.5 }
+        {
+          "x": 0,
+          "y": 0,
+          "z": -4.5
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "z": -5.5
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "z": -5.5
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -4.5
+        }
       ]
     },
     {
-      "spawn": { "x": 4, "y": 0, "z": 3 },
+      "spawn": {
+        "x": 4,
+        "y": 0,
+        "z": 3
+      },
       "type": "Runner",
       "maxHP": 25,
       "visionRadius": 8,
       "speed": 6.5,
       "attackDamage": 6,
       "patrolRoute": [
-        { "x": 4, "y": 0, "z": 3 },
-        { "x": 5, "y": 0, "z": -3 },
-        { "x": -5, "y": 0, "z": -3 },
-        { "x": -4, "y": 0, "z": 3 },
-        { "x": 4, "y": 0, "z": 3 }
+        {
+          "x": 4,
+          "y": 0,
+          "z": 3
+        },
+        {
+          "x": 5,
+          "y": 0,
+          "z": -3
+        },
+        {
+          "x": -5,
+          "y": 0,
+          "z": -3
+        },
+        {
+          "x": -4,
+          "y": 0,
+          "z": 3
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "z": 3
+        }
       ]
     }
   ],
-  "spawners": [],
   "gears": [
-    { "position": { "x": 0, "y": 0, "z": 4 } },
-    { "position": { "x": -4.5, "y": 0, "z": -3 } },
-    { "position": { "x": 4.5, "y": 0, "z": -3 } }
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 4
+      }
+    },
+    {
+      "position": {
+        "x": -4.5,
+        "y": 0,
+        "z": -3
+      }
+    },
+    {
+      "position": {
+        "x": 4.5,
+        "y": 0,
+        "z": -3
+      }
+    }
   ],
+  "spawners": [],
   "healthKits": [
-    { "position": { "x": 0, "y": 0, "z": 1 } }
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      }
+    }
   ],
   "barrels": [],
+  "hazards": [],
   "door": {
-    "position": { "x": 0, "y": 0, "z": -8 },
-    "halfExtents": { "x": 1, "y": 1, "z": 1 }
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -8
+    },
+    "halfExtents": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
   }
 }

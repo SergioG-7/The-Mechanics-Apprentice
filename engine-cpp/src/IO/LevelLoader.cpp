@@ -166,6 +166,14 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
             }
         }
 
+        if (root.contains("powerUps")) {
+            for (const json& n : root.at("powerUps")) {
+                level.powerUps.push_back(std::make_unique<PowerUp>(
+                    ParseVector3(n.at("position")),
+                    PowerUp::ParseType(n.value("type", std::string("Overclock")))));
+            }
+        }
+
         // !is_null() a propósito: System.Text.Json puede serializar una
         // propiedad C# nula como `"door": null` en vez de omitir la clave.
         // contains() por sí solo daría true y el .at("position") de abajo
@@ -177,7 +185,7 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
                 ParseVector3(doorNode.at("halfExtents")));
         }
 
-        TraceLog(LOG_INFO, "LevelLoader: '%s' cargado -> %d enemigos, %d obstaculos, %d hazards, %d engranajes, %d spawners, %d botiquines, %d barriles, puerta %s",
+        TraceLog(LOG_INFO, "LevelLoader: '%s' cargado -> %d enemigos, %d obstaculos, %d hazards, %d engranajes, %d spawners, %d botiquines, %d barriles, %d power-ups, puerta %s",
                  jsonPath.c_str(),
                  static_cast<int>(level.enemies.size()),
                  static_cast<int>(level.obstacles.size()),
@@ -186,6 +194,7 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
                  static_cast<int>(level.spawners.size()),
                  static_cast<int>(level.healthKits.size()),
                  static_cast<int>(level.barrels.size()),
+                 static_cast<int>(level.powerUps.size()),
                  level.door ? "si" : "no");
 
     } catch (const json::exception& e) {

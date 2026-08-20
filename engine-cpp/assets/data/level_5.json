@@ -1,80 +1,341 @@
 {
   "levelName": "level_5",
   "player": {
-    "spawn": { "x": 0, "y": 0, "z": 10 },
+    "spawn": {
+      "x": 0,
+      "y": 0,
+      "z": 10
+    },
     "maxHP": 100,
     "speed": 4.5,
     "attackDamage": 45
   },
   "obstacles": [
-    { "position": { "x": 6, "y": 0, "z": 0 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": -6, "y": 0, "z": 0 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": 0, "y": 0, "z": 6 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": 0, "y": 0, "z": -6 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": 4.2, "y": 0, "z": 4.2 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": -4.2, "y": 0, "z": 4.2 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": 4.2, "y": 0, "z": -4.2 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-    { "position": { "x": -4.2, "y": 0, "z": -4.2 }, "type": "cylinder", "radius": 0.7, "height": 3 },
-
-    { "position": { "x": 0, "y": 0, "z": 12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 0, "y": 0, "z": -12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } },
-    { "position": { "x": -12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } }
+    {
+      "position": {
+        "x": 6,
+        "y": 0,
+        "z": 0
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": -6,
+        "y": 0,
+        "z": 0
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 6
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -6
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 4.2,
+        "y": 0,
+        "z": 4.2
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": -4.2,
+        "y": 0,
+        "z": 4.2
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 4.2,
+        "y": 0,
+        "z": -4.2
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": -4.2,
+        "y": 0,
+        "z": -4.2
+      },
+      "type": "cylinder",
+      "radius": 0.7,
+      "height": 3
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      }
+    },
+    {
+      "position": {
+        "x": -16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      }
+    }
   ],
   "hazards": [
-    { "position": { "x": 0, "y": 0, "z": 0 }, "size": { "x": 3, "y": 0.1, "z": 3 }, "damagePerTick": 15 },
-    { "position": { "x": 3, "y": 0, "z": -6.5 }, "size": { "x": 2, "y": 0.1, "z": 2 }, "damagePerTick": 12 },
-    { "position": { "x": -3, "y": 0, "z": -6.5 }, "size": { "x": 2, "y": 0.1, "z": 2 }, "damagePerTick": 12 }
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "size": {
+        "x": 3,
+        "y": 0.1,
+        "z": 3
+      },
+      "damagePerTick": 15
+    },
+    {
+      "position": {
+        "x": 3,
+        "y": 0,
+        "z": -6.5
+      },
+      "size": {
+        "x": 2,
+        "y": 0.1,
+        "z": 2
+      },
+      "damagePerTick": 12
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": -6.5
+      },
+      "size": {
+        "x": 2,
+        "y": 0.1,
+        "z": 2
+      },
+      "damagePerTick": 12
+    }
   ],
   "enemies": [
     {
-      "spawn": { "x": 0, "y": 0, "z": -3 },
+      "spawn": {
+        "x": 0,
+        "y": 0,
+        "z": -3
+      },
       "type": "Tank",
       "maxHP": 200,
       "visionRadius": 5,
       "speed": 1.2,
       "attackDamage": 25,
       "patrolRoute": [
-        { "x": 0, "y": 0, "z": -3 },
-        { "x": 2.5, "y": 0, "z": -2 },
-        { "x": -2.5, "y": 0, "z": -2 },
-        { "x": 0, "y": 0, "z": -3 }
+        {
+          "x": 0,
+          "y": 0,
+          "z": -3
+        },
+        {
+          "x": 2.5,
+          "y": 0,
+          "z": -2
+        },
+        {
+          "x": -2.5,
+          "y": 0,
+          "z": -2
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": -3
+        }
       ]
     }
   ],
   "spawners": [
     {
-      "position": { "x": -5, "y": 0, "z": -8 },
+      "position": {
+        "x": -5,
+        "y": 0,
+        "z": -8
+      },
       "enemyType": "Spitter",
       "interval": 5.0,
       "maxEnemies": 2
     },
     {
-      "position": { "x": 5, "y": 0, "z": -8 },
+      "position": {
+        "x": 5,
+        "y": 0,
+        "z": -8
+      },
       "enemyType": "Kamikaze",
       "interval": 7.0,
       "maxEnemies": 2
     }
   ],
   "gears": [
-    { "position": { "x": 0, "y": 0, "z": 8 } },
-    { "position": { "x": 7, "y": 0, "z": 2 } },
-    { "position": { "x": -7, "y": 0, "z": 2 } },
-    { "position": { "x": 3.5, "y": 0, "z": -8.5 } },
-    { "position": { "x": -3.5, "y": 0, "z": -8.5 } }
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 8
+      }
+    },
+    {
+      "position": {
+        "x": 7,
+        "y": 0,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": -7,
+        "y": 0,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 3.5,
+        "y": 0,
+        "z": -8.5
+      }
+    },
+    {
+      "position": {
+        "x": -3.5,
+        "y": 0,
+        "z": -8.5
+      }
+    }
   ],
   "healthKits": [
-    { "position": { "x": 5, "y": 0, "z": 5 } },
-    { "position": { "x": -5, "y": 0, "z": 5 } }
+    {
+      "position": {
+        "x": 5,
+        "y": 0,
+        "z": 5
+      }
+    },
+    {
+      "position": {
+        "x": -5,
+        "y": 0,
+        "z": 5
+      }
+    }
   ],
   "barrels": [
-    { "position": { "x": 3, "y": 0, "z": 3 } },
-    { "position": { "x": -3, "y": 0, "z": 3 } },
-    { "position": { "x": 3, "y": 0, "z": -1.5 } },
-    { "position": { "x": -3, "y": 0, "z": -1.5 } }
+    {
+      "position": {
+        "x": 3,
+        "y": 0,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": 3,
+        "y": 0,
+        "z": -1.5
+      }
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": -1.5
+      }
+    }
   ],
   "door": {
-    "position": { "x": 0, "y": 0, "z": -9.5 },
-    "halfExtents": { "x": 1, "y": 1, "z": 1 }
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -9.5
+    },
+    "halfExtents": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
   }
 }

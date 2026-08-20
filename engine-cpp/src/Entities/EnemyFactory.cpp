@@ -15,9 +15,32 @@ EnemyBehavior ParseBehavior(const std::string& name) {
     if (name == "melee") return EnemyBehavior::Melee;
     if (name == "kamikaze") return EnemyBehavior::Kamikaze;
     if (name == "spitter") return EnemyBehavior::Spitter;
+    if (name == "shielder") return EnemyBehavior::Shielder;
+    if (name == "buffer") return EnemyBehavior::Buffer;
+    if (name == "trapper") return EnemyBehavior::Trapper;
 
     TraceLog(LOG_WARNING, "EnemyFactory: behavior '%s' desconocido, usando 'melee'", name.c_str());
     return EnemyBehavior::Melee;
+}
+
+// "tint": [r, g, b] con componentes 0-255. Ausente o mal formado = WHITE
+// (sin teñir), mismo criterio de degradar sin reventar que ParseBehavior.
+Color ParseTint(const json& node) {
+    if (!node.contains("tint")) return WHITE;
+
+    const json& tint = node.at("tint");
+    if (!tint.is_array() || tint.size() < 3) {
+        TraceLog(LOG_WARNING, "EnemyFactory: 'tint' debe ser un array [r, g, b], ignorado");
+        return WHITE;
+    }
+
+    auto channel = [&tint](size_t i) {
+        int value = tint[i].get<int>();
+        if (value < 0) value = 0;
+        if (value > 255) value = 255;
+        return static_cast<unsigned char>(value);
+    };
+    return Color{ channel(0), channel(1), channel(2), 255 };
 }
 }
 
@@ -44,6 +67,7 @@ const std::unordered_map<std::string, EnemyFactory::EnemyVariant>& EnemyFactory:
                 // Opcional: las variantes ya existentes (Tank/Runner) no lo
                 // llevan y siguen siendo Melee sin tocarlas.
                 variant.behavior = ParseBehavior(node.value("behavior", std::string("melee")));
+                variant.tint = ParseTint(node);
                 result.emplace(name, variant);
             }
         } catch (const json::exception& e) {
@@ -67,5 +91,5 @@ std::unique_ptr<Enemy> EnemyFactory::CreateEnemy(const std::string& variantName,
 
     const EnemyVariant& v = it->second;
     return std::make_unique<Enemy>(position, v.maxHP, std::move(patrolRoute), v.visionRadius,
-                                    v.speed, v.attackDamage, v.scale, v.behavior);
+                                    v.speed, v.attackDamage, v.scale, v.behavior, v.tint);
 }

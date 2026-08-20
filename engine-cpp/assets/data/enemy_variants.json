@@ -5,7 +5,8 @@
       "speed": 1.2,
       "scale": 1.5,
       "attackDamage": 25.0,
-      "visionRadius": 5.0
+      "visionRadius": 5.0,
+      "tint": [150, 150, 165]
     },
     "Runner": {
       "maxHP": 25.0,
@@ -20,7 +21,8 @@
       "scale": 0.9,
       "attackDamage": 8.0,
       "visionRadius": 10.0,
-      "behavior": "spitter"
+      "behavior": "spitter",
+      "tint": [190, 120, 235]
     },
     "Kamikaze": {
       "maxHP": 15.0,
@@ -28,7 +30,35 @@
       "scale": 0.85,
       "attackDamage": 35.0,
       "visionRadius": 7.0,
-      "behavior": "kamikaze"
+      "behavior": "kamikaze",
+      "tint": [255, 110, 100]
+    },
+    "Shielder": {
+      "maxHP": 90.0,
+      "speed": 2.2,
+      "scale": 1.15,
+      "attackDamage": 14.0,
+      "visionRadius": 7.0,
+      "behavior": "shielder",
+      "tint": [120, 165, 235]
+    },
+    "Buffer": {
+      "maxHP": 45.0,
+      "speed": 2.6,
+      "scale": 1.0,
+      "attackDamage": 0.0,
+      "visionRadius": 11.0,
+      "behavior": "buffer",
+      "tint": [255, 210, 80]
+    },
+    "Trapper": {
+      "maxHP": 40.0,
+      "speed": 3.0,
+      "scale": 0.95,
+      "attackDamage": 8.0,
+      "visionRadius": 8.0,
+      "behavior": "trapper",
+      "tint": [130, 235, 110]
     }
   }
 }

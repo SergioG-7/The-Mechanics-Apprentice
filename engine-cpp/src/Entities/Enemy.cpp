@@ -8,11 +8,16 @@
 #include <iostream>
 
 Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, float visionRadius,
-             float speed, float attackDamage, float scale, EnemyBehavior behavior)
+             float speed, float attackDamage, float scale, EnemyBehavior behavior, Color baseTint)
     : Actor(position, maxHP, Vector3{ 0.5f * scale, 0.5f * scale, 0.5f * scale }),
       m_patrolRoute(std::move(patrolRoute)), m_speed(speed),
-      m_attackDamage(attackDamage), m_scale(scale), m_behavior(behavior), m_visionRadius(visionRadius) {
+      m_attackDamage(attackDamage), m_scale(scale), m_behavior(behavior), m_baseTint(baseTint),
+      m_visionRadius(visionRadius) {
     SetupStates();
+
+    // Arrancado, no en cero: si no, un Trapper soltaría su primer charco en
+    // el frame mismo en que nace, encima de su propio spawn.
+    m_puddleTimer.Start(kPuddleInterval);
 
     // Modelo Kenney (blocky-characters, variante L / "zombie"): mismo caso
     // que el Player, trae su atlas vía baseColorTexture y raylib lo resuelve
@@ -102,7 +107,8 @@ void Enemy::UpdatePatrol(float dt) {
 
     m_facingDirection = dir;
 
-    TryMoveAgainstObstacles(Vector3{ dir.x * m_speed * dt, 0.0f, dir.z * m_speed * dt });
+    float speed = CurrentSpeed();
+    TryMoveAgainstObstacles(Vector3{ dir.x * speed * dt, 0.0f, dir.z * speed * dt });
 }
 
 void Enemy::UpdateChase(float dt) {
@@ -126,7 +132,19 @@ void Enemy::UpdateChase(float dt) {
                     return;
                 }
                 break;
+            case EnemyBehavior::Buffer:
+                // No ataca nunca: al entrar en su radio de mando se planta,
+                // mirando al jugador, y deja que su aura empuje a los demás.
+                if (distSq <= kBufferKeepDistance * kBufferKeepDistance) {
+                    m_facingDirection = DirectionToLastKnownPlayer();
+                    return;
+                }
+                break;
             case EnemyBehavior::Melee:
+            case EnemyBehavior::Shielder:
+            case EnemyBehavior::Trapper:
+                // Los tres cierran a melee igual; lo que los diferencia
+                // (placa frontal, goteo de lodo) no toca la FSM.
                 if (distSq <= kAttackRange * kAttackRange) {
                     m_fsm.ChangeState(EnemyState::Attack);
                     return;
@@ -150,7 +168,8 @@ void Enemy::UpdateChase(float dt) {
 
     m_facingDirection = dir;
 
-    TryMoveAgainstObstacles(Vector3{ dir.x * m_speed * dt, 0.0f, dir.z * m_speed * dt });
+    float speed = CurrentSpeed();
+    TryMoveAgainstObstacles(Vector3{ dir.x * speed * dt, 0.0f, dir.z * speed * dt });
 }
 
 Vector3 Enemy::DirectionToLastKnownPlayer() const {
@@ -263,8 +282,30 @@ void Enemy::UpdateDead(float dt) {
 
 void Enemy::Update(float dt) {
     m_damageFlashTimer.Tick(dt);
+
+    // Trapper: gotea un charco cada kPuddleInterval mientras siga vivo, sea
+    // cual sea su estado -- también patrullando, para que el nivel se vaya
+    // ensuciando aunque el jugador todavía no lo haya visto.
+    if (m_behavior == EnemyBehavior::Trapper && IsAlive()) {
+        m_puddleTimer.Tick(dt);
+        if (!m_puddleTimer.IsActive()) {
+            m_puddleTimer.Start(kPuddleInterval);
+            m_queuedPuddlePosition = m_position;
+            m_pendingPuddle = true;
+        }
+    }
+
     ApplyKnockback(dt);
     m_fsm.Update(dt);
+}
+
+bool Enemy::BlocksAttackFrom(Vector3 attackerPosition) const {
+    if (m_behavior != EnemyBehavior::Shielder) return false;
+
+    Vector3 toAttacker = CollisionMath::Normalize2D(Vector3{
+        attackerPosition.x - m_position.x, 0.0f, attackerPosition.z - m_position.z });
+    float facingDot = toAttacker.x * m_facingDirection.x + toAttacker.z * m_facingDirection.z;
+    return facingDot >= kShieldBlockCosine;
 }
 
 void Enemy::Draw() const {
@@ -276,11 +317,12 @@ void Enemy::Draw() const {
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
     Vector3 scale = { m_scale, m_scale, m_scale };
 
-    // WHITE en normal (igual que el Player) para no teñir el material sobre
-    // el que trabaja el toon shader; el flash de daño pasa a RED, ya que
-    // WHITE dejaría de contrastar contra un tinte neutro. Tono sangre seca
-    // cuando cae derrotado.
-    Color tint = WHITE;
+    // Código de color del arquetipo (WHITE para los que no declaran ninguno,
+    // igual que antes: no tiñe el material sobre el que trabaja el toon
+    // shader). El flash de daño pasa a RED, ya que WHITE dejaría de
+    // contrastar contra un tinte neutro. Tono sangre seca cuando cae
+    // derrotado, por encima del tinte de arquetipo.
+    Color tint = m_baseTint;
     unsigned char shadowAlpha = 100;
     if (m_fsm.Is(EnemyState::Hurt)) {
         tint = RED;
@@ -344,7 +386,56 @@ void Enemy::Draw() const {
     // cuerpo para que se desvanezca a la par durante el fade del cadáver.
     ModelUtils::DrawModelWithOutline(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
+    DrawArchetypeDecoration(rotationAngle, tint);
+
     if (isFading) rlEnableDepthMask();
+}
+
+void Enemy::DrawArchetypeDecoration(float rotationAngleDegrees, Color tint) const {
+    // El aro del Buffer va en coordenadas de mundo (no gira con el cuerpo) y
+    // se apaga con el cadáver, así que sale de la matriz rotada de abajo.
+    if (m_behavior == EnemyBehavior::Buffer) {
+        if (!IsAlive()) return;
+
+        // Pulso lento: el radio y la opacidad respiran a la vez, para que se
+        // lea como un área de influencia activa y no como decoración fija.
+        float pulse = 0.5f + 0.5f * sinf(static_cast<float>(GetTime()) * 3.0f);
+        float radius = kBufferAuraRadius * (0.96f + 0.04f * pulse);
+        Vector3 base{ m_position.x, 0.03f, m_position.z };
+        DrawCylinder(base, radius, radius, 0.02f, 32, Fade(GOLD, 0.06f + 0.08f * pulse));
+        DrawCylinderWires(base, radius, radius, 0.02f, 32, Fade(GOLD, 0.45f + 0.4f * pulse));
+        return;
+    }
+
+    if (m_behavior != EnemyBehavior::Shielder && m_behavior != EnemyBehavior::Trapper) return;
+
+    // Mismo truco que Gear/PowerUp: DrawCube/DrawSphere no aceptan ángulo,
+    // así que se rota la matriz de mundo con el MISMO ángulo que el cuerpo
+    // -- así la placa sigue mirando adelante y el depósito sigue a la
+    // espalda cuando el enemigo gira.
+    rlPushMatrix();
+    rlTranslatef(m_position.x, m_position.y, m_position.z);
+    rlRotatef(rotationAngleDegrees, 0.0f, 1.0f, 0.0f);
+
+    // Los adornos heredan el alpha del cuerpo: durante el fade del cadáver,
+    // una placa o un depósito opacos se quedarían flotando sobre un zombie
+    // que ya casi no se ve.
+    float alpha = tint.a / 255.0f;
+
+    if (m_behavior == EnemyBehavior::Shielder) {
+        // Placa frontal: cubre justo el cono que BlocksAttackFrom protege,
+        // así que lo que se ve es literalmente por dónde NO entra el golpe.
+        Vector3 plateCenter{ 0.0f, 0.55f * m_scale, 0.6f * m_scale };
+        DrawCube(plateCenter, 1.2f * m_scale, 1.3f * m_scale, 0.16f * m_scale, tint);
+        DrawCubeWires(plateCenter, 1.2f * m_scale, 1.3f * m_scale, 0.16f * m_scale, Fade(SKYBLUE, alpha));
+    } else {
+        // Depósito de ácido a la espalda: de ahí salen los charcos.
+        Vector3 tankCenter{ 0.0f, 0.9f * m_scale, -0.5f * m_scale };
+        DrawSphere(tankCenter, 0.34f * m_scale, Fade(Color{ 70, 210, 70, 255 }, alpha));
+        DrawSphereWires(tankCenter, 0.36f * m_scale, 6, 8, Fade(DARKGREEN, alpha));
+    }
+
+    rlPopMatrix();
 }
 
 void Enemy::TakeDamage(float amount, Vector3 knockbackDir) {
@@ -377,6 +468,13 @@ bool Enemy::ConsumePendingProjectile(Projectile& outProjectile) {
 bool Enemy::ConsumeExplosionTrigger() {
     if (!m_pendingExplosion) return false;
     m_pendingExplosion = false;
+    return true;
+}
+
+bool Enemy::ConsumePendingPuddle(Vector3& outPosition) {
+    if (!m_pendingPuddle) return false;
+    outPosition = m_queuedPuddlePosition;
+    m_pendingPuddle = false;
     return true;
 }
 

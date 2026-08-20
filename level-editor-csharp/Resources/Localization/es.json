@@ -12,12 +12,14 @@
   "tool_place_gear": "Colocar Engranaje",
   "tool_place_healthkit": "Colocar Cura",
   "tool_place_barrel": "Colocar Barril",
+  "tool_place_powerup": "Colocar Power-Up",
   "tool_place_spawner": "Colocar Spawner",
   "tool_define_patrol": "Definir Patrulla",
   "tool_select": "Seleccionar / Editar",
 
   "group_edit": "Edición",
   "group_variant": "Variante de enemigo",
+  "group_powerup": "Tipo de power-up",
   "group_properties": "Propiedades",
   "group_language": "Idioma",
 
@@ -26,6 +28,13 @@
   "variant_Runner": "Corredor",
   "variant_Spitter": "Escupidor",
   "variant_Kamikaze": "Kamikaze",
+  "variant_Shielder": "Blindado",
+  "variant_Buffer": "Comandante",
+  "variant_Trapper": "Ralentizador",
+
+  "powerup_Overclock": "Sobremarcha",
+  "powerup_Frenzy": "Frenesí",
+  "powerup_Shield": "Escudo",
 
   "hint_delete": "Click derecho: borrar entidad\n(o punto de patrulla más cercano)",
 
@@ -50,6 +59,7 @@
   "prop_length": "Largo:",
   "prop_radius": "Radio:",
   "prop_damagepertick": "Daño por tick:",
+  "prop_powerup_type": "Efecto:",
 
   "msg_no_enemy_title": "Sin enemigo seleccionado",
   "msg_no_enemy_body": "Por favor, selecciona primero un enemigo (con la herramienta 'Seleccionar / Editar') para añadirle puntos de patrulla.\n\nClick izquierdo: añade un punto. Click derecho: quita el punto más cercano.",
@@ -82,6 +92,7 @@
   "status_healthkits": "Curas: {0}",
   "status_barrels": "Barriles: {0}",
   "status_hazards": "Trampas: {0}",
+  "status_powerups": "Power-Ups: {0}",
   "status_door": "Puerta: {0}",
   "status_door_placed": "colocada",
   "status_door_unplaced": "sin colocar"

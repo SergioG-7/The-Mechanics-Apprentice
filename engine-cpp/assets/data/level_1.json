@@ -1,68 +1,287 @@
 {
   "levelName": "level_1",
   "player": {
-    "spawn": { "x": 0.9, "y": 0, "z": 8.6 },
+    "spawn": {
+      "x": 0.9,
+      "y": 0,
+      "z": 8.6
+    },
     "maxHP": 100,
     "speed": 4.5,
     "attackDamage": 45
   },
   "obstacles": [
-    { "position": { "x": -3, "y": 0, "z": 7 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-    { "position": { "x": -3, "y": 0, "z": 3.7 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-    { "position": { "x": -3, "y": 0, "z": -1.7 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-    { "position": { "x": 4.5, "y": 0, "z": 6.8 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-    { "position": { "x": 5, "y": 0, "z": 4 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-    { "position": { "x": 4.6, "y": 0, "z": -0.5 }, "type": "box", "size": { "x": 1, "y": 1, "z": 1 } },
-
-    { "position": { "x": 0, "y": 0, "z": 12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 0, "y": 0, "z": -12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } },
-    { "position": { "x": -12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } }
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": 7
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": 3.7
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": -1.7
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 4.5,
+        "y": 0,
+        "z": 6.8
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 5,
+        "y": 0,
+        "z": 4
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 4.6,
+        "y": 0,
+        "z": -0.5
+      },
+      "type": "box",
+      "size": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": 16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      },
+      "radius": 0.5,
+      "height": 1
+    },
+    {
+      "position": {
+        "x": -16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      },
+      "radius": 0.5,
+      "height": 1
+    }
   ],
-  "hazards": [],
   "enemies": [
     {
-      "spawn": { "x": 6.4, "y": 0, "z": 0.9 },
+      "spawn": {
+        "x": 6.4,
+        "y": 0,
+        "z": 0.9
+      },
       "type": "Default",
       "maxHP": 70,
       "visionRadius": 5,
       "speed": 3.5,
       "attackDamage": 10,
       "patrolRoute": [
-        { "x": 6.4, "y": 0, "z": 0.9 },
-        { "x": 6.3, "y": 0, "z": -6.6 },
-        { "x": 2.6, "y": 0, "z": -6.4 },
-        { "x": 3.0, "y": 0, "z": 1 },
-        { "x": 3.1, "y": 0, "z": 5.5 },
-        { "x": 6.7, "y": 0, "z": 5.3 },
-        { "x": 6.4, "y": 0, "z": 0.9 }
+        {
+          "x": 6.4,
+          "y": 0,
+          "z": 0.9
+        },
+        {
+          "x": 6.3,
+          "y": 0,
+          "z": -6.6
+        },
+        {
+          "x": 2.6,
+          "y": 0,
+          "z": -6.4
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "z": 1
+        },
+        {
+          "x": 3.1,
+          "y": 0,
+          "z": 5.5
+        },
+        {
+          "x": 6.7,
+          "y": 0,
+          "z": 5.3
+        },
+        {
+          "x": 6.4,
+          "y": 0,
+          "z": 0.9
+        }
       ]
     },
     {
-      "spawn": { "x": -6.9, "y": 0, "z": 1.1 },
+      "spawn": {
+        "x": -6.9,
+        "y": 0,
+        "z": 1.1
+      },
       "type": "Default",
       "maxHP": 50,
       "visionRadius": 6,
-      "speed": 3.0,
+      "speed": 3,
       "attackDamage": 12,
       "patrolRoute": [
-        { "x": -6.9, "y": 0, "z": 1.1 },
-        { "x": -7.0, "y": 0, "z": -3.5 },
-        { "x": -1.0, "y": 0, "z": -3.7 },
-        { "x": -1.2, "y": 0, "z": 1 },
-        { "x": -6.7, "y": 0, "z": 1.2 }
+        {
+          "x": -6.9,
+          "y": 0,
+          "z": 1.1
+        },
+        {
+          "x": -7,
+          "y": 0,
+          "z": -3.5
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "z": -3.7
+        },
+        {
+          "x": -1.2,
+          "y": 0,
+          "z": 1
+        },
+        {
+          "x": -6.7,
+          "y": 0,
+          "z": 1.2
+        }
       ]
     }
   ],
-  "spawners": [],
   "gears": [
-    { "position": { "x": 1, "y": 0, "z": 6.1 } },
-    { "position": { "x": 0.8, "y": 0, "z": -4.4 } }
+    {
+      "position": {
+        "x": 0.93333334,
+        "y": 0,
+        "z": 2.5
+      }
+    },
+    {
+      "position": {
+        "x": 0.8666667,
+        "y": 0,
+        "z": -3.9
+      }
+    }
   ],
+  "spawners": [],
   "healthKits": [],
   "barrels": [],
+  "hazards": [],
   "door": {
-    "position": { "x": 1.1, "y": 0, "z": -7.7 },
-    "halfExtents": { "x": 1, "y": 1, "z": 1 }
+    "position": {
+      "x": 1.1,
+      "y": 0,
+      "z": -7.7
+    },
+    "halfExtents": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
   }
 }

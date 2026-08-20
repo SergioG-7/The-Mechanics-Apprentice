@@ -11,8 +11,16 @@ enum class EnemyState { Patrol, Chase, Attack, AttackRanged, Explode, Hurt, Dead
 // Perfil de combate del enemigo, resuelto por EnemyFactory a partir del
 // campo "behavior" de enemy_variants.json (ver EnemyFactory.cpp). Determina
 // a qué estado transiciona UpdateChase al alcanzar al jugador -- el resto de
-// la FSM (Patrol/Hurt/Dead) es idéntico para los tres.
-enum class EnemyBehavior { Melee, Kamikaze, Spitter };
+// la FSM (Patrol/Hurt/Dead) es idéntico para todos.
+//
+//   Shielder: bloquea los golpes que le entran de frente (BlocksAttackFrom);
+//             por la espalda o los flancos recibe daño normal, y el AoE de
+//             barriles/Kamikaze lo atraviesa siempre.
+//   Buffer:   no ataca -- mantiene las distancias y acelera a los zombis que
+//             tenga dentro de su aura (ver Application::UpdateActiveMatch).
+//   Trapper:  melee normal, pero va dejando charcos de lodo por donde pasa
+//             (ver MudPuddle / ConsumePendingPuddle).
+enum class EnemyBehavior { Melee, Kamikaze, Spitter, Shielder, Buffer, Trapper };
 
 class Enemy : public Actor {
 public:
@@ -21,9 +29,12 @@ public:
     // enemigos que ya construye LevelLoader desde el JSON de nivel. behavior
     // por defecto Melee, por la misma razón: un enemigo "Default" del JSON
     // de nivel no pasa por EnemyFactory y no debe comportarse como Spitter o
-    // Kamikaze sin que nadie se lo haya pedido explícitamente.
+    // Kamikaze sin que nadie se lo haya pedido explícitamente. baseTint es el
+    // código de color del arquetipo (mismo modelo 3D para todos, así que es
+    // lo único que los distingue a distancia junto con la geometría de Draw).
     Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, float visionRadius,
-          float speed, float attackDamage, float scale = 1.0f, EnemyBehavior behavior = EnemyBehavior::Melee);
+          float speed, float attackDamage, float scale = 1.0f, EnemyBehavior behavior = EnemyBehavior::Melee,
+          Color baseTint = WHITE);
     ~Enemy();
     void Update(float dt) override;
     void Draw() const override;
@@ -54,8 +65,27 @@ public:
     bool ConsumePendingProjectile(Projectile& outProjectile);
     bool ConsumeExplosionTrigger();
 
+    // Mismo patrón: true la primera vez tras cumplirse el intervalo de goteo
+    // del Trapper. Application crea el MudPuddle con la posición devuelta.
+    bool ConsumePendingPuddle(Vector3& outPosition);
+
     float GetExplosionDamage() const { return m_attackDamage; }
     static constexpr float kExplodeRadius = 3.0f; // radio del AoE del Kamikaze; Application lo pasa a CombatSystem::ApplyAreaDamage
+
+    EnemyBehavior GetBehavior() const { return m_behavior; }
+
+    // true solo para un Shielder golpeado dentro de su cono frontal. La
+    // consulta CombatSystem::ResolveMeleeAttack para descartar ESE golpe --
+    // el AoE (ApplyAreaDamage) no la mira, una explosión rodea la placa.
+    bool BlocksAttackFrom(Vector3 attackerPosition) const;
+
+    // Multiplicador de velocidad del aura de un Buffer. Application lo
+    // reescribe cada frame desde cero (1.0 = sin buff), así que el bonus
+    // desaparece solo en cuanto el Buffer muere o el zombi sale del radio.
+    void SetSpeedMultiplier(float multiplier) { m_speedMultiplier = multiplier; }
+
+    static constexpr float kBufferAuraRadius = 6.0f;
+    static constexpr float kBufferSpeedBonus = 1.4f;
 
 private:
     void SetupStates();
@@ -76,6 +106,15 @@ private:
     // m_lastKnownPlayerPosition por separado.
     Vector3 DirectionToLastKnownPlayer() const;
 
+    // Velocidad efectiva de este frame (base × aura de Buffer). Todo
+    // desplazamiento del Enemy pasa por aquí, igual que en el Player.
+    float CurrentSpeed() const { return m_speed * m_speedMultiplier; }
+
+    // Geometría adjunta que distingue al arquetipo por forma, no solo por
+    // color: placa del Shielder, aro de aura del Buffer, depósito del
+    // Trapper. Sin efecto para el resto de comportamientos.
+    void DrawArchetypeDecoration(float rotationAngleDegrees, Color tint) const;
+
     StateMachine<EnemyState> m_fsm;
     Vector3 m_facingDirection = { 0.0f, 0.0f, 1.0f };
     std::vector<Vector3> m_patrolRoute;
@@ -85,6 +124,8 @@ private:
     float m_attackDamage;
     float m_scale = 1.0f;
     EnemyBehavior m_behavior = EnemyBehavior::Melee;
+    Color m_baseTint = WHITE;
+    float m_speedMultiplier = 1.0f;
 
     float m_visionRadius;
     Vector3 m_lastKnownPlayerPosition{};
@@ -119,6 +160,20 @@ private:
     static constexpr float kExplodeDuration = 1.5f;
     float m_explodeTimer = 0.0f;
     bool m_pendingExplosion = false;
+
+    // Shielder: coseno del semiángulo del cono frontal protegido. 0.5 = ±60°
+    // -- lo justo para que rodearlo sea una maniobra real, no un pixel-hunt.
+    static constexpr float kShieldBlockCosine = 0.5f;
+
+    // Buffer: no cierra distancia como un Melee, se queda a este radio del
+    // jugador (desde donde su aura sigue cubriendo a la horda que empuja).
+    static constexpr float kBufferKeepDistance = 5.0f;
+
+    // Trapper: un charco cada este intervalo mientras siga vivo.
+    static constexpr float kPuddleInterval = 2.5f;
+    CountdownTimer m_puddleTimer;
+    bool m_pendingPuddle = false;
+    Vector3 m_queuedPuddlePosition{};
 
     // Corpse cleanup: fade-out continuo desde el instante de la muerte (ver
     // Draw) antes de marcarse para destrucción. Sin esto, el Modo Infinito

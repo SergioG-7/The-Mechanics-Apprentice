@@ -12,12 +12,14 @@
   "tool_place_gear": "歯車を配置",
   "tool_place_healthkit": "回復キットを配置",
   "tool_place_barrel": "樽を配置",
+  "tool_place_powerup": "パワーアップを配置",
   "tool_place_spawner": "スポナーを配置",
   "tool_define_patrol": "巡回ルートを設定",
   "tool_select": "選択・編集",
 
   "group_edit": "編集",
   "group_variant": "敵のバリエーション",
+  "group_powerup": "パワーアップの種類",
   "group_properties": "プロパティ",
   "group_language": "言語",
 
@@ -26,6 +28,13 @@
   "variant_Runner": "ランナー",
   "variant_Spitter": "スピッター",
   "variant_Kamikaze": "カミカゼ",
+  "variant_Shielder": "盾持ち",
+  "variant_Buffer": "指揮官",
+  "variant_Trapper": "スライム",
+
+  "powerup_Overclock": "オーバークロック",
+  "powerup_Frenzy": "フレンジー",
+  "powerup_Shield": "シールド",
 
   "hint_delete": "右クリック: エンティティを削除\n(または最も近い巡回ポイント)",
 
@@ -50,6 +59,7 @@
   "prop_length": "奥行き:",
   "prop_radius": "半径:",
   "prop_damagepertick": "ティックごとのダメージ:",
+  "prop_powerup_type": "効果:",
 
   "msg_no_enemy_title": "敵が選択されていません",
   "msg_no_enemy_body": "巡回ポイントを追加するには、まず「選択・編集」ツールで敵を選択してください。\n\n左クリック: ポイントを追加。右クリック: 最も近いポイントを削除。",
@@ -82,6 +92,7 @@
   "status_healthkits": "回復キット: {0}",
   "status_barrels": "樽: {0}",
   "status_hazards": "トラップ: {0}",
+  "status_powerups": "パワーアップ: {0}",
   "status_door": "ドア: {0}",
   "status_door_placed": "配置済み",
   "status_door_unplaced": "未配置"

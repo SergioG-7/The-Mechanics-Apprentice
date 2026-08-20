@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "Hitbox.h"
 #include "Projectile.h"
+#include "../Entities/MudPuddle.h"
 #include <vector>
 #include <memory>
 #include <optional>
@@ -19,6 +20,12 @@ class Hazard;
 struct MeleeHitResult {
     Vector3 impactPoint{};
     Enemy* hitEnemy = nullptr;
+
+    // true si la placa de un Shielder paró el golpe: no hubo daño, pero SÍ
+    // cuenta como impacto (cierra la ventana de hitbox y da su propio juice)
+    // -- sin esto el swing seguiría probando cada frame contra un enemigo
+    // que nunca puede recibirlo, sin ninguna señal de por qué.
+    bool blocked = false;
 };
 
 class CombatSystem {
@@ -85,4 +92,10 @@ public:
     // ApplyAreaDamage. Deliberadamente NO daña a los Enemy: una trampa de
     // nivel es una amenaza para el jugador, no para la IA que ya la conoce.
     static void ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazards, Player& player);
+
+    // Envejece los charcos del Trapper y ralentiza al Player que pise uno
+    // (ver MudPuddle). No hacen daño y no bloquean el paso -- son una
+    // penalización de movilidad, no una trampa: por eso no van por
+    // ApplyHazardDamage. Descarta (erase-remove) los ya caducados.
+    static void UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, Player& player);
 };

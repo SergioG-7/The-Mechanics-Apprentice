@@ -11,6 +11,7 @@
 #include "../Renderer/ShaderManager.h"
 #include "../VFX/ParticleSystem.h"
 #include "../Entities/Spawner.h"
+#include "../Entities/MudPuddle.h"
 #include "../Combat/Projectile.h"
 #include "../UI/MenuScreen.h"
 #include "../UI/HudRenderer.h"
@@ -81,6 +82,17 @@ private:
 
     void DrawGroundGrid() const;
 
+    // Recalcula desde cero el bonus de velocidad que el aura de cada Buffer
+    // (ver EnemyBehavior::Buffer) aplica a los zombis a su alrededor. Vive
+    // aquí y no en Enemy porque un Enemy no conoce a los demás -- igual que
+    // el AoE del Kamikaze lo aplica CombatSystem desde fuera.
+    void ApplyBufferAuras();
+
+    // Tirada de drop al morir un enemigo en Modo Historia: power-up
+    // (ponderado por rareza) o botiquín, o nada. El Modo Infinito tiene su
+    // propia economía (engranaje = puntuación) y no pasa por aquí.
+    void RollStoryModeDrop(Vector3 position);
+
     UiContext BuildUiContext() const { return UiContext{ m_localization }; }
 
     // Carga (o recarga) el nivel indicado desde disco y deja la partida en
@@ -137,6 +149,12 @@ private:
     // Modo Historia: nivel actual (1-indexado); assets/data/level_<N>.json.
     int m_currentLevel = 1;
 
+    // Cuántos level_<N>.json existen de verdad en assets/data. Es el tope de
+    // maxLevelUnlocked: sin él, superar el último nivel "desbloqueaba" uno
+    // más que no existe, y el selector le pintaba un botón que solo servía
+    // para rebotar al menú. Añadir un nivel nuevo implica subir esto.
+    static constexpr int kStoryLevelCount = 10;
+
     // Modo Infinito: dificultad, drop de engranajes y puntuación -- ver
     // EndlessDirector, que vive fuera de Application a propósito.
     EndlessDirector m_endlessDirector;
@@ -165,4 +183,9 @@ private:
     // Enemy::ConsumePendingProjectile devuelve uno y mueren al impactar o
     // expirar (erase-remove, dentro de esa misma función).
     std::vector<Projectile> m_projectiles;
+
+    // Charcos de lodo que van dejando los Trapper. Igual que m_projectiles:
+    // sin dueño propio, nacen de Enemy::ConsumePendingPuddle y caducan solos
+    // en CombatSystem::UpdateMudPuddles.
+    std::vector<MudPuddle> m_puddles;
 };

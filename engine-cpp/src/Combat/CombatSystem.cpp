@@ -49,12 +49,19 @@ std::vector<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std
         }
         if (blocked) continue;
 
-        enemy->TakeDamage(hitbox->damage, hitbox->knockbackDir);
-
         MeleeHitResult result;
         result.impactPoint = enemy->GetPosition();
         result.impactPoint.y += 1.0f; // altura de pecho, mismo offset que la barra de HP flotante del HUD
         result.hitEnemy = enemy.get();
+
+        // Shielder golpeado de frente: el golpe se registra (juice, cierre de
+        // la ventana de hitbox) pero no aplica daño. Rodearlo es la respuesta.
+        if (enemy->BlocksAttackFrom(origin)) {
+            result.blocked = true;
+        } else {
+            enemy->TakeDamage(hitbox->damage, hitbox->knockbackDir);
+        }
+
         hits.push_back(result);
     }
 
@@ -197,4 +204,23 @@ void CombatSystem::ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazar
             player.GetPosition().x - hazard->GetPosition().x, 0.0f, player.GetPosition().z - hazard->GetPosition().z });
         player.TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
     }
+}
+
+void CombatSystem::UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, Player& player) {
+    for (MudPuddle& puddle : puddles) {
+        puddle.lifetime -= dt;
+
+        // Se reaplica cada frame que el jugador siga dentro: al salir, el
+        // lastre se le agota kSlowDuration después, no de golpe -- así se
+        // nota el "chapoteo" al escapar en vez de recuperar la velocidad en
+        // el mismo píxel en que sales del charco.
+        if (CollisionMath::IsWithinRadius(player.GetPosition(), puddle.position, MudPuddle::kRadius)) {
+            player.ApplySlow(MudPuddle::kSlowDuration, MudPuddle::kSlowMultiplier);
+        }
+    }
+
+    puddles.erase(
+        std::remove_if(puddles.begin(), puddles.end(),
+                        [](const MudPuddle& p) { return p.lifetime <= 0.0f; }),
+        puddles.end());
 }

@@ -1,51 +1,252 @@
 {
   "levelName": "level_3",
   "player": {
-    "spawn": { "x": 0, "y": 0, "z": 8 },
+    "spawn": {
+      "x": 0,
+      "y": 0,
+      "z": 8
+    },
     "maxHP": 100,
     "speed": 4.5,
     "attackDamage": 45
   },
   "obstacles": [
-    { "position": { "x": -3, "y": 0, "z": 3 }, "type": "box", "size": { "x": 0.6, "y": 1, "z": 3 } },
-    { "position": { "x": -5.5, "y": 0, "z": 3 }, "type": "box", "size": { "x": 0.6, "y": 1, "z": 3 } },
-    { "position": { "x": 3, "y": 0, "z": 3 }, "type": "box", "size": { "x": 0.6, "y": 1, "z": 3 } },
-    { "position": { "x": 5.5, "y": 0, "z": 3 }, "type": "box", "size": { "x": 0.6, "y": 1, "z": 3 } },
-    { "position": { "x": -1.2, "y": 0, "z": -2 }, "type": "box", "size": { "x": 0.6, "y": 1, "z": 2 } },
-    { "position": { "x": 1.2, "y": 0, "z": -2 }, "type": "box", "size": { "x": 0.6, "y": 1, "z": 2 } },
-
-    { "position": { "x": 0, "y": 0, "z": 12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 0, "y": 0, "z": -12 }, "type": "box", "size": { "x": 26, "y": 3, "z": 2 } },
-    { "position": { "x": 12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } },
-    { "position": { "x": -12, "y": 0, "z": 0 }, "type": "box", "size": { "x": 2, "y": 3, "z": 26 } }
+    {
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": 3
+      },
+      "type": "box",
+      "size": {
+        "x": 0.6,
+        "y": 1,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": -5.5,
+        "y": 0,
+        "z": 3
+      },
+      "type": "box",
+      "size": {
+        "x": 0.6,
+        "y": 1,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": 3,
+        "y": 0,
+        "z": 3
+      },
+      "type": "box",
+      "size": {
+        "x": 0.6,
+        "y": 1,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": 5.5,
+        "y": 0,
+        "z": 3
+      },
+      "type": "box",
+      "size": {
+        "x": 0.6,
+        "y": 1,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": -1.2,
+        "y": 0,
+        "z": -2
+      },
+      "type": "box",
+      "size": {
+        "x": 0.6,
+        "y": 1,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 1.2,
+        "y": 0,
+        "z": -2
+      },
+      "type": "box",
+      "size": {
+        "x": 0.6,
+        "y": 1,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -16.0
+      },
+      "type": "box",
+      "size": {
+        "x": 34.0,
+        "y": 3,
+        "z": 2
+      }
+    },
+    {
+      "position": {
+        "x": 16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      }
+    },
+    {
+      "position": {
+        "x": -16.0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "box",
+      "size": {
+        "x": 2,
+        "y": 3,
+        "z": 34.0
+      }
+    }
   ],
   "hazards": [
-    { "position": { "x": -4.2, "y": 0, "z": 2 }, "size": { "x": 2, "y": 0.1, "z": 3.5 }, "damagePerTick": 12 },
-    { "position": { "x": 4.2, "y": 0, "z": 2 }, "size": { "x": 2, "y": 0.1, "z": 3.5 }, "damagePerTick": 12 }
+    {
+      "position": {
+        "x": -4.2,
+        "y": 0,
+        "z": 2
+      },
+      "size": {
+        "x": 2,
+        "y": 0.1,
+        "z": 3.5
+      },
+      "damagePerTick": 12
+    },
+    {
+      "position": {
+        "x": 4.2,
+        "y": 0,
+        "z": 2
+      },
+      "size": {
+        "x": 2,
+        "y": 0.1,
+        "z": 3.5
+      },
+      "damagePerTick": 12
+    }
   ],
   "enemies": [],
   "spawners": [
     {
-      "position": { "x": 0, "y": 0, "z": -2 },
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -2
+      },
       "enemyType": "Runner",
       "interval": 3.5,
       "maxEnemies": 3
     }
   ],
   "gears": [
-    { "position": { "x": -4, "y": 0, "z": 5.5 } },
-    { "position": { "x": 4, "y": 0, "z": 5.5 } },
-    { "position": { "x": 0, "y": 0, "z": 3 } },
-    { "position": { "x": 0, "y": 0, "z": -7 } }
+    {
+      "position": {
+        "x": -4,
+        "y": 0,
+        "z": 5.5
+      }
+    },
+    {
+      "position": {
+        "x": 4,
+        "y": 0,
+        "z": 5.5
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 3
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -7
+      }
+    }
   ],
   "healthKits": [],
   "barrels": [
-    { "position": { "x": -2, "y": 0, "z": -4.5 } },
-    { "position": { "x": 2, "y": 0, "z": -4.5 } },
-    { "position": { "x": 0, "y": 0, "z": -6 } }
+    {
+      "position": {
+        "x": -2,
+        "y": 0,
+        "z": -4.5
+      }
+    },
+    {
+      "position": {
+        "x": 2,
+        "y": 0,
+        "z": -4.5
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": -6
+      }
+    }
   ],
   "door": {
-    "position": { "x": 0, "y": 0, "z": -9 },
-    "halfExtents": { "x": 1, "y": 1, "z": 1 }
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -9
+    },
+    "halfExtents": {
+      "x": 1,
+      "y": 1,
+      "z": 1
+    }
   }
 }

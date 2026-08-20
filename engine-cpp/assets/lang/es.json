@@ -59,6 +59,19 @@
 
   "hud_hp": "Vida",
   "hud_gears": "Engranajes",
+
+  "powerup_overclock": "Sobremarcha",
+  "powerup_overclock_desc": "+50% de velocidad durante 5 s",
+  "powerup_frenzy": "Frenesí",
+  "powerup_frenzy_desc": "Ataques el doble de rápidos durante 5 s",
+  "powerup_shield": "Escudo",
+  "powerup_shield_desc": "Absorbe el próximo golpe recibido",
+
+  "enemy_shielder": "Blindado",
+  "enemy_buffer": "Comandante",
+  "enemy_trapper": "Ralentizador",
+
+
   "gameover_title": "GAME OVER",
   "gameover_retry": "Pulsa R para reintentar",
   "gameover_menu": "Pulsa R para volver al menú",

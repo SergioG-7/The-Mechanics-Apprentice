@@ -12,12 +12,14 @@
   "tool_place_gear": "Place Gear",
   "tool_place_healthkit": "Place Health Kit",
   "tool_place_barrel": "Place Barrel",
+  "tool_place_powerup": "Place Power-Up",
   "tool_place_spawner": "Place Spawner",
   "tool_define_patrol": "Define Patrol",
   "tool_select": "Select / Edit",
 
   "group_edit": "Editing",
   "group_variant": "Enemy variant",
+  "group_powerup": "Power-up type",
   "group_properties": "Properties",
   "group_language": "Language",
 
@@ -26,6 +28,13 @@
   "variant_Runner": "Runner",
   "variant_Spitter": "Spitter",
   "variant_Kamikaze": "Kamikaze",
+  "variant_Shielder": "Shielder",
+  "variant_Buffer": "Commander",
+  "variant_Trapper": "Trapper",
+
+  "powerup_Overclock": "Overclock",
+  "powerup_Frenzy": "Frenzy",
+  "powerup_Shield": "Shield",
 
   "hint_delete": "Right click: delete entity\n(or nearest patrol point)",
 
@@ -50,6 +59,7 @@
   "prop_length": "Length:",
   "prop_radius": "Radius:",
   "prop_damagepertick": "Damage per tick:",
+  "prop_powerup_type": "Effect:",
 
   "msg_no_enemy_title": "No enemy selected",
   "msg_no_enemy_body": "Please select an enemy first (with the 'Select / Edit' tool) to add patrol points.\n\nLeft click: adds a point. Right click: removes the nearest one.",
@@ -82,6 +92,7 @@
   "status_healthkits": "Health kits: {0}",
   "status_barrels": "Barrels: {0}",
   "status_hazards": "Hazards: {0}",
+  "status_powerups": "Power-Ups: {0}",
   "status_door": "Door: {0}",
   "status_door_placed": "placed",
   "status_door_unplaced": "not placed"

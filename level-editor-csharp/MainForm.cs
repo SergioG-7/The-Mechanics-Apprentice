@@ -20,6 +20,7 @@ namespace LevelEditor
             PlaceGear,
             PlaceHealthKit,
             PlaceBarrel,
+            PlacePowerUp,
             PlaceDoor,
             PlaceSpawner,
             DefinePatrol,
@@ -32,7 +33,17 @@ namespace LevelEditor
         // Son identificadores consumidos tal cual por el motor (no se
         // traducen NUNCA como valor) -- lo que se traduce es solo su
         // representación en el ComboBox, ver BuildVariantItems.
-        private static readonly string[] EnemyVariantNames = { "Default", "Tank", "Runner", "Spitter", "Kamikaze" };
+        private static readonly string[] EnemyVariantNames =
+            { "Default", "Tank", "Runner", "Spitter", "Kamikaze", "Shielder", "Buffer", "Trapper" };
+
+        // Tipos de power-up que reconoce PowerUp::ParseType en el motor C++.
+        // Identificadores, no texto de interfaz -- ver PowerUpData.Type.
+        private static readonly string[] PowerUpTypeNames = { "Overclock", "Frenzy", "Shield" };
+
+        // Mismo envoltorio que BuildVariantItems pero con claves
+        // "powerup_{code}" (powerup_Overclock, powerup_Frenzy...).
+        private static ComboBoxItem<string>[] BuildPowerUpItems() =>
+            PowerUpTypeNames.Select(code => new ComboBoxItem<string>(code, LocalizationManager.GetText($"powerup_{code}"))).ToArray();
 
         // Envuelve cada código de variante en un ComboBoxItem cuyo texto
         // visible sale de "variant_{code}" (variant_Default, variant_Tank...)
@@ -51,6 +62,7 @@ namespace LevelEditor
         private readonly List<HealthKitData> _healthKits = new();
         private readonly List<BarrelData> _barrels = new();
         private readonly List<HazardData> _hazards = new();
+        private readonly List<PowerUpData> _powerUps = new();
         private DoorData? _door; // singular, como el Player: colocarla de nuevo reemplaza la anterior
 
         private EditorTool _activeTool = EditorTool.PlacePlayer;
@@ -73,6 +85,10 @@ namespace LevelEditor
         // tanto a un EnemyData nuevo (PlaceEnemy) como al EnemyType de un
         // SpawnerData nuevo (PlaceSpawner) -- un solo selector para ambos.
         private string _selectedVariant = "Default";
+
+        // Tipo activo en el ComboBox de "Tipo de power-up", aplicado al
+        // colocar uno nuevo (PlacePowerUp) -- mismo papel que _selectedVariant.
+        private string _selectedPowerUpType = "Overclock";
 
         // Nombre lógico del nivel (campo "levelName" del JSON). Se conserva
         // al abrir un nivel existente para no perderlo al reexportar.
@@ -99,6 +115,8 @@ namespace LevelEditor
         private readonly GroupBox _editGroup;
         private readonly GroupBox _variantGroup;
         private readonly ComboBox _variantCombo;
+        private readonly GroupBox _powerUpGroup;
+        private readonly ComboBox _powerUpCombo;
         private readonly GroupBox _languageGroup;
         private readonly Label _hintLabel;
         private readonly Button _openButton;
@@ -106,7 +124,10 @@ namespace LevelEditor
 
         public MainForm()
         {
-            ClientSize = new Size(CanvasSize + 240, 700);
+            // Alto = el del lienzo ampliado (700) más los márgenes: al pasar
+            // de 600 a 700 px de canvas, dejarlo en 700 recortaba la última
+            // fila de celdas del propio grid.
+            ClientSize = new Size(CanvasSize + 240, CanvasSize + 60);
             StartPosition = FormStartPosition.CenterScreen;
             // El panel derecho ya se salía de los 700px de alto antes de esta
             // fase (propertiesGroup solo mide 300px de sus 260 originales) y
@@ -173,6 +194,7 @@ namespace LevelEditor
             CreateToolRadio("tool_place_gear", 10, EditorTool.PlaceGear, _objectsTab);
             CreateToolRadio("tool_place_healthkit", 40, EditorTool.PlaceHealthKit, _objectsTab);
             CreateToolRadio("tool_place_barrel", 70, EditorTool.PlaceBarrel, _objectsTab);
+            CreateToolRadio("tool_place_powerup", 100, EditorTool.PlacePowerUp, _objectsTab);
             toolTabs.TabPages.Add(_objectsTab);
 
             _systemTab = new TabPage(LocalizationManager.GetText("tab_system"));
@@ -218,10 +240,29 @@ namespace LevelEditor
             _variantGroup.Controls.Add(_variantCombo);
             Controls.Add(_variantGroup);
 
+            // --- Tipo de power-up (se aplica al colocar un Power-Up) ---
+            _powerUpGroup = new GroupBox
+            {
+                Text = LocalizationManager.GetText("group_powerup"),
+                Location = new Point(toolsX, _variantGroup.Bottom + 10),
+                Size = new Size(190, 55)
+            };
+            _powerUpCombo = new ComboBox
+            {
+                Location = new Point(10, 20),
+                Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            _powerUpCombo.Items.AddRange(BuildPowerUpItems());
+            _powerUpCombo.SelectedIndex = 0;
+            _powerUpCombo.SelectedIndexChanged += OnPowerUpComboChanged;
+            _powerUpGroup.Controls.Add(_powerUpCombo);
+            Controls.Add(_powerUpGroup);
+
             _hintLabel = new Label
             {
                 Text = LocalizationManager.GetText("hint_delete"),
-                Location = new Point(toolsX, _variantGroup.Bottom + 5),
+                Location = new Point(toolsX, _powerUpGroup.Bottom + 5),
                 Size = new Size(190, 30),
                 ForeColor = Color.DimGray
             };
@@ -260,7 +301,7 @@ namespace LevelEditor
             _statusLabel = new Label
             {
                 Location = new Point(toolsX, _propertiesGroup.Bottom + 20),
-                Size = new Size(190, 145) // 145, no 130: BuildStatusText tiene 8 líneas desde que se añadieron los Hazards
+                Size = new Size(190, 165) // 165: BuildStatusText tiene 10 líneas desde que se añadieron los Power-Ups
             };
             Controls.Add(_statusLabel);
 
@@ -338,6 +379,11 @@ namespace LevelEditor
             _selectedVariant = ((ComboBoxItem<string>)_variantCombo.SelectedItem!).Value;
         }
 
+        private void OnPowerUpComboChanged(object? sender, EventArgs e)
+        {
+            _selectedPowerUpType = ((ComboBoxItem<string>)_powerUpCombo.SelectedItem!).Value;
+        }
+
         // Reetiqueta el ComboBox de variante superior (fuera del panel de
         // propiedades, así que ApplyLanguage no lo reconstruye gratis como
         // hace con BuildEnemyProperties/BuildSpawnerProperties vía
@@ -353,6 +399,18 @@ namespace LevelEditor
             int index = Array.IndexOf(EnemyVariantNames, _selectedVariant);
             _variantCombo.SelectedIndex = index >= 0 ? index : 0;
             _variantCombo.SelectedIndexChanged += OnVariantComboChanged;
+        }
+
+        // Igual que RefreshVariantCombo, con el mismo desenganche del handler
+        // mientras se reconstruyen los Items (ver el comentario de arriba).
+        private void RefreshPowerUpCombo()
+        {
+            _powerUpCombo.SelectedIndexChanged -= OnPowerUpComboChanged;
+            _powerUpCombo.Items.Clear();
+            _powerUpCombo.Items.AddRange(BuildPowerUpItems());
+            int index = Array.IndexOf(PowerUpTypeNames, _selectedPowerUpType);
+            _powerUpCombo.SelectedIndex = index >= 0 ? index : 0;
+            _powerUpCombo.SelectedIndexChanged += OnPowerUpComboChanged;
         }
 
         // Escribe el texto correcto en cada control fijo del formulario para
@@ -402,6 +460,8 @@ namespace LevelEditor
             ApplyLocalizedText(_editGroup, "group_edit");
             ApplyLocalizedText(_variantGroup, "group_variant");
             RefreshVariantCombo();
+            ApplyLocalizedText(_powerUpGroup, "group_powerup");
+            RefreshPowerUpCombo();
             ApplyLocalizedText(_languageGroup, "group_language");
             ApplyLocalizedText(_hintLabel, "hint_delete");
             ApplyLocalizedText(_openButton, "btn_open");
@@ -523,6 +583,11 @@ namespace LevelEditor
                     MarkDirty();
                     break;
 
+                case EditorTool.PlacePowerUp:
+                    _powerUps.Add(new PowerUpData { Position = worldPos, Type = _selectedPowerUpType });
+                    MarkDirty();
+                    break;
+
                 case EditorTool.PlaceDoor:
                     _door = new DoorData { Position = worldPos, HalfExtents = new Vector3Data(1.0f, 1.0f, 1.0f) };
                     MarkDirty();
@@ -568,8 +633,9 @@ namespace LevelEditor
         }
 
         // Orden inverso al de dibujado (lo último dibujado, arriba del todo,
-        // se prueba primero): Player, Enemies, Spawners, Barrels, HealthKits,
-        // Gears, Hazards, Door, Obstacles (Obstacle-box y Cylinder mezclados).
+        // se prueba primero): Player, Enemies, Spawners, Barrels, PowerUps,
+        // HealthKits, Gears, Hazards, Door, Obstacles (Obstacle-box y
+        // Cylinder mezclados).
         private object? FindEntityAt(Point screenPoint)
         {
             if (_player is not null && IsPointNearMarker(screenPoint, WorldToScreen(_player.Spawn)))
@@ -586,6 +652,10 @@ namespace LevelEditor
             for (int i = _barrels.Count - 1; i >= 0; i--)
                 if (IsPointNearMarker(screenPoint, WorldToScreen(_barrels[i].Position)))
                     return _barrels[i];
+
+            for (int i = _powerUps.Count - 1; i >= 0; i--)
+                if (IsPointNearMarker(screenPoint, WorldToScreen(_powerUps[i].Position)))
+                    return _powerUps[i];
 
             for (int i = _healthKits.Count - 1; i >= 0; i--)
                 if (IsPointNearMarker(screenPoint, WorldToScreen(_healthKits[i].Position)))
@@ -653,6 +723,7 @@ namespace LevelEditor
                 case SpawnerData spawner: spawner.Position = worldPos; break;
                 case HealthKitData healthKit: healthKit.Position = worldPos; break;
                 case BarrelData barrel: barrel.Position = worldPos; break;
+                case PowerUpData powerUp: powerUp.Position = worldPos; break;
                 case HazardData hazard: hazard.Position = worldPos; break;
             }
         }
@@ -684,6 +755,7 @@ namespace LevelEditor
             else if (entity is SpawnerData spawner) { if (!_spawners.Remove(spawner)) return false; }
             else if (entity is HealthKitData healthKit) { if (!_healthKits.Remove(healthKit)) return false; }
             else if (entity is BarrelData barrel) { if (!_barrels.Remove(barrel)) return false; }
+            else if (entity is PowerUpData powerUp) { if (!_powerUps.Remove(powerUp)) return false; }
             else if (entity is HazardData hazard) { if (!_hazards.Remove(hazard)) return false; }
             else return false;
 
@@ -760,6 +832,11 @@ namespace LevelEditor
                 case HazardData hazard:
                     _propertiesGroup.Visible = true;
                     BuildHazardProperties(hazard);
+                    break;
+
+                case PowerUpData powerUp:
+                    _propertiesGroup.Visible = true;
+                    BuildPowerUpProperties(powerUp);
                     break;
 
                 default:
@@ -1023,6 +1100,31 @@ namespace LevelEditor
             _propertiesGroup.Controls.Add(damageInput);
         }
 
+        // Power-Up: solo el tipo de efecto. La duración y la magnitud las
+        // fija el motor (Player::kPowerUpDuration y compañía), no el nivel:
+        // dos escudos que absorbieran distinto según dónde estén colocados
+        // serían imposibles de leer en pantalla.
+        private void BuildPowerUpProperties(PowerUpData powerUp)
+        {
+            var typeCombo = new ComboBox
+            {
+                Location = new Point(10, InputY(0)), Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            typeCombo.Items.AddRange(BuildPowerUpItems());
+            typeCombo.SelectedIndex = Array.IndexOf(PowerUpTypeNames, powerUp.Type);
+            if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0; // Type de un JSON externo que no reconocemos
+            typeCombo.SelectedIndexChanged += (s, e) =>
+            {
+                powerUp.Type = ((ComboBoxItem<string>)typeCombo.SelectedItem!).Value;
+                MarkDirty();
+                _canvasPanel.Invalidate(); // el color del marcador depende del tipo
+            };
+
+            _propertiesGroup.Controls.Add(CreateLocalizedLabel("prop_powerup_type", new Point(10, LabelY(0))));
+            _propertiesGroup.Controls.Add(typeCombo);
+        }
+
         // Compartido por Door (Obstacle-box ya usa Size, ver
         // BuildObstacleBoxProperties): posición + halfExtents directo.
         private void BuildHalfExtentsProperties(Vector3Data halfExtents)
@@ -1060,6 +1162,7 @@ namespace LevelEditor
             DrawDoor(e.Graphics);
             DrawGears(e.Graphics);
             DrawHealthKits(e.Graphics);
+            DrawPowerUps(e.Graphics);
             DrawBarrels(e.Graphics);
             DrawSpawners(e.Graphics);
             DrawEnemies(e.Graphics);
@@ -1149,6 +1252,35 @@ namespace LevelEditor
             foreach (var barrel in _barrels) DrawEntityMarker(g, Brushes.Firebrick, barrel.Position);
         }
 
+        // Rombo, no círculo ni cuadrado: las dos formas que quedaban libres
+        // ya están cogidas (Gear/Spawner/Barrel son círculos, HealthKit es un
+        // cuadrado). El color lo pone el tipo, con los MISMOS tonos que
+        // PowerUp::TypeColor en el motor C++, para que un power-up se
+        // reconozca igual en el editor que en la partida.
+        private static Color PowerUpColor(string type) => type switch
+        {
+            "Frenzy" => Color.FromArgb(255, 130, 40),
+            "Shield" => Color.FromArgb(90, 200, 255),
+            _ => Color.FromArgb(255, 220, 60), // Overclock, y cualquier tipo no reconocido
+        };
+
+        private void DrawPowerUps(Graphics g)
+        {
+            foreach (var powerUp in _powerUps)
+            {
+                using var brush = new SolidBrush(PowerUpColor(powerUp.Type));
+                g.FillPolygon(brush, GetDiamondPoints(WorldToScreen(powerUp.Position)));
+            }
+        }
+
+        private static Point[] GetDiamondPoints(Point center) => new[]
+        {
+            new Point(center.X, center.Y - MarkerRadius),
+            new Point(center.X + MarkerRadius, center.Y),
+            new Point(center.X, center.Y + MarkerRadius),
+            new Point(center.X - MarkerRadius, center.Y),
+        };
+
         private void DrawDoor(Graphics g)
         {
             if (_door is null) return;
@@ -1204,6 +1336,9 @@ namespace LevelEditor
                     break;
                 case BarrelData barrel:
                     DrawMarkerHighlight(g, highlightPen, WorldToScreen(barrel.Position));
+                    break;
+                case PowerUpData powerUp:
+                    DrawMarkerHighlight(g, highlightPen, WorldToScreen(powerUp.Position));
                     break;
                 case ObstacleData obstacle when obstacle.Type == "cylinder":
                     {
@@ -1295,6 +1430,8 @@ namespace LevelEditor
                 _barrels.AddRange(level.Barrels);
                 _hazards.Clear();
                 _hazards.AddRange(level.Hazards);
+                _powerUps.Clear();
+                _powerUps.AddRange(level.PowerUps);
                 _door = level.Door;
 
                 _selectedEntity = null;
@@ -1335,6 +1472,7 @@ namespace LevelEditor
                 HealthKits = _healthKits,
                 Barrels = _barrels,
                 Hazards = _hazards,
+                PowerUps = _powerUps,
                 Door = _door
             };
 
@@ -1384,6 +1522,7 @@ namespace LevelEditor
                    LocalizationManager.GetText("status_healthkits", _healthKits.Count) + "\n" +
                    LocalizationManager.GetText("status_barrels", _barrels.Count) + "\n" +
                    LocalizationManager.GetText("status_hazards", _hazards.Count) + "\n" +
+                   LocalizationManager.GetText("status_powerups", _powerUps.Count) + "\n" +
                    LocalizationManager.GetText("status_door", doorStatus);
         }
 

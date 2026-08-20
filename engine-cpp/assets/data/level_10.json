@@ -1,10 +1,10 @@
 {
-  "levelName": "level_6",
+  "levelName": "level_10",
   "player": {
     "spawn": {
       "x": 0.0,
       "y": 0.0,
-      "z": 13.0
+      "z": 13.5
     },
     "maxHP": 100.0,
     "speed": 4.5,
@@ -73,186 +73,170 @@
     },
     {
       "position": {
-        "x": -5.0,
+        "x": 0.0,
         "y": 0.0,
-        "z": -11.0
+        "z": 0.0
       },
-      "type": "box",
+      "type": "cylinder",
       "size": {
         "x": 1.0,
-        "y": 2.0,
-        "z": 7.0
-      },
-      "radius": 0.5,
-      "height": 1.0
-    },
-    {
-      "position": {
-        "x": -5.0,
-        "y": 0.0,
-        "z": -2.0
-      },
-      "type": "box",
-      "size": {
-        "x": 1.0,
-        "y": 2.0,
-        "z": 7.0
-      },
-      "radius": 0.5,
-      "height": 1.0
-    },
-    {
-      "position": {
-        "x": -5.0,
-        "y": 0.0,
-        "z": 7.5
-      },
-      "type": "box",
-      "size": {
-        "x": 1.0,
-        "y": 2.0,
-        "z": 8.0
-      },
-      "radius": 0.5,
-      "height": 1.0
-    },
-    {
-      "position": {
-        "x": 5.0,
-        "y": 0.0,
-        "z": -11.0
-      },
-      "type": "box",
-      "size": {
-        "x": 1.0,
-        "y": 2.0,
-        "z": 7.0
-      },
-      "radius": 0.5,
-      "height": 1.0
-    },
-    {
-      "position": {
-        "x": 5.0,
-        "y": 0.0,
-        "z": -2.0
-      },
-      "type": "box",
-      "size": {
-        "x": 1.0,
-        "y": 2.0,
-        "z": 7.0
-      },
-      "radius": 0.5,
-      "height": 1.0
-    },
-    {
-      "position": {
-        "x": 5.0,
-        "y": 0.0,
-        "z": 7.5
-      },
-      "type": "box",
-      "size": {
-        "x": 1.0,
-        "y": 2.0,
-        "z": 8.0
-      },
-      "radius": 0.5,
-      "height": 1.0
-    },
-    {
-      "position": {
-        "x": -11.0,
-        "y": 0.0,
-        "z": 3.0
-      },
-      "type": "box",
-      "size": {
-        "x": 7.0,
-        "y": 2.0,
+        "y": 1.0,
         "z": 1.0
       },
+      "radius": 2.2,
+      "height": 4.0
+    },
+    {
+      "position": {
+        "x": -7.0,
+        "y": 0.0,
+        "z": 7.0
+      },
+      "type": "box",
+      "size": {
+        "x": 5.0,
+        "y": 2.0,
+        "z": 1.5
+      },
       "radius": 0.5,
       "height": 1.0
     },
     {
       "position": {
-        "x": 11.0,
+        "x": 7.0,
         "y": 0.0,
-        "z": -3.0
+        "z": 7.0
       },
       "type": "box",
       "size": {
-        "x": 7.0,
+        "x": 5.0,
         "y": 2.0,
-        "z": 1.0
+        "z": 1.5
       },
       "radius": 0.5,
       "height": 1.0
+    },
+    {
+      "position": {
+        "x": -7.0,
+        "y": 0.0,
+        "z": -7.0
+      },
+      "type": "box",
+      "size": {
+        "x": 5.0,
+        "y": 2.0,
+        "z": 1.5
+      },
+      "radius": 0.5,
+      "height": 1.0
+    },
+    {
+      "position": {
+        "x": 7.0,
+        "y": 0.0,
+        "z": -7.0
+      },
+      "type": "box",
+      "size": {
+        "x": 5.0,
+        "y": 2.0,
+        "z": 1.5
+      },
+      "radius": 0.5,
+      "height": 1.0
+    },
+    {
+      "position": {
+        "x": -12.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "radius": 1.0,
+      "height": 3.0
+    },
+    {
+      "position": {
+        "x": 12.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "radius": 1.0,
+      "height": 3.0
+    },
+    {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -12.0
+      },
+      "type": "cylinder",
+      "size": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "radius": 1.0,
+      "height": 3.0
     }
   ],
   "enemies": [
     {
       "spawn": {
-        "x": -10.0,
+        "x": -8.0,
         "y": 0.0,
-        "z": 8.0
+        "z": -3.0
       },
-      "type": "Kamikaze",
-      "maxHP": 15.0,
-      "visionRadius": 7.0,
-      "speed": 4.0,
-      "attackDamage": 35.0,
+      "type": "Buffer",
+      "maxHP": 45.0,
+      "visionRadius": 11.0,
+      "speed": 2.6,
+      "attackDamage": 0.0,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": 10.0,
+        "x": 8.0,
+        "y": 0.0,
+        "z": -3.0
+      },
+      "type": "Buffer",
+      "maxHP": 45.0,
+      "visionRadius": 11.0,
+      "speed": 2.6,
+      "attackDamage": 0.0,
+      "patrolRoute": []
+    },
+    {
+      "spawn": {
+        "x": 0.0,
         "y": 0.0,
         "z": -8.0
       },
-      "type": "Kamikaze",
-      "maxHP": 15.0,
-      "visionRadius": 7.0,
-      "speed": 4.0,
-      "attackDamage": 35.0,
+      "type": "Tank",
+      "maxHP": 200.0,
+      "visionRadius": 5.0,
+      "speed": 1.2,
+      "attackDamage": 25.0,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": 10.0,
+        "x": -12.0,
         "y": 0.0,
         "z": 8.0
-      },
-      "type": "Runner",
-      "maxHP": 25.0,
-      "visionRadius": 8.0,
-      "speed": 6.5,
-      "attackDamage": 6.0,
-      "patrolRoute": [
-        {
-          "x": 10.0,
-          "y": 0.0,
-          "z": 8.0
-        },
-        {
-          "x": 10.0,
-          "y": 0.0,
-          "z": -2.0
-        },
-        {
-          "x": 10.0,
-          "y": 0.0,
-          "z": 8.0
-        }
-      ]
-    },
-    {
-      "spawn": {
-        "x": -10.0,
-        "y": 0.0,
-        "z": -6.0
       },
       "type": "Trapper",
       "maxHP": 40.0,
@@ -261,68 +245,154 @@
       "attackDamage": 8.0,
       "patrolRoute": [
         {
-          "x": -10.0,
+          "x": -12.0,
           "y": 0.0,
-          "z": -6.0
+          "z": 8.0
         },
         {
-          "x": -10.0,
+          "x": -12.0,
           "y": 0.0,
-          "z": 6.0
+          "z": -8.0
         },
         {
-          "x": -10.0,
+          "x": -12.0,
           "y": 0.0,
-          "z": -6.0
+          "z": 8.0
         }
       ]
+    },
+    {
+      "spawn": {
+        "x": 12.0,
+        "y": 0.0,
+        "z": 8.0
+      },
+      "type": "Trapper",
+      "maxHP": 40.0,
+      "visionRadius": 8.0,
+      "speed": 3.0,
+      "attackDamage": 8.0,
+      "patrolRoute": [
+        {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 8.0
+        },
+        {
+          "x": 12.0,
+          "y": 0.0,
+          "z": -8.0
+        },
+        {
+          "x": 12.0,
+          "y": 0.0,
+          "z": 8.0
+        }
+      ]
+    },
+    {
+      "spawn": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 5.0
+      },
+      "type": "Shielder",
+      "maxHP": 90.0,
+      "visionRadius": 7.0,
+      "speed": 2.2,
+      "attackDamage": 14.0,
+      "patrolRoute": []
     }
   ],
   "gears": [
     {
       "position": {
-        "x": -10.0,
+        "x": -13.0,
         "y": 0.0,
-        "z": 11.0
+        "z": 3.0
       }
     },
     {
       "position": {
-        "x": 10.0,
+        "x": 13.0,
         "y": 0.0,
-        "z": 11.0
+        "z": 3.0
+      }
+    },
+    {
+      "position": {
+        "x": -4.0,
+        "y": 0.0,
+        "z": -13.0
+      }
+    },
+    {
+      "position": {
+        "x": 4.0,
+        "y": 0.0,
+        "z": -13.0
       }
     },
     {
       "position": {
         "x": 0.0,
         "y": 0.0,
-        "z": 2.0
+        "z": 9.0
       }
     },
     {
       "position": {
-        "x": -10.0,
+        "x": -13.0,
         "y": 0.0,
-        "z": -12.0
+        "z": -3.0
       }
     },
     {
       "position": {
-        "x": 10.0,
+        "x": 13.0,
         "y": 0.0,
-        "z": -12.0
+        "z": -3.0
       }
     }
   ],
   "spawners": [
     {
       "position": {
-        "x": 0.0,
+        "x": -14.0,
         "y": 0.0,
-        "z": -13.5
+        "z": 14.0
+      },
+      "enemyType": "Kamikaze",
+      "interval": 7.0,
+      "maxEnemies": 3
+    },
+    {
+      "position": {
+        "x": 14.0,
+        "y": 0.0,
+        "z": 14.0
       },
       "enemyType": "Runner",
+      "interval": 4.0,
+      "maxEnemies": 4
+    },
+    {
+      "position": {
+        "x": -14.0,
+        "y": 0.0,
+        "z": -14.0
+      },
+      "enemyType": "Tank",
+      "interval": 12.0,
+      "maxEnemies": 2
+    },
+    {
+      "position": {
+        "x": 14.0,
+        "y": 0.0,
+        "z": -14.0
+      },
+      "enemyType": "Spitter",
       "interval": 6.0,
       "maxEnemies": 3
     }
@@ -330,9 +400,23 @@
   "healthKits": [
     {
       "position": {
+        "x": -9.0,
+        "y": 0.0,
+        "z": 11.0
+      }
+    },
+    {
+      "position": {
+        "x": 9.0,
+        "y": 0.0,
+        "z": 11.0
+      }
+    },
+    {
+      "position": {
         "x": 0.0,
         "y": 0.0,
-        "z": 8.0
+        "z": -4.0
       }
     }
   ],
@@ -341,60 +425,72 @@
       "position": {
         "x": -5.0,
         "y": 0.0,
-        "z": -6.5
+        "z": 2.0
+      }
+    },
+    {
+      "position": {
+        "x": 5.0,
+        "y": 0.0,
+        "z": 2.0
       }
     },
     {
       "position": {
         "x": -5.0,
         "y": 0.0,
-        "z": 2.5
+        "z": -10.0
       }
     },
     {
       "position": {
         "x": 5.0,
         "y": 0.0,
-        "z": -6.5
-      }
-    },
-    {
-      "position": {
-        "x": 5.0,
-        "y": 0.0,
-        "z": 2.5
-      }
-    },
-    {
-      "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -6.5
-      }
-    },
-    {
-      "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 6.5
-      }
-    },
-    {
-      "position": {
-        "x": -8.0,
-        "y": 0.0,
-        "z": 0.0
-      }
-    },
-    {
-      "position": {
-        "x": 8.0,
-        "y": 0.0,
-        "z": 0.0
+        "z": -10.0
       }
     }
   ],
-  "hazards": [],
+  "hazards": [
+    {
+      "position": {
+        "x": -4.5,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 2.5,
+        "y": 0.1,
+        "z": 2.5
+      },
+      "damagePerTick": 15.0
+    },
+    {
+      "position": {
+        "x": 4.5,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 2.5,
+        "y": 0.1,
+        "z": 2.5
+      },
+      "damagePerTick": 15.0
+    },
+    {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -4.5
+      },
+      "size": {
+        "x": 2.5,
+        "y": 0.1,
+        "z": 2.5
+      },
+      "damagePerTick": 15.0
+    }
+  ],
   "powerUps": [
     {
       "position": {
@@ -402,14 +498,54 @@
         "y": 0.0,
         "z": 11.0
       },
+      "type": "Shield"
+    },
+    {
+      "position": {
+        "x": -13.0,
+        "y": 0.0,
+        "z": 11.0
+      },
       "type": "Overclock"
+    },
+    {
+      "position": {
+        "x": 13.0,
+        "y": 0.0,
+        "z": 11.0
+      },
+      "type": "Frenzy"
+    },
+    {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -9.0
+      },
+      "type": "Overclock"
+    },
+    {
+      "position": {
+        "x": -13.0,
+        "y": 0.0,
+        "z": -11.0
+      },
+      "type": "Frenzy"
+    },
+    {
+      "position": {
+        "x": 13.0,
+        "y": 0.0,
+        "z": -11.0
+      },
+      "type": "Shield"
     }
   ],
   "door": {
     "position": {
       "x": 0.0,
       "y": 0.0,
-      "z": -14.0
+      "z": -14.5
     },
     "halfExtents": {
       "x": 1.0,

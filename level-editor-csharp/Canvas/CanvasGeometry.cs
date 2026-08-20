@@ -10,8 +10,13 @@ namespace LevelEditor.Canvas
     // cualificar (ScreenToWorld(...), no CanvasGeometry.ScreenToWorld(...)).
     internal static class CanvasGeometry
     {
-        public const int CellSize = 30;
-        public const int CanvasSize = 600;
+        // 20 px por unidad de mundo sobre un lienzo de 700: cubre de -17.5 a
+        // +17.5, es decir el perímetro entero de la arena ampliada (muros en
+        // ±16, ver assets/data/*.json y Application::DrawGroundGrid). Con los
+        // 30/600 anteriores el lienzo solo llegaba a ±10 y ni siquiera se
+        // podían ver los muros, mucho menos colocar nada más allá de ellos.
+        public const int CellSize = 20;
+        public const int CanvasSize = 700;
         public static readonly Point CanvasCenter = new(CanvasSize / 2, CanvasSize / 2);
         public const int MarkerRadius = 8;
 

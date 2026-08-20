@@ -11,6 +11,7 @@
 #include "../Entities/HealthKit.h"
 #include "../Entities/ExplosiveBarrel.h"
 #include "../Entities/Hazard.h"
+#include "../Entities/PowerUp.h"
 
 // Datos crudos de un Spawner tal como los deja el JSON -- no es el Spawner
 // en sí (Entities/Spawner.h), que además necesita la lista de obstáculos y
@@ -39,6 +40,12 @@ struct LevelData {
     std::vector<SpawnerData> spawners;
     std::vector<std::unique_ptr<HealthKit>> healthKits;
     std::vector<std::unique_ptr<ExplosiveBarrel>> barrels;
+
+    // Power-ups colocados a mano en el nivel. Los que sueltan los enemigos al
+    // morir (Modo Historia) entran en esta MISMA lista en tiempo de ejecución
+    // -- ver Application::UpdateActiveMatch, mismo patrón que los engranajes
+    // y botiquines que dropea el Modo Infinito.
+    std::vector<std::unique_ptr<PowerUp>> powerUps;
 
     // Zonas de daño por tick, NUNCA en 'obstacles': no bloquean el paso.
     // Lista propia (no Entity genérico) porque CombatSystem necesita

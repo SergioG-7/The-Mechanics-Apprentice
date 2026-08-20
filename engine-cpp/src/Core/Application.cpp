@@ -106,6 +106,7 @@ void Application::LoadLevel(const std::string& path) {
     // activo justo al cruzar la puerta, sobrevivían al cambio de nivel.
     m_spawners.clear();
     m_projectiles.clear();
+    m_puddles.clear();
     m_shakeTimer.Start(0.0f);
     m_shakeIntensity = 0.0f;
     m_hitStopTimer.Start(0.0f);
@@ -168,6 +169,17 @@ void Application::StartEndlessMode() {
 
 void Application::AdvanceToNextStoryLevel() {
     m_currentLevel++;
+
+    // Se acabó la historia: volver al menú sin tocar maxLevelUnlocked. Antes
+    // se marcaba como desbloqueado un nivel que no existe en disco, y el
+    // selector le pintaba un botón que al pulsarlo solo rebotaba al menú (vía
+    // el "nivel no disponible" de LoadLevel).
+    if (m_currentLevel > kStoryLevelCount) {
+        m_saveManager.Save();
+        m_appState = AppState::MainMenu;
+        return;
+    }
+
     if (m_currentLevel > m_saveManager.Data().maxLevelUnlocked) {
         m_saveManager.Data().maxLevelUnlocked = m_currentLevel;
     }
@@ -407,6 +419,45 @@ void Application::HandleGameplayPauseInput() {
     LoadLevel(m_currentLevelPath);
 }
 
+void Application::ApplyBufferAuras() {
+    // Se reescribe entero cada frame, empezando por limpiar: así el bonus
+    // caduca solo en cuanto el Buffer muere o el zombi sale del radio, sin
+    // que nadie tenga que acordarse de retirarlo.
+    for (auto& enemy : m_level.enemies) enemy->SetSpeedMultiplier(1.0f);
+
+    for (const auto& buffer : m_level.enemies) {
+        if (buffer->GetBehavior() != EnemyBehavior::Buffer || !buffer->IsAlive()) continue;
+
+        for (auto& target : m_level.enemies) {
+            if (target.get() == buffer.get() || !target->IsAlive()) continue;
+            if (CollisionMath::IsWithinRadius(target->GetPosition(), buffer->GetPosition(), Enemy::kBufferAuraRadius)) {
+                target->SetSpeedMultiplier(Enemy::kBufferSpeedBonus);
+            }
+        }
+    }
+}
+
+void Application::RollStoryModeDrop(Vector3 position) {
+    // Tabla ponderada por una sola tirada de 1-100, en orden de rareza: los
+    // dos power-ups ofensivos/de movilidad son el drop habitual, el escudo y
+    // la cura son el premio raro. El 65% restante no suelta nada.
+    constexpr int kOverclockChance = 13;
+    constexpr int kFrenzyChance = 12;
+    constexpr int kShieldChance = 5;
+    constexpr int kHealthKitChance = 5;
+
+    int roll = GetRandomValue(1, 100);
+    if (roll <= kOverclockChance) {
+        m_level.powerUps.push_back(std::make_unique<PowerUp>(position, PowerUpType::Overclock));
+    } else if (roll <= kOverclockChance + kFrenzyChance) {
+        m_level.powerUps.push_back(std::make_unique<PowerUp>(position, PowerUpType::Frenzy));
+    } else if (roll <= kOverclockChance + kFrenzyChance + kShieldChance) {
+        m_level.powerUps.push_back(std::make_unique<PowerUp>(position, PowerUpType::Shield));
+    } else if (roll <= kOverclockChance + kFrenzyChance + kShieldChance + kHealthKitChance) {
+        m_level.healthKits.push_back(std::make_unique<HealthKit>(position));
+    }
+}
+
 void Application::UpdateActiveMatch(float dt) {
     if (!m_level.player) return;
 
@@ -436,7 +487,10 @@ void Application::UpdateActiveMatch(float dt) {
         AddCameraShake(kHitShakeDuration, kHitShakeIntensity);
 
         for (const MeleeHitResult& hit : meleeHits) {
-            m_particles.Emit(hit.impactPoint, GetRandomValue(kMinHitParticles, kMaxHitParticles));
+            // La mitad de chispas si la placa del Shielder paró el golpe: se
+            // ve que ha conectado algo, pero no como un impacto limpio.
+            int particleCount = GetRandomValue(kMinHitParticles, kMaxHitParticles);
+            m_particles.Emit(hit.impactPoint, hit.blocked ? particleCount / 2 : particleCount);
 
             if (hit.hitEnemy && !hit.hitEnemy->IsAlive()) {
                 m_saveManager.Data().zombiesKilled++;
@@ -451,6 +505,8 @@ void Application::UpdateActiveMatch(float dt) {
                     } else {
                         m_level.gears.push_back(std::make_unique<Gear>(hit.hitEnemy->GetPosition()));
                     }
+                } else {
+                    RollStoryModeDrop(hit.hitEnemy->GetPosition());
                 }
             }
         }
@@ -462,12 +518,19 @@ void Application::UpdateActiveMatch(float dt) {
         m_particles.Emit(*barrelHit, GetRandomValue(kMinHitParticles, kMaxHitParticles));
     }
 
+    ApplyBufferAuras();
+
     for (auto& enemy : m_level.enemies) {
         enemy->Update(entityDt);
 
         Projectile projectile;
         if (enemy->ConsumePendingProjectile(projectile)) {
             m_projectiles.push_back(projectile);
+        }
+
+        Vector3 puddlePosition;
+        if (enemy->ConsumePendingPuddle(puddlePosition)) {
+            m_puddles.push_back(MudPuddle{ puddlePosition, MudPuddle::kLifetime });
         }
 
         if (enemy->ConsumeExplosionTrigger()) {
@@ -482,6 +545,7 @@ void Application::UpdateActiveMatch(float dt) {
 
     for (auto& hazard : m_level.hazards) hazard->Update(entityDt);
     CombatSystem::ApplyHazardDamage(m_level.hazards, *m_level.player);
+    CombatSystem::UpdateMudPuddles(entityDt, m_puddles, *m_level.player);
 
     for (auto& spawner : m_spawners) {
         spawner.Update(entityDt, m_level.enemies);
@@ -521,6 +585,17 @@ void Application::UpdateActiveMatch(float dt) {
             std::cout << "[Gameplay] Engranaje recogido!" << std::endl;
             if (m_appState == AppState::EndlessMode) m_endlessDirector.OnGearCollected();
             it = m_level.gears.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    // Recolección de power-ups: aplica su efecto al Player y desaparece.
+    for (auto it = m_level.powerUps.begin(); it != m_level.powerUps.end(); ) {
+        if (CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), (*it)->GetBoundingBox())) {
+            std::cout << "[Gameplay] Power-up recogido!" << std::endl;
+            m_level.player->ApplyPowerUp((*it)->GetType());
+            it = m_level.powerUps.erase(it);
         } else {
             ++it;
         }
@@ -566,7 +641,12 @@ void Application::DrawGroundGrid() const {
     // Cuadrícula holográfica estilo Tron en vez del DrawGrid gris por
     // defecto de raylib -- raylib no define CYAN, así que se usa SKYBLUE
     // (mismo sustituto ya usado para el contorno de Obstacle).
-    constexpr int slices = 20;
+    //
+    // 32 (arena de -16 a +16), no 20: los muros perimetrales de todos los
+    // niveles están ahora en ±16 (ver assets/data/*.json), así que una
+    // cuadrícula de ±10 dejaba media arena sin suelo visible. Si se vuelve a
+    // mover el perímetro, este número tiene que acompañarlo.
+    constexpr int slices = 32;
     constexpr float spacing = 1.0f;
     constexpr float halfSize = (slices * spacing) / 2.0f;
     Color gridColor = Fade(SKYBLUE, 0.3f);
@@ -585,12 +665,24 @@ void Application::DrawGameplay() const {
     BeginMode3D(m_camera);
     DrawGroundGrid();
 
+    // Los charcos van antes que el Player/los enemigos: son una capa de
+    // suelo, cualquier cosa que camine encima tiene que taparlos.
+    for (const MudPuddle& puddle : m_puddles) {
+        // Se apaga con la vida que le queda, así se ve que va a secarse
+        // antes de que desaparezca de golpe bajo los pies del jugador.
+        float fade = puddle.lifetime / MudPuddle::kLifetime;
+        Vector3 base{ puddle.position.x, 0.015f, puddle.position.z };
+        DrawCylinder(base, MudPuddle::kRadius, MudPuddle::kRadius, 0.02f, 20, Fade(Color{ 60, 170, 50, 255 }, 0.55f * fade));
+        DrawCylinderWires(base, MudPuddle::kRadius, MudPuddle::kRadius, 0.02f, 20, Fade(LIME, 0.8f * fade));
+    }
+
     if (m_level.player) m_level.player->Draw();
     for (auto& enemy : m_level.enemies) enemy->Draw();
     for (auto& obstacle : m_level.obstacles) obstacle->Draw();
     for (auto& hazard : m_level.hazards) hazard->Draw();
     for (const Spawner& spawner : m_spawners) spawner.Draw();
     for (auto& gear : m_level.gears) gear->Draw();
+    for (auto& powerUp : m_level.powerUps) powerUp->Draw();
     for (auto& healthKit : m_level.healthKits) healthKit->Draw();
     for (auto& barrel : m_level.barrels) barrel->Draw();
     for (const Projectile& projectile : m_projectiles) DrawSphere(projectile.position, Projectile::kRadius, YELLOW);

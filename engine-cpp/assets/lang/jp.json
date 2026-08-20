@@ -59,6 +59,19 @@
 
   "hud_hp": "体力",
   "hud_gears": "歯車",
+
+  "powerup_overclock": "オーバークロック",
+  "powerup_overclock_desc": "5秒間 移動速度+50%",
+  "powerup_frenzy": "フレンジー",
+  "powerup_frenzy_desc": "5秒間 攻撃速度2倍",
+  "powerup_shield": "シールド",
+  "powerup_shield_desc": "次に受けるダメージを1回無効化",
+
+  "enemy_shielder": "盾持ち",
+  "enemy_buffer": "指揮官",
+  "enemy_trapper": "スライム",
+
+
   "gameover_title": "ゲームオーバー",
   "gameover_retry": "Rキーでリトライ",
   "gameover_menu": "Rキーでメニューに戻る",
