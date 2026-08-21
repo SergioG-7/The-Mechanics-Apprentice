@@ -10,7 +10,8 @@
 
 ### 🎮 Jugar la Demo
 * Jugar en Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice]
-* Ver gameplay y editor en YouTube - [https://youtu.be/gNOpDSCa8wE]
+* Ver gameplay en YouTube - [https://youtu.be/KxtVA9pftCg] 
+* Ver editor en YouTube - [https://youtu.be/jk4LX89isQ4]
 
 ### 🛠️ Tecnologías y Herramientas
 * **Motor Core:** C++17, Raylib, CMake
@@ -30,7 +31,9 @@
 
 ### 🎮 Play the Demo
 * Play on Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice]
-* Watch gameplay & editor on YouTube - [https://youtu.be/gNOpDSCa8wE]
+* Watch gameplay on YouTube - [https://youtu.be/KxtVA9pftCg]
+* Watch editor on YouTube - [https://youtu.be/jk4LX89isQ4]
+
 
 ### 🛠️ Technologies & Tools
 * **Core Engine:** C++17, Raylib, CMake
@@ -50,7 +53,8 @@
 
 ### 🎮 デモをプレイする
 * Itch.ioでプレイ (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice]
-* YouTubeでゲームプレイとエディタを見る - [https://youtu.be/gNOpDSCa8wE]
+* YouTubeでゲームプレイを見る - [https://youtu.be/KxtVA9pftCg]
+* YouTubeでエディタを見る - [https://youtu.be/jk4LX89isQ4]
 
 ### 🛠️ 使用技術とツール
 * **コアエンジン:** C++17, Raylib, CMake
