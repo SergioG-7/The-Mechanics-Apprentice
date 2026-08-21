@@ -2,6 +2,7 @@
 #include "../Combat/CollisionMath.h"
 #include "../Combat/CombatSystem.h"
 #include "../Core/AudioSettings.h"
+#include "../Core/Pulse.h"
 #include "../Renderer/ModelUtils.h"
 #include "raylib.h"
 #include "rlgl.h"
@@ -207,11 +208,7 @@ void Enemy::FaceTowards(Vector3 targetDirection, float dt) {
 }
 
 Vector3 Enemy::DirectionToLastKnownPlayer() const {
-    Vector3 toPlayer{
-        m_lastKnownPlayerPosition.x - m_position.x, 0.0f,
-        m_lastKnownPlayerPosition.z - m_position.z
-    };
-    return CollisionMath::Normalize2D(toPlayer);
+    return CollisionMath::DirectionXZ(m_position, m_lastKnownPlayerPosition);
 }
 
 void Enemy::EnterAttack() {
@@ -343,17 +340,13 @@ void Enemy::Update(float dt) {
 bool Enemy::BlocksAttackFrom(Vector3 attackerPosition) const {
     if (m_behavior != EnemyBehavior::Shielder) return false;
 
-    Vector3 toAttacker = CollisionMath::Normalize2D(Vector3{
-        attackerPosition.x - m_position.x, 0.0f, attackerPosition.z - m_position.z });
+    Vector3 toAttacker = CollisionMath::DirectionXZ(m_position, attackerPosition);
     float facingDot = toAttacker.x * m_facingDirection.x + toAttacker.z * m_facingDirection.z;
     return facingDot >= kShieldBlockCosine;
 }
 
 void Enemy::Draw() const {
-    float rotationAngle = 0.0f;
-    if (m_facingDirection.x != 0.0f || m_facingDirection.z != 0.0f) {
-        rotationAngle = atan2f(m_facingDirection.x, m_facingDirection.z) * (180.0f / PI);
-    }
+    float rotationAngle = CollisionMath::HeadingDegrees(m_facingDirection);
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
     Vector3 scale = { m_scale, m_scale, m_scale };
@@ -378,22 +371,17 @@ void Enemy::Draw() const {
         constexpr Color kDeadTint = Color{ 80, 20, 20, 255 };
         constexpr float kCorpseFlickerPeriod = 0.2f;
 
-        float alphaFloat = 1.0f - (m_deathTimer / kCorpseFadeDuration);
-        if (alphaFloat < 0.0f) alphaFloat = 0.0f;
+        float alphaFloat = 1.0f - Pulse::Progress01(m_deathTimer, kCorpseFadeDuration);
         unsigned char alpha = (unsigned char)(alphaFloat * 255.0f);
 
-        bool flickerOn = fmodf(m_deathTimer, kCorpseFlickerPeriod) < (kCorpseFlickerPeriod * 0.5f);
-        tint = flickerOn ? WHITE : kDeadTint;
+        tint = Pulse::Blink(m_deathTimer, kCorpseFlickerPeriod) ? WHITE : kDeadTint;
         tint.a = alpha;
         shadowAlpha = (unsigned char)(alphaFloat * 100.0f);
     } else if (m_fsm.Is(EnemyState::Explode)) {
         // Parpadeo cada vez más rápido: el período baja de 0.3s a 0.05s a
-        // medida que se acerca la detonación (progress 0..1).
-        float progress = m_explodeTimer / kExplodeDuration;
-        float period = 0.3f - 0.25f * progress;
-        if (period < 0.02f) period = 0.02f; // suelo: evita un fmodf casi degenerado
-        bool flashOn = fmodf(m_explodeTimer, period) < (period * 0.5f);
-        tint = flashOn ? WHITE : RED;
+        // medida que se acerca la detonación.
+        tint = Pulse::AcceleratingBlink(m_explodeTimer, Pulse::Progress01(m_explodeTimer, kExplodeDuration), 0.3f, 0.05f)
+                   ? WHITE : RED;
     }
 
     // Hit-flash: destello breve de impacto, independiente del tinte de
@@ -440,7 +428,7 @@ void Enemy::DrawArchetypeDecoration(float rotationAngleDegrees, Color tint) cons
 
         // Pulso lento: el radio y la opacidad respiran a la vez, para que se
         // lea como un área de influencia activa y no como decoración fija.
-        float pulse = 0.5f + 0.5f * sinf(static_cast<float>(GetTime()) * 3.0f);
+        float pulse = Pulse::Wave01(static_cast<float>(GetTime()), 3.0f);
         float radius = kBufferAuraRadius * (0.96f + 0.04f * pulse);
         Vector3 base{ m_position.x, 0.03f, m_position.z };
         DrawCylinder(base, radius, radius, 0.02f, 32, Fade(GOLD, 0.06f + 0.08f * pulse));

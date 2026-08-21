@@ -11,6 +11,11 @@ void Actor::TakeDamage(float amount, Vector3 knockbackDir) {
 }
 
 void Actor::Heal(float amount) {
+    // Un Actor a 0 HP ya está muerto y no se cura: sin esta guarda, morir en
+    // el mismo frame en que se pisa un botiquín "resucitaba" al jugador
+    // (la recolección corre ANTES del chequeo de fin de partida, así que su
+    // HP volvía a subir y el Game Over no llegaba a dispararse nunca).
+    if (!IsAlive()) return;
     m_hp = std::min(m_maxHP, m_hp + amount);
 }
 

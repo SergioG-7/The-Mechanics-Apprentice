@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "AudioSettings.h"
+#include "DropTable.h"
 #include "../Combat/CombatSystem.h"
 #include "../Combat/CollisionMath.h"
 #include "../Entities/Gear.h"
@@ -24,11 +25,7 @@ Application::Application(int width, int height, const std::string& title) {
     // de raylib) en vez de abrir el menú de pausa -- ver UpdateGameplay.
     SetExitKey(KEY_NULL);
 
-    m_camera.position   = { 0.0f, 4.0f, 8.0f };
-    m_camera.target     = { 0.0f, 1.0f, 0.0f };
-    m_camera.up         = { 0.0f, 1.0f, 0.0f };
-    m_camera.fovy       = 45.0f;
-    m_camera.projection = CAMERA_PERSPECTIVE;
+    // La cámara se configura sola en su constructor (ver CameraRig).
 
     // m_saveManager ya se ha construido (lee save_data.json en su propio
     // constructor, antes que nada aquí) -- el volumen y el idioma arrancan
@@ -107,9 +104,7 @@ void Application::LoadLevel(const std::string& path) {
     m_spawners.clear();
     m_projectiles.clear();
     m_puddles.clear();
-    m_shakeTimer.Start(0.0f);
-    m_shakeIntensity = 0.0f;
-    m_hitStopTimer.Start(0.0f);
+    ClearTransientEffects();
 
     m_level = LevelLoader::LoadFromFile(path);
 
@@ -253,15 +248,20 @@ void Application::UpdateMenu() {
             break;
         case MenuAction::OpenControls:    m_appState = AppState::Controls; break;
         case MenuAction::OpenStats:       m_appState = AppState::Stats; break;
-        case MenuAction::OpenGuide:       m_appState = AppState::Guide; break;
+        case MenuAction::OpenGuide:
+            m_guideReturnTo = AppState::MainMenu;
+            m_appState = AppState::Guide;
+            break;
         case MenuAction::OpenLevelEditor: LaunchLevelEditor(); break;
         case MenuAction::BackToMainMenu:
-            // Desde Opciones, "Volver" respeta de dónde se abrió (menú
-            // principal o pausa); desde cualquier otra pantalla (Stats,
-            // LevelSelect) siempre es el menú principal. m_appState todavía
-            // no se ha reasignado en este punto, así que sigue siendo la
-            // pantalla que acaba de devolver la acción.
-            m_appState = (m_appState == AppState::Options) ? m_optionsReturnTo : AppState::MainMenu;
+            // Opciones y Guía se pueden abrir desde el menú principal Y desde
+            // la pausa, así que su "Volver" respeta de dónde vinieron; el
+            // resto de pantallas (Stats, LevelSelect) siempre vuelven al menú
+            // principal. m_appState todavía no se ha reasignado en este punto,
+            // así que sigue siendo la pantalla que acaba de devolver la acción.
+            if (m_appState == AppState::Options)    m_appState = m_optionsReturnTo;
+            else if (m_appState == AppState::Guide) m_appState = m_guideReturnTo;
+            else                                     m_appState = AppState::MainMenu;
             break;
         case MenuAction::BackToOptions:   m_appState = AppState::Options; break;
         case MenuAction::CycleLanguage:
@@ -297,30 +297,20 @@ void Application::DrawMenu() const {
 
 // --- Gameplay (StoryMode / EndlessMode) ---
 
+void Application::ClearTransientEffects() {
+    m_camera.ClearShake();
+    m_hitStopTimer.Start(0.0f);
+}
+
 void Application::UpdateGameplay(float dt) {
     m_music->Update();
 
-    m_shakeTimer.Tick(dt);
+    m_camera.Tick(dt);
     m_hitStopTimer.Tick(dt);
     m_particles.Update(dt);
 
     if (m_level.player != nullptr) {
-        Vector3 playerPos = m_level.player->GetPosition();
-
-        m_camera.target = playerPos;
-
-        // Offset isométrico: 15 unidades hacia arriba (Y) y 12 hacia atrás (Z)
-        m_camera.position = Vector3{ playerPos.x, playerPos.y + 15.0f, playerPos.z + 12.0f };
-
-        // Shake sumado ENCIMA de la posición ya calculada, nunca la sustituye
-        // -- si escribiera m_camera.position aparte, pelearía con el offset
-        // isométrico de arriba en vez de mezclarse con él.
-        if (m_shakeTimer.IsActive()) {
-            float offsetX = (static_cast<float>(GetRandomValue(-100, 100)) / 100.0f) * m_shakeIntensity;
-            float offsetZ = (static_cast<float>(GetRandomValue(-100, 100)) / 100.0f) * m_shakeIntensity;
-            m_camera.position.x += offsetX;
-            m_camera.position.z += offsetZ;
-        }
+        m_camera.FollowTarget(m_level.player->GetPosition());
     }
 
     if (m_appState == AppState::Paused) {
@@ -348,6 +338,11 @@ void Application::UpdateGameplay(float dt) {
     if (pausePressed) {
         m_pausedFromState = m_appState;
         m_appState = AppState::Paused;
+        // Un hit-stop o un temblor a medias no debe quedarse esperando al
+        // otro lado de la pausa: si el jugador se va a Opciones o a la Guía,
+        // UpdateGameplay deja de correr y esos timers ni siquiera se
+        // descuentan, así que al volver reaparecerían congelados.
+        ClearTransientEffects();
         return;
     }
 
@@ -376,6 +371,12 @@ void Application::UpdatePauseMenu() {
         case MenuAction::OpenOptions:
             m_optionsReturnTo = AppState::Paused;
             m_appState = AppState::Options;
+            break;
+        case MenuAction::OpenGuide:
+            // Vuelve a la PAUSA, no al juego ni al menú principal: consultar
+            // el glosario a media partida no puede costar el nivel en curso.
+            m_guideReturnTo = AppState::Paused;
+            m_appState = AppState::Guide;
             break;
         case MenuAction::BackToMainMenu:
             m_music->Stop();
@@ -429,52 +430,68 @@ void Application::HandleGameplayPauseInput() {
     LoadLevel(m_currentLevelPath);
 }
 
-void Application::ApplyBufferAuras() {
-    // Se reescribe entero cada frame, empezando por limpiar: así el bonus
-    // caduca solo en cuanto el Buffer muere o el zombi sale del radio, sin
-    // que nadie tenga que acordarse de retirarlo.
-    for (auto& enemy : m_level.enemies) enemy->SetSpeedMultiplier(1.0f);
+void Application::CollectPickups() {
+    // Los tres hacen lo mismo salvo qué efecto aplican: recorrer la lista,
+    // probar el AABB del Player y sacar el elemento. Se comparte el barrido
+    // con una lambda genérica en vez de repetir tres veces el mismo
+    // erase-en-bucle con iteradores (donde es fácil olvidar el ++it).
+    BoundingBox playerBox = m_level.player->GetBoundingBox();
 
-    for (const auto& buffer : m_level.enemies) {
-        if (buffer->GetBehavior() != EnemyBehavior::Buffer || !buffer->IsAlive()) continue;
-
-        for (auto& target : m_level.enemies) {
-            if (target.get() == buffer.get() || !target->IsAlive()) continue;
-            if (CollisionMath::IsWithinRadius(target->GetPosition(), buffer->GetPosition(), Enemy::kBufferAuraRadius)) {
-                target->SetSpeedMultiplier(Enemy::kBufferSpeedBonus);
+    auto collect = [&playerBox](auto& container, auto&& onCollected) {
+        for (auto it = container.begin(); it != container.end(); ) {
+            if (CollisionMath::AABBIntersects(playerBox, (*it)->GetBoundingBox())) {
+                onCollected(**it);
+                it = container.erase(it);
+            } else {
+                ++it;
             }
         }
-    }
+    };
+
+    collect(m_level.gears, [this](const Gear&) {
+        if (m_appState == AppState::EndlessMode) m_endlessDirector.OnGearCollected();
+    });
+
+    collect(m_level.powerUps, [this](const PowerUp& powerUp) {
+        m_level.player->ApplyPowerUp(powerUp.GetType());
+    });
+
+    collect(m_level.healthKits, [this](const HealthKit& kit) {
+        m_level.player->Heal(kit.GetHealAmount());
+        m_saveManager.Data().healthKitsUsed++;
+    });
 }
 
-void Application::RollEnemyDrop(Vector3 position) {
-    // Infinito: cada baja deja SIEMPRE un engranaje, porque ahí el engranaje
-    // ES la puntuación del modo, no un extra. El sorteo de power-ups de abajo
-    // se aplica igual en los dos modos, así que Infinito también los recibe.
-    // Ambos caen en la misma posición sin pisarse: el engranaje se dibuja a
-    // ras de suelo y el power-up flota 0.6 por encima.
-    if (m_appState == AppState::EndlessMode) {
-        m_level.gears.push_back(std::make_unique<Gear>(position));
-    }
+void Application::ResolveBarrelExplosions() {
+    // Se repite hasta que ningún barril quede por resolver, en vez de una
+    // sola pasada: la explosión de un barril puede detonar a otro que está
+    // ANTES en el vector y que este bucle ya ha dejado atrás. Con una sola
+    // pasada, ese barril quedaba marcado como explotado, el erase-remove del
+    // final del frame se lo llevaba, y su área no se aplicaba nunca -- una
+    // explosión visible que no hacía daño a nada.
+    //
+    // ConsumeExplosion() es de un solo uso por barril, así que el bucle
+    // termina siempre: cada vuelta resuelve al menos uno y ninguno se puede
+    // resolver dos veces. La guarda de seguridad es el propio número de
+    // barriles, que solo decrece.
+    bool resolvedAny = true;
+    while (resolvedAny) {
+        resolvedAny = false;
 
-    // Tabla ponderada por una sola tirada de 1-100, en orden de rareza. Total
-    // ~12%: bajado del 35% del playtest anterior, donde caían tantos que los
-    // efectos temporales estaban casi siempre activos y dejaban de sentirse
-    // como un golpe de suerte. El 88% restante no suelta nada.
-    constexpr int kOverclockChance = 4;
-    constexpr int kFrenzyChance = 4;
-    constexpr int kShieldChance = 2;
-    constexpr int kHealthKitChance = 2;
+        // Índice, no iterador/referencia: ApplyAreaDamage no toca el tamaño
+        // del vector, pero recorrerlo por índice deja explícito que aquí no
+        // se puede invalidar nada aunque en el futuro sí lo tocara.
+        for (size_t i = 0; i < m_level.barrels.size(); i++) {
+            if (!m_level.barrels[i]->ConsumeExplosion()) continue;
 
-    int roll = GetRandomValue(1, 100);
-    if (roll <= kOverclockChance) {
-        m_level.powerUps.push_back(std::make_unique<PowerUp>(position, PowerUpType::Overclock));
-    } else if (roll <= kOverclockChance + kFrenzyChance) {
-        m_level.powerUps.push_back(std::make_unique<PowerUp>(position, PowerUpType::Frenzy));
-    } else if (roll <= kOverclockChance + kFrenzyChance + kShieldChance) {
-        m_level.powerUps.push_back(std::make_unique<PowerUp>(position, PowerUpType::Shield));
-    } else if (roll <= kOverclockChance + kFrenzyChance + kShieldChance + kHealthKitChance) {
-        m_level.healthKits.push_back(std::make_unique<HealthKit>(position));
+            Vector3 center = m_level.barrels[i]->GetPosition();
+            CombatSystem::ApplyAreaDamage(center, ExplosiveBarrel::kExplosionRadius,
+                                           ExplosiveBarrel::kExplosionDamage,
+                                           *m_level.player, m_level.enemies, m_level.barrels);
+            m_particles.Emit(center, GetRandomValue(15, 25));
+            m_saveManager.Data().barrelsExploded++;
+            resolvedAny = true;
+        }
     }
 }
 
@@ -500,11 +517,11 @@ void Application::UpdateActiveMatch(float dt) {
     std::vector<MeleeHitResult> meleeHits = CombatSystem::ResolveMeleeAttack(*m_level.player, m_level.enemies, m_level.obstacles);
     if (!meleeHits.empty()) {
         // Una vez por swing, no por enemigo golpeado -- TriggerHitStop ya es
-        // idempotente (toma el máximo) y AddCameraShake reescribe los mismos
+        // idempotente (toma el máximo) y AddShake reescribe los mismos
         // valores cada vez, así que llamarlos por enemigo no cambiaría nada
         // salvo repetir trabajo.
         TriggerHitStop(kHitStopDuration);
-        AddCameraShake(kHitShakeDuration, kHitShakeIntensity);
+        m_camera.AddShake(kHitShakeDuration, kHitShakeIntensity);
 
         for (const MeleeHitResult& hit : meleeHits) {
             // La mitad de chispas si la placa del Shielder paró el golpe: se
@@ -514,18 +531,19 @@ void Application::UpdateActiveMatch(float dt) {
 
             if (hit.hitEnemy && !hit.hitEnemy->IsAlive()) {
                 m_saveManager.Data().zombiesKilled++;
-                RollEnemyDrop(hit.hitEnemy->GetPosition());
+                DropTable::RollEnemyDrop(m_level, hit.hitEnemy->GetPosition(),
+                                          m_appState == AppState::EndlessMode);
             }
         }
     } else if (auto barrelHit = CombatSystem::ResolveMeleeAttackOnBarrels(*m_level.player, m_level.barrels)) {
         // Mismo juice que golpear a un enemigo; la propia explosión (si el
         // barril llega a 0 HP) se resuelve más abajo, tras el update.
         TriggerHitStop(kHitStopDuration);
-        AddCameraShake(kHitShakeDuration, kHitShakeIntensity);
+        m_camera.AddShake(kHitShakeDuration, kHitShakeIntensity);
         m_particles.Emit(*barrelHit, GetRandomValue(kMinHitParticles, kMaxHitParticles));
     }
 
-    ApplyBufferAuras();
+    CombatSystem::ApplyBufferAuras(m_level.enemies);
 
     for (auto& enemy : m_level.enemies) {
         enemy->Update(entityDt);
@@ -563,65 +581,41 @@ void Application::UpdateActiveMatch(float dt) {
         m_endlessDirector.Update(entityDt, m_spawners);
     }
 
-    // Barriles: aplica el AoE compartido con el Kamikaze en cuanto uno llega
-    // a 0 HP y lo retira -- HasExploded() solo puede pasar a true una vez,
-    // así que no hace falta un flag de "ya procesado".
-    for (auto& barrel : m_level.barrels) {
-        if (!barrel->HasExploded()) continue;
-        CombatSystem::ApplyAreaDamage(barrel->GetPosition(), ExplosiveBarrel::kExplosionRadius,
-                                       ExplosiveBarrel::kExplosionDamage, *m_level.player, m_level.enemies, m_level.barrels);
-        m_particles.Emit(barrel->GetPosition(), GetRandomValue(15, 25));
-        m_saveManager.Data().barrelsExploded++;
-    }
+    ResolveBarrelExplosions();
+
     m_level.barrels.erase(
         std::remove_if(m_level.barrels.begin(), m_level.barrels.end(),
                         [](const std::unique_ptr<ExplosiveBarrel>& b) { return b->HasExploded(); }),
         m_level.barrels.end());
 
+    // Los Spawner guardan Enemy* NO propietarios de los que han generado.
+    // Se les hace soltar los que van a desaparecer AQUÍ, pegado al
+    // erase-remove, en vez de confiar en que su propio Update (que corre
+    // antes en este mismo frame) ya los haya purgado por IsAlive(): así el
+    // invariante "ningún puntero sobrevive a su Enemy" vive junto al borrado
+    // y no se rompe si algún día se reordena este bucle.
+    for (Spawner& spawner : m_spawners) spawner.ForgetDestroyedEnemies();
+
     // Corpse cleanup: saca del vector a los enemigos que ya terminaron su
-    // fade-out (ver Enemy::UpdateDead). Sus punteros ya no están en ningún
-    // Spawner::m_spawnedEnemies -- Spawner::Update purga por IsAlive() cada
-    // frame, mucho antes de que un cadáver llegue a este punto.
+    // fade-out (ver Enemy::UpdateDead).
     m_level.enemies.erase(
         std::remove_if(m_level.enemies.begin(), m_level.enemies.end(),
                         [](const std::unique_ptr<Enemy>& e) { return e->IsPendingDestruction(); }),
         m_level.enemies.end());
 
-    // Recolección de engranajes: chequeo AABB simple Player vs cada Gear.
-    for (auto it = m_level.gears.begin(); it != m_level.gears.end(); ) {
-        if (CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), (*it)->GetBoundingBox())) {
-            std::cout << "[Gameplay] Engranaje recogido!" << std::endl;
-            if (m_appState == AppState::EndlessMode) m_endlessDirector.OnGearCollected();
-            it = m_level.gears.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    // Recolección de power-ups: aplica su efecto al Player y desaparece.
-    for (auto it = m_level.powerUps.begin(); it != m_level.powerUps.end(); ) {
-        if (CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), (*it)->GetBoundingBox())) {
-            std::cout << "[Gameplay] Power-up recogido!" << std::endl;
-            m_level.player->ApplyPowerUp((*it)->GetType());
-            it = m_level.powerUps.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    // Recolección de botiquines: cura al Player y desaparece.
-    for (auto it = m_level.healthKits.begin(); it != m_level.healthKits.end(); ) {
-        if (CollisionMath::AABBIntersects(m_level.player->GetBoundingBox(), (*it)->GetBoundingBox())) {
-            std::cout << "[Gameplay] Botiquin recogido!" << std::endl;
-            m_level.player->Heal((*it)->GetHealAmount());
-            m_saveManager.Data().healthKitsUsed++;
-            it = m_level.healthKits.erase(it);
-        } else {
-            ++it;
-        }
+    // Recolección solo si el jugador sigue vivo: si murió en este mismo frame
+    // (combate, hazard o baldosa), un cadáver no debe seguir recogiendo. Sin
+    // esta guarda, morir encima de un engranaje sumaba puntuación a una
+    // partida ya perdida y se tragaba el objeto que había debajo.
+    if (m_level.player->IsAlive()) {
+        CollectPickups();
     }
 
     // --- Condiciones de fin de partida ---
+    // La muerte se comprueba ANTES que la victoria y sale con return: morir
+    // en el mismo frame en que se pisa la puerta con el último engranaje ya
+    // recogido es Game Over, no victoria. Es la resolución deliberada del
+    // empate, no un accidente del orden de las dos comprobaciones.
     if (!m_level.player->IsAlive()) {
         TraceLog(LOG_INFO, "Application: GAME OVER");
         m_matchState = GameState::GameOver;
@@ -670,7 +664,7 @@ void Application::DrawGameplay() const {
     BeginDrawing();
     ClearBackground(Color{ 30, 30, 35, 255 });
 
-    BeginMode3D(m_camera);
+    BeginMode3D(m_camera.Get());
     DrawGroundGrid();
 
     // Los charcos van antes que el Player/los enemigos: son una capa de
@@ -710,7 +704,7 @@ void Application::DrawGameplay() const {
     hudContext.currentStoryLevel = m_currentLevel;
     hudContext.endlessScore = m_endlessDirector.GetScore();
     hudContext.endlessHighScore = m_saveManager.Data().highScore;
-    m_hud.DrawHud(ui, m_level, hudContext, m_camera);
+    m_hud.DrawHud(ui, m_level, hudContext, m_camera.Get());
 
     switch (m_matchState) {
         case GameState::WaitingToStart:
@@ -744,11 +738,6 @@ void Application::DrawGameplay() const {
     Vector2 fpsDim = MeasureTextEx(fpsFont, fpsText, kFpsTextSize, 1.0f);
     DrawTextEx(fpsFont, fpsText, Vector2{ GetScreenWidth() - fpsDim.x - 10.0f, 10.0f }, kFpsTextSize, 1.0f, LIME);
     EndDrawing();
-}
-
-void Application::AddCameraShake(float duration, float intensity) {
-    m_shakeTimer.Start(duration);
-    m_shakeIntensity = intensity;
 }
 
 void Application::TriggerHitStop(float duration) {

@@ -25,6 +25,12 @@ void ExplosiveBarrel::Draw() const {
     DrawCylinderWires(base, m_halfExtents.x, m_halfExtents.x, height, 12, MAROON);
 }
 
+bool ExplosiveBarrel::ConsumeExplosion() {
+    if (!m_exploded || m_explosionResolved) return false;
+    m_explosionResolved = true;
+    return true;
+}
+
 void ExplosiveBarrel::TakeDamage(float amount, Vector3 knockbackDir) {
     if (m_exploded) return;
     Actor::TakeDamage(amount, knockbackDir);

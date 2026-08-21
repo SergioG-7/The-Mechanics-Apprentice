@@ -44,6 +44,13 @@ public:
     // EndlessDirector para escalar la dificultad del Modo Infinito.
     void ScaleSpawnInterval(float factor);
 
+    // Suelta los punteros a enemigos marcados para destrucción. La llama
+    // Application justo antes de su erase-remove sobre la lista de enemigos:
+    // Update() ya purga por IsAlive() cada frame, pero atar la limpieza al
+    // punto de borrado real es lo que garantiza que aquí no quede nunca un
+    // puntero colgando, sin depender del orden de llamadas.
+    void ForgetDestroyedEnemies();
+
     // true si este spawner sortea el arquetipo en cada spawn. Solo lo usa
     // Draw() para pintarse distinto -- que el jugador vea de un vistazo de
     // qué bocas puede salir cualquier cosa.

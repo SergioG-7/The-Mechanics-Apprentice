@@ -1,4 +1,5 @@
 #include "ElectricTile.h"
+#include "../Core/Pulse.h"
 #include "raylib.h"
 
 ElectricTile::ElectricTile(Vector3 position, Vector3 size, float damage, float cycleInterval)
@@ -69,10 +70,7 @@ void ElectricTile::Draw() const {
         case ElectricTileState::Warning: {
             // Parpadeo que se acelera con la cuenta atrás, igual que el
             // Kamikaze antes de detonar: el ritmo ES la barra de progreso.
-            float progress = m_stateTimer / kWarningDuration;
-            float period = 0.32f - 0.26f * progress;
-            if (period < 0.04f) period = 0.04f; // suelo: evita un fmodf casi degenerado
-            bool on = fmodf(m_stateTimer, period) < (period * 0.5f);
+            bool on = Pulse::AcceleratingBlink(m_stateTimer, Pulse::Progress01(m_stateTimer, kWarningDuration), 0.32f, 0.06f);
             plate = on ? Color{ 240, 200, 60, 255 } : Color{ 120, 95, 30, 255 };
             border = YELLOW;
             break;

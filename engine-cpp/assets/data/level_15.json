@@ -2,317 +2,317 @@
   "levelName": "level_15",
   "player": {
     "spawn": {
-      "x": 0.0,
-      "y": 0.0,
-      "z": 14.0
+      "x": 0,
+      "y": 0,
+      "z": 14
     },
-    "maxHP": 100.0,
+    "maxHP": 100,
     "speed": 4.5,
-    "attackDamage": 45.0
+    "attackDamage": 45
   },
   "obstacles": [
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 16.0
+        "x": 0,
+        "y": 0,
+        "z": 16
       },
       "type": "box",
       "size": {
-        "x": 34.0,
-        "y": 3.0,
-        "z": 2.0
+        "x": 34,
+        "y": 3,
+        "z": 2
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -16.0
+        "x": 0,
+        "y": 0,
+        "z": -16
       },
       "type": "box",
       "size": {
-        "x": 34.0,
-        "y": 3.0,
-        "z": 2.0
+        "x": 34,
+        "y": 3,
+        "z": 2
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": 16.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": 16,
+        "y": 0,
+        "z": 0
       },
       "type": "box",
       "size": {
-        "x": 2.0,
-        "y": 3.0,
-        "z": 34.0
+        "x": 2,
+        "y": 3,
+        "z": 34
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": -16.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": -16,
+        "y": 0,
+        "z": 0
       },
       "type": "box",
       "size": {
-        "x": 2.0,
-        "y": 3.0,
-        "z": 34.0
+        "x": 2,
+        "y": 3,
+        "z": 34
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": 0,
+        "y": 0,
+        "z": 0
       },
       "type": "cylinder",
       "size": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 1,
+        "y": 1,
+        "z": 1
       },
       "radius": 2.4,
-      "height": 5.0
+      "height": 5
     },
     {
       "position": {
-        "x": -8.0,
-        "y": 0.0,
-        "z": 8.0
+        "x": -8,
+        "y": 0,
+        "z": 8
       },
       "type": "box",
       "size": {
-        "x": 5.0,
-        "y": 2.0,
+        "x": 5,
+        "y": 2,
         "z": 1.5
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": 8.0,
-        "y": 0.0,
-        "z": 8.0
+        "x": 8,
+        "y": 0,
+        "z": 8
       },
       "type": "box",
       "size": {
-        "x": 5.0,
-        "y": 2.0,
+        "x": 5,
+        "y": 2,
         "z": 1.5
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": -8.0,
-        "y": 0.0,
-        "z": -8.0
+        "x": -8,
+        "y": 0,
+        "z": -8
       },
       "type": "box",
       "size": {
-        "x": 5.0,
-        "y": 2.0,
+        "x": 5,
+        "y": 2,
         "z": 1.5
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": 8.0,
-        "y": 0.0,
-        "z": -8.0
+        "x": 8,
+        "y": 0,
+        "z": -8
       },
       "type": "box",
       "size": {
-        "x": 5.0,
-        "y": 2.0,
+        "x": 5,
+        "y": 2,
         "z": 1.5
       },
       "radius": 0.5,
-      "height": 1.0
+      "height": 1
     },
     {
       "position": {
-        "x": -13.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": -13,
+        "y": 0,
+        "z": 0
       },
       "type": "cylinder",
       "size": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 1,
+        "y": 1,
+        "z": 1
       },
-      "radius": 1.0,
-      "height": 3.0
+      "radius": 1,
+      "height": 3
     },
     {
       "position": {
-        "x": 13.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": 13,
+        "y": 0,
+        "z": 0
       },
       "type": "cylinder",
       "size": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 1,
+        "y": 1,
+        "z": 1
       },
-      "radius": 1.0,
-      "height": 3.0
+      "radius": 1,
+      "height": 3
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -13.0
+        "x": 0,
+        "y": 0,
+        "z": -11.8
       },
       "type": "cylinder",
       "size": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 1,
+        "y": 1,
+        "z": 1
       },
-      "radius": 1.0,
-      "height": 3.0
+      "radius": 1,
+      "height": 3
     }
   ],
   "enemies": [
     {
       "spawn": {
-        "x": -10.0,
-        "y": 0.0,
-        "z": -3.0
+        "x": -10,
+        "y": 0,
+        "z": -3
       },
       "type": "Buffer",
-      "maxHP": 45.0,
-      "visionRadius": 11.0,
+      "maxHP": 45,
+      "visionRadius": 11,
       "speed": 2.6,
-      "attackDamage": 0.0,
+      "attackDamage": 0,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": 10.0,
-        "y": 0.0,
-        "z": -3.0
+        "x": 10,
+        "y": 0,
+        "z": -3
       },
       "type": "Buffer",
-      "maxHP": 45.0,
-      "visionRadius": 11.0,
+      "maxHP": 45,
+      "visionRadius": 11,
       "speed": 2.6,
-      "attackDamage": 0.0,
+      "attackDamage": 0,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -10.0
+        "x": 0,
+        "y": 0,
+        "z": -10
       },
       "type": "Tank",
-      "maxHP": 200.0,
-      "visionRadius": 5.0,
+      "maxHP": 200,
+      "visionRadius": 5,
       "speed": 1.2,
-      "attackDamage": 25.0,
+      "attackDamage": 25,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": -5.0,
-        "y": 0.0,
-        "z": 5.0
+        "x": -5,
+        "y": 0,
+        "z": 5
       },
       "type": "Shielder",
-      "maxHP": 90.0,
-      "visionRadius": 7.0,
+      "maxHP": 90,
+      "visionRadius": 7,
       "speed": 2.2,
-      "attackDamage": 14.0,
+      "attackDamage": 14,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": 5.0,
-        "y": 0.0,
-        "z": 5.0
+        "x": 5,
+        "y": 0,
+        "z": 5
       },
       "type": "Shielder",
-      "maxHP": 90.0,
-      "visionRadius": 7.0,
+      "maxHP": 90,
+      "visionRadius": 7,
       "speed": 2.2,
-      "attackDamage": 14.0,
+      "attackDamage": 14,
       "patrolRoute": []
     },
     {
       "spawn": {
-        "x": -13.0,
-        "y": 0.0,
-        "z": 10.0
+        "x": -13,
+        "y": 0,
+        "z": 10
       },
       "type": "Trapper",
-      "maxHP": 40.0,
-      "visionRadius": 8.0,
-      "speed": 3.0,
-      "attackDamage": 8.0,
+      "maxHP": 40,
+      "visionRadius": 8,
+      "speed": 3,
+      "attackDamage": 8,
       "patrolRoute": [
         {
-          "x": -13.0,
-          "y": 0.0,
-          "z": 10.0
+          "x": -13,
+          "y": 0,
+          "z": 10
         },
         {
-          "x": -13.0,
-          "y": 0.0,
-          "z": -10.0
+          "x": -13,
+          "y": 0,
+          "z": -10
         },
         {
-          "x": -13.0,
-          "y": 0.0,
-          "z": 10.0
+          "x": -13,
+          "y": 0,
+          "z": 10
         }
       ]
     },
     {
       "spawn": {
-        "x": 13.0,
-        "y": 0.0,
-        "z": 10.0
+        "x": 13,
+        "y": 0,
+        "z": 10
       },
       "type": "Trapper",
-      "maxHP": 40.0,
-      "visionRadius": 8.0,
-      "speed": 3.0,
-      "attackDamage": 8.0,
+      "maxHP": 40,
+      "visionRadius": 8,
+      "speed": 3,
+      "attackDamage": 8,
       "patrolRoute": [
         {
-          "x": 13.0,
-          "y": 0.0,
-          "z": 10.0
+          "x": 13,
+          "y": 0,
+          "z": 10
         },
         {
-          "x": 13.0,
-          "y": 0.0,
-          "z": -10.0
+          "x": 13,
+          "y": 0,
+          "z": -10
         },
         {
-          "x": 13.0,
-          "y": 0.0,
-          "z": 10.0
+          "x": 13,
+          "y": 0,
+          "z": 10
         }
       ]
     }
@@ -320,67 +320,67 @@
   "gears": [
     {
       "position": {
-        "x": -13.0,
-        "y": 0.0,
-        "z": 5.0
+        "x": -13,
+        "y": 0,
+        "z": 5
       }
     },
     {
       "position": {
-        "x": 13.0,
-        "y": 0.0,
-        "z": 5.0
+        "x": 13,
+        "y": 0,
+        "z": 5
       }
     },
     {
       "position": {
-        "x": -5.0,
-        "y": 0.0,
-        "z": -13.0
+        "x": -5,
+        "y": 0,
+        "z": -13
       }
     },
     {
       "position": {
-        "x": 5.0,
-        "y": 0.0,
-        "z": -13.0
+        "x": 5,
+        "y": 0,
+        "z": -13
       }
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 10.0
+        "x": 0,
+        "y": 0,
+        "z": 10
       }
     },
     {
       "position": {
-        "x": -13.0,
-        "y": 0.0,
-        "z": -5.0
+        "x": -13,
+        "y": 0,
+        "z": -5
       }
     },
     {
       "position": {
-        "x": 13.0,
-        "y": 0.0,
-        "z": -5.0
+        "x": 13,
+        "y": 0,
+        "z": -5
       }
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -5.0
+        "x": 0,
+        "y": 0,
+        "z": -5
       }
     }
   ],
   "spawners": [
     {
       "position": {
-        "x": -14.0,
-        "y": 0.0,
-        "z": 14.0
+        "x": -14,
+        "y": 0,
+        "z": 14
       },
       "enemyType": "Runner",
       "interval": 4.5,
@@ -390,13 +390,14 @@
         "Kamikaze": 3,
         "Trapper": 2,
         "Shielder": 2
-      }
+      },
+      "IsRandom": true
     },
     {
       "position": {
-        "x": 14.0,
-        "y": 0.0,
-        "z": 14.0
+        "x": 14,
+        "y": 0,
+        "z": 14
       },
       "enemyType": "Spitter",
       "interval": 5.5,
@@ -406,96 +407,99 @@
         "Runner": 4,
         "Shielder": 2,
         "Buffer": 1
-      }
+      },
+      "IsRandom": true
     },
     {
       "position": {
-        "x": -14.0,
-        "y": 0.0,
-        "z": -14.0
+        "x": -14,
+        "y": 0,
+        "z": -14
       },
       "enemyType": "Tank",
-      "interval": 11.0,
+      "interval": 11,
       "maxEnemies": 2,
       "weights": {
         "Tank": 4,
         "Shielder": 3,
         "Buffer": 1
-      }
+      },
+      "IsRandom": true
     },
     {
       "position": {
-        "x": 14.0,
-        "y": 0.0,
-        "z": -14.0
+        "x": 14,
+        "y": 0,
+        "z": -14
       },
       "enemyType": "Kamikaze",
-      "interval": 7.0,
+      "interval": 7,
       "maxEnemies": 3,
       "weights": {
         "Kamikaze": 5,
         "Trapper": 3,
         "Runner": 2
-      }
+      },
+      "IsRandom": true
     }
   ],
   "healthKits": [
     {
       "position": {
-        "x": -10.0,
-        "y": 0.0,
-        "z": 12.0
+        "x": -10,
+        "y": 0,
+        "z": 12
       }
     },
     {
       "position": {
-        "x": 10.0,
-        "y": 0.0,
-        "z": 12.0
+        "x": 10,
+        "y": 0,
+        "z": 12
       }
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -3.0
+        "x": 0,
+        "y": 0,
+        "z": -3
       }
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 12.0
+        "x": 0,
+        "y": 0,
+        "z": 12
       }
     }
   ],
   "barrels": [
     {
       "position": {
-        "x": -6.0,
-        "y": 0.0,
-        "z": 3.0
+        "x": -6,
+        "y": 0,
+        "z": 3
       }
     },
     {
       "position": {
-        "x": 6.0,
-        "y": 0.0,
-        "z": 3.0
+        "x": 6,
+        "y": 0,
+        "z": 3
       }
     },
     {
       "position": {
-        "x": -6.0,
-        "y": 0.0,
-        "z": -11.0
+        "x": -6,
+        "y": 0,
+        "z": -11
       }
     },
     {
       "position": {
-        "x": 6.0,
-        "y": 0.0,
-        "z": -11.0
+        "x": 6,
+        "y": 0,
+        "z": -11
       }
     }
   ],
@@ -503,76 +507,76 @@
     {
       "position": {
         "x": -5.5,
-        "y": 0.0,
-        "z": 0.0
+        "y": 0,
+        "z": 0
       },
       "size": {
         "x": 2.5,
         "y": 0.1,
         "z": 2.5
       },
-      "damagePerTick": 15.0
+      "damagePerTick": 15
     },
     {
       "position": {
         "x": 5.5,
-        "y": 0.0,
-        "z": 0.0
+        "y": 0,
+        "z": 0
       },
       "size": {
         "x": 2.5,
         "y": 0.1,
         "z": 2.5
       },
-      "damagePerTick": 15.0
+      "damagePerTick": 15
     }
   ],
   "powerUps": [
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 12.0
+        "x": 0,
+        "y": 0,
+        "z": 12
       },
       "type": "Shield"
     },
     {
       "position": {
-        "x": -13.0,
-        "y": 0.0,
-        "z": 12.0
+        "x": -13,
+        "y": 0,
+        "z": 12
       },
       "type": "Overclock"
     },
     {
       "position": {
-        "x": 13.0,
-        "y": 0.0,
-        "z": 12.0
+        "x": 13,
+        "y": 0,
+        "z": 12
       },
       "type": "Frenzy"
     },
     {
       "position": {
-        "x": -13.0,
-        "y": 0.0,
-        "z": -12.0
+        "x": -13,
+        "y": 0,
+        "z": -12
       },
       "type": "Frenzy"
     },
     {
       "position": {
-        "x": 13.0,
-        "y": 0.0,
-        "z": -12.0
+        "x": 13,
+        "y": 0,
+        "z": -12
       },
       "type": "Shield"
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": -8.0
+        "x": 0,
+        "y": 0,
+        "z": -8
       },
       "type": "Overclock"
     }
@@ -580,99 +584,99 @@
   "electricTiles": [
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0,
+        "y": 0,
         "z": 4.5
       },
       "size": {
-        "x": 5.0,
+        "x": 5,
         "y": 0.1,
-        "z": 2.0
+        "z": 2
       },
-      "damage": 20.0,
+      "damage": 20,
       "cycleInterval": 3.5
     },
     {
       "position": {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0,
+        "y": 0,
         "z": -4.5
       },
       "size": {
-        "x": 5.0,
+        "x": 5,
         "y": 0.1,
-        "z": 2.0
+        "z": 2
       },
-      "damage": 20.0,
+      "damage": 20,
       "cycleInterval": 4.5
     },
     {
       "position": {
         "x": -4.5,
-        "y": 0.0,
-        "z": 0.0
+        "y": 0,
+        "z": 0
       },
       "size": {
-        "x": 2.0,
+        "x": 2,
         "y": 0.1,
-        "z": 5.0
+        "z": 5
       },
-      "damage": 20.0,
+      "damage": 20,
       "cycleInterval": 5.5
     },
     {
       "position": {
         "x": 4.5,
-        "y": 0.0,
-        "z": 0.0
+        "y": 0,
+        "z": 0
       },
       "size": {
-        "x": 2.0,
+        "x": 2,
         "y": 0.1,
-        "z": 5.0
+        "z": 5
       },
-      "damage": 20.0,
+      "damage": 20,
       "cycleInterval": 2.5
     },
     {
       "position": {
-        "x": -11.0,
-        "y": 0.0,
-        "z": 11.0
+        "x": -11,
+        "y": 0,
+        "z": 11
       },
       "size": {
-        "x": 3.0,
+        "x": 3,
         "y": 0.1,
-        "z": 3.0
+        "z": 3
       },
-      "damage": 22.0,
-      "cycleInterval": 0.0
+      "damage": 22,
+      "cycleInterval": 0
     },
     {
       "position": {
-        "x": 11.0,
-        "y": 0.0,
-        "z": 11.0
+        "x": 11,
+        "y": 0,
+        "z": 11
       },
       "size": {
-        "x": 3.0,
+        "x": 3,
         "y": 0.1,
-        "z": 3.0
+        "z": 3
       },
-      "damage": 22.0,
-      "cycleInterval": 0.0
+      "damage": 22,
+      "cycleInterval": 0
     }
   ],
   "door": {
     "position": {
-      "x": 0.0,
-      "y": 0.0,
+      "x": 0,
+      "y": 0,
       "z": -14.5
     },
     "halfExtents": {
-      "x": 1.0,
-      "y": 1.0,
-      "z": 1.0
+      "x": 1,
+      "y": 1,
+      "z": 1
     }
   }
 }

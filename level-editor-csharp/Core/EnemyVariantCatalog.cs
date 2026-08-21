@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LevelEditor.Localization;
 
 namespace LevelEditor.Core
 {
@@ -21,6 +22,23 @@ namespace LevelEditor.Core
     // valor por defecto sin importar qué variante se elija.
     public static class EnemyVariantCatalog
     {
+        // Arquetipos disponibles para el ComboBox de variante y para el tipo
+        // de enemigo de un Spawner. "Default" es el único que NO pasa por
+        // EnemyFactory en el motor C++: usa los stats propios del EnemyData.
+        // Son identificadores consumidos tal cual por el motor (no se
+        // traducen NUNCA como valor) -- lo que se traduce es solo su
+        // representación en el ComboBox, ver BuildItems.
+        public static readonly string[] Names =
+            { "Default", "Tank", "Runner", "Spitter", "Kamikaze", "Shielder", "Buffer", "Trapper" };
+
+        // Envuelve cada código de variante en un ComboBoxItem cuyo texto
+        // visible sale de "variant_{code}" (variant_Default, variant_Tank...)
+        // en el idioma activo, pero cuyo Value se queda en el código en
+        // inglés que espera EnemyFactory -- así el ComboBox se relocaliza sin
+        // arrastrar el valor serializado.
+        public static ComboBoxItem<string>[] BuildItems(IEnumerable<string> codes) =>
+            codes.Select(code => new ComboBoxItem<string>(code, LocalizationManager.GetText($"variant_{code}"))).ToArray();
+
         private static Dictionary<string, EnemyVariantStatsData>? _variants;
 
         public static EnemyVariantStatsData? TryGet(string variantCode)

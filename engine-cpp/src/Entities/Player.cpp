@@ -276,10 +276,7 @@ void Player::Update(float dt) {
 }
 
 void Player::Draw() const {
-    float rotationAngle = 0.0f;
-    if (m_facingDirection.x != 0.0f || m_facingDirection.z != 0.0f) {
-        rotationAngle = atan2f(m_facingDirection.x, m_facingDirection.z) * (180.0f / PI);
-    }
+    float rotationAngle = CollisionMath::HeadingDegrees(m_facingDirection);
 
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f }; // Queremos que gire sobre el eje Y (el suelo)
     Vector3 scale = { 1.0f, 1.0f, 1.0f };        

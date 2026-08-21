@@ -19,6 +19,16 @@ public:
 
     bool HasExploded() const { return m_exploded; }
 
+    // true EXACTAMENTE una vez por barril, en la primera llamada tras
+    // explotar -- patrón "consumir", igual que Enemy::ConsumeExplosionTrigger.
+    //
+    // Existe porque HasExploded() por sí solo no distinguía "ha explotado" de
+    // "ya se le ha aplicado el área": en una cadena, la explosión de un barril
+    // podía marcar a otro que el bucle YA había dejado atrás en el vector, y
+    // el erase-remove del final del frame se lo llevaba sin haber aplicado
+    // nunca su AoE -- una explosión que se veía venir y no hacía nada.
+    bool ConsumeExplosion();
+
     // Reaplica AudioSettings::GetSfxVolume() al Sound ya cargado -- ver
     // Player::RefreshSfxVolume, mismo motivo.
     void RefreshSfxVolume();
@@ -28,5 +38,6 @@ public:
 
 private:
     bool m_exploded = false;
+    bool m_explosionResolved = false; // ya se le aplicó el AoE; ver ConsumeExplosion
     Sound m_deathSound{};
 };

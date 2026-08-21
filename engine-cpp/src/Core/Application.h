@@ -9,6 +9,7 @@
 #include "../Audio/MusicController.h"
 #include "../IO/LevelLoader.h"
 #include "../Renderer/ShaderManager.h"
+#include "../Renderer/CameraRig.h"
 #include "../VFX/ParticleSystem.h"
 #include "../Entities/Spawner.h"
 #include "../Entities/MudPuddle.h"
@@ -28,7 +29,8 @@ public:
     void Run();
 
     // Juice de combate, disparado desde UpdateGameplay al conectar un golpe.
-    void AddCameraShake(float duration, float intensity);
+    // El screen shake vive en CameraRig (m_camera.AddShake); aquí solo queda
+    // el hit-stop, que no es un efecto de cámara sino de tiempo de juego.
     void TriggerHitStop(float duration);
 
 private:
@@ -82,16 +84,20 @@ private:
 
     void DrawGroundGrid() const;
 
-    // Recalcula desde cero el bonus de velocidad que el aura de cada Buffer
-    // (ver EnemyBehavior::Buffer) aplica a los zombis a su alrededor. Vive
-    // aquí y no en Enemy porque un Enemy no conoce a los demás -- igual que
-    // el AoE del Kamikaze lo aplica CombatSystem desde fuera.
-    void ApplyBufferAuras();
+    // Recoge todo lo que el Player esté tocando (engranajes, power-ups,
+    // botiquines). Solo se llama con el Player VIVO -- ver la guarda de
+    // UpdateActiveMatch.
+    void CollectPickups();
 
-    // Botín al morir un enemigo, en LOS DOS modos. Infinito suelta además
-    // siempre un engranaje (es su puntuación, no un extra); la tabla de
-    // power-ups es la misma para ambos.
-    void RollEnemyDrop(Vector3 position);
+    // Aplica el AoE de todos los barriles explotados que aún no se hayan
+    // resuelto, repitiendo hasta agotar la cadena (ver el .cpp: una sola
+    // pasada perdía explosiones encadenadas).
+    void ResolveBarrelExplosions();
+
+    // Corta screen shake y hit-stop en seco. Se llama al cargar nivel y al
+    // entrar en pausa: un efecto de 0.05 s no debe sobrevivir a un cambio de
+    // pantalla ni quedarse a medias mientras el jugador navega por un menú.
+    void ClearTransientEffects();
 
     UiContext BuildUiContext() const { return UiContext{ m_localization }; }
 
@@ -130,13 +136,20 @@ private:
     // MenuScreen no conoce AppState, así que esta decisión vive aquí.
     AppState m_optionsReturnTo = AppState::MainMenu;
 
+    // Lo mismo para la Guía, que ahora se abre desde el menú principal Y
+    // desde la pausa. Sin esto, cerrar el glosario a media partida tiraba al
+    // jugador al menú principal y le hacía perder el nivel en curso.
+    AppState m_guideReturnTo = AppState::MainMenu;
+
     // Persistencia (save_data.json) e idioma. SaveManager se construye
     // primero (lee CurrentLanguage de disco) para que LocalizationManager
     // pueda arrancar ya en el idioma correcto, no siempre en español.
     SaveManager m_saveManager;
     LocalizationManager m_localization;
 
-    Camera3D m_camera{};
+    // Cámara isométrica + screen shake, con su propio estado (ver CameraRig):
+    // Application solo le dice a quién seguir y cuándo temblar.
+    CameraRig m_camera;
     GameState m_matchState = GameState::Gameplay;
     std::unique_ptr<MusicController> m_music;
 
@@ -158,12 +171,6 @@ private:
     // Modo Infinito: dificultad, drop de engranajes y puntuación -- ver
     // EndlessDirector, que vive fuera de Application a propósito.
     EndlessDirector m_endlessDirector;
-
-    // Screen shake: offset aleatorio sumado sobre la posición de cámara ya
-    // calculada a partir del jugador (Application::UpdateGameplay), nunca
-    // escrito por otro lado.
-    CountdownTimer m_shakeTimer;
-    float m_shakeIntensity = 0.0f;
 
     // Hit-stop: mientras esté activo, Player/Enemy reciben dt = 0 en su
     // Update (ver UpdateActiveMatch), pero el timer se descuenta con el dt

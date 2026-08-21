@@ -106,4 +106,11 @@ public:
     // zombi sobre una baldosa es la mitad de la mecánica.
     static void UpdateElectricTiles(float dt, std::vector<std::unique_ptr<ElectricTile>>& tiles,
                                      Player& player, std::vector<std::unique_ptr<Enemy>>& enemies);
+
+    // Aura del Buffer (ver EnemyBehavior::Buffer): recalcula desde cero el
+    // multiplicador de velocidad de TODOS los enemigos según qué Buffers
+    // vivos los cubran. Vive aquí, con el resto de sistemas que necesitan ver
+    // varias entidades a la vez (un Enemy no conoce a los demás), y no en
+    // Application, que solo tiene que orquestar el orden de las llamadas.
+    static void ApplyBufferAuras(std::vector<std::unique_ptr<Enemy>>& enemies);
 };

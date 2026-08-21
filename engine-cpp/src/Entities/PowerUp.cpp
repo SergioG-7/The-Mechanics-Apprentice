@@ -1,4 +1,5 @@
 #include "PowerUp.h"
+#include "../Core/Pulse.h"
 #include "raylib.h"
 #include "rlgl.h"
 
@@ -34,7 +35,7 @@ void PowerUp::Draw() const {
 
     // Flotación + giro: mismo truco que Gear (rlRotatef sobre la matriz de
     // mundo, porque DrawCube/DrawCylinder no aceptan ángulo por parámetro).
-    float bob = sinf(static_cast<float>(GetTime()) * 2.5f) * 0.12f;
+    float bob = (Pulse::Wave01(static_cast<float>(GetTime()), 2.5f) - 0.5f) * 0.24f;
 
     rlPushMatrix();
     rlTranslatef(m_position.x, m_position.y + 0.6f + bob, m_position.z);

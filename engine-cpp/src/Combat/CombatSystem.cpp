@@ -18,7 +18,7 @@ Hitbox CombatSystem::BuildMeleeHitbox(Vector3 origin, Vector3 direction, float d
         Vector3{ center.x + halfExtent, center.y + halfExtent, center.z + halfExtent }
     };
     hitbox.damage = damage;
-    hitbox.knockbackDir = Vector3{ direction.x * knockbackForce, 0.0f, direction.z * knockbackForce };
+    hitbox.knockbackDir = CollisionMath::ScaleXZ(direction, knockbackForce);
     hitbox.remainingTime = duration;
     return hitbox;
 }
@@ -109,9 +109,8 @@ void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, P
     constexpr float kAreaKnockbackForce = 7.0f;
 
     if (CollisionMath::IsWithinRadius(player.GetPosition(), center, radius)) {
-        Vector3 dir = CollisionMath::Normalize2D(Vector3{
-            player.GetPosition().x - center.x, 0.0f, player.GetPosition().z - center.z });
-        player.TakeDamage(damage, Vector3{ dir.x * kAreaKnockbackForce, 0.0f, dir.z * kAreaKnockbackForce });
+        Vector3 dir = CollisionMath::DirectionXZ(center, player.GetPosition());
+        player.TakeDamage(damage, CollisionMath::ScaleXZ(dir, kAreaKnockbackForce));
     }
 
     // Incluye al propio emisor si está en la lista (p.ej. el Kamikaze que
@@ -120,9 +119,8 @@ void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, P
         if (!enemy->IsAlive()) continue;
         if (!CollisionMath::IsWithinRadius(enemy->GetPosition(), center, radius)) continue;
 
-        Vector3 dir = CollisionMath::Normalize2D(Vector3{
-            enemy->GetPosition().x - center.x, 0.0f, enemy->GetPosition().z - center.z });
-        enemy->TakeDamage(damage, Vector3{ dir.x * kAreaKnockbackForce, 0.0f, dir.z * kAreaKnockbackForce });
+        Vector3 dir = CollisionMath::DirectionXZ(center, enemy->GetPosition());
+        enemy->TakeDamage(damage, CollisionMath::ScaleXZ(dir, kAreaKnockbackForce));
     }
 
     // Mismo criterio que con los Enemy: un barril ya explotado (incluido el
@@ -132,9 +130,8 @@ void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, P
         if (barrel->HasExploded()) continue;
         if (!CollisionMath::IsWithinRadius(barrel->GetPosition(), center, radius)) continue;
 
-        Vector3 dir = CollisionMath::Normalize2D(Vector3{
-            barrel->GetPosition().x - center.x, 0.0f, barrel->GetPosition().z - center.z });
-        barrel->TakeDamage(damage, Vector3{ dir.x * kAreaKnockbackForce, 0.0f, dir.z * kAreaKnockbackForce });
+        Vector3 dir = CollisionMath::DirectionXZ(center, barrel->GetPosition());
+        barrel->TakeDamage(damage, CollisionMath::ScaleXZ(dir, kAreaKnockbackForce));
     }
 }
 
@@ -172,7 +169,7 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
             for (auto& barrel : barrels) {
                 if (!barrel->HasExploded() && CollisionMath::AABBIntersects(projectileBox, barrel->GetBoundingBox())) {
                     Vector3 dir = CollisionMath::Normalize2D(projectile.velocity);
-                    barrel->TakeDamage(projectile.damage, Vector3{ dir.x * kProjectileKnockbackForce, 0.0f, dir.z * kProjectileKnockbackForce });
+                    barrel->TakeDamage(projectile.damage, CollisionMath::ScaleXZ(dir, kProjectileKnockbackForce));
                     hitBarrel = true;
                     break;
                 }
@@ -183,7 +180,7 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
             projectile.lifetime = 0.0f;
         } else if (CollisionMath::AABBIntersects(projectileBox, player.GetBoundingBox())) {
             Vector3 dir = CollisionMath::Normalize2D(projectile.velocity);
-            player.TakeDamage(projectile.damage, Vector3{ dir.x * kProjectileKnockbackForce, 0.0f, dir.z * kProjectileKnockbackForce });
+            player.TakeDamage(projectile.damage, CollisionMath::ScaleXZ(dir, kProjectileKnockbackForce));
             projectile.lifetime = 0.0f; // marca para el erase-remove de abajo
         }
     }
@@ -201,9 +198,8 @@ void CombatSystem::ApplyHazardDamage(std::vector<std::unique_ptr<Hazard>>& hazar
         if (!hazard->ConsumeTick()) continue;
         if (!CollisionMath::AABBIntersects(player.GetBoundingBox(), hazard->GetBoundingBox())) continue;
 
-        Vector3 dir = CollisionMath::Normalize2D(Vector3{
-            player.GetPosition().x - hazard->GetPosition().x, 0.0f, player.GetPosition().z - hazard->GetPosition().z });
-        player.TakeDamage(hazard->GetDamagePerTick(), Vector3{ dir.x * kHazardKnockbackForce, 0.0f, dir.z * kHazardKnockbackForce });
+        Vector3 dir = CollisionMath::DirectionXZ(hazard->GetPosition(), player.GetPosition());
+        player.TakeDamage(hazard->GetDamagePerTick(), CollisionMath::ScaleXZ(dir, kHazardKnockbackForce));
     }
 }
 
@@ -224,6 +220,24 @@ void CombatSystem::UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, P
         std::remove_if(puddles.begin(), puddles.end(),
                         [](const MudPuddle& p) { return p.lifetime <= 0.0f; }),
         puddles.end());
+}
+
+void CombatSystem::ApplyBufferAuras(std::vector<std::unique_ptr<Enemy>>& enemies) {
+    // Se reescribe entero cada frame, empezando por limpiar: así el bonus
+    // caduca solo en cuanto el Buffer muere o el zombi sale del radio, sin
+    // que nadie tenga que acordarse de retirarlo.
+    for (auto& enemy : enemies) enemy->SetSpeedMultiplier(1.0f);
+
+    for (const auto& buffer : enemies) {
+        if (buffer->GetBehavior() != EnemyBehavior::Buffer || !buffer->IsAlive()) continue;
+
+        for (auto& target : enemies) {
+            if (target.get() == buffer.get() || !target->IsAlive()) continue;
+            if (CollisionMath::IsWithinRadius(target->GetPosition(), buffer->GetPosition(), Enemy::kBufferAuraRadius)) {
+                target->SetSpeedMultiplier(Enemy::kBufferSpeedBonus);
+            }
+        }
+    }
 }
 
 void CombatSystem::UpdateElectricTiles(float dt, std::vector<std::unique_ptr<ElectricTile>>& tiles,
@@ -259,18 +273,16 @@ void CombatSystem::UpdateElectricTiles(float dt, std::vector<std::unique_ptr<Ele
         Vector3 center = tile->GetPosition();
 
         if (CollisionMath::AABBIntersects(player.GetBoundingBox(), tileBox)) {
-            Vector3 dir = CollisionMath::Normalize2D(Vector3{
-                player.GetPosition().x - center.x, 0.0f, player.GetPosition().z - center.z });
-            player.TakeDamage(damage, Vector3{ dir.x * kTileKnockbackForce, 0.0f, dir.z * kTileKnockbackForce });
+            Vector3 dir = CollisionMath::DirectionXZ(center, player.GetPosition());
+            player.TakeDamage(damage, CollisionMath::ScaleXZ(dir, kTileKnockbackForce));
         }
 
         for (auto& enemy : enemies) {
             if (!enemy->IsAlive()) continue;
             if (!CollisionMath::AABBIntersects(enemy->GetBoundingBox(), tileBox)) continue;
 
-            Vector3 dir = CollisionMath::Normalize2D(Vector3{
-                enemy->GetPosition().x - center.x, 0.0f, enemy->GetPosition().z - center.z });
-            enemy->TakeDamage(damage, Vector3{ dir.x * kTileKnockbackForce, 0.0f, dir.z * kTileKnockbackForce });
+            Vector3 dir = CollisionMath::DirectionXZ(center, enemy->GetPosition());
+            enemy->TakeDamage(damage, CollisionMath::ScaleXZ(dir, kTileKnockbackForce));
         }
     }
 }

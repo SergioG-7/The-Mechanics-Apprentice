@@ -175,10 +175,16 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildOptionsButtons() const {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildPauseButtons() const {
+    // 4 filas desde que la Guía también se abre en pausa. StackedListStartY
+    // sigue centrando (4 filas caben de sobra: 480px de 720), pero es lo que
+    // garantiza que si mañana se añade una quinta no se meta bajo el título
+    // "PAUSA", que se dibuja a y=150 y llega hasta los 200.
+    constexpr int kRows = 4;
     return {
-        { StackedButton(0, 3), "pause_resume", MenuAction::ResumeGame, false },
-        { StackedButton(1, 3), "menu_options", MenuAction::OpenOptions, false },
-        { StackedButton(2, 3), "pause_exit", MenuAction::BackToMainMenu, false },
+        { StackedButton(0, kRows), "pause_resume", MenuAction::ResumeGame, false },
+        { StackedButton(1, kRows), "menu_guide", MenuAction::OpenGuide, false },
+        { StackedButton(2, kRows), "menu_options", MenuAction::OpenOptions, false },
+        { StackedButton(3, kRows), "pause_exit", MenuAction::BackToMainMenu, false },
     };
 }
 
@@ -361,7 +367,10 @@ void MenuScreen::DrawPause(const UiContext& ui) const {
     const char* title = ui.localization.GetText("pause_title");
     constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
-    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (screenW - titleDim.x) / 2.0f, 150.0f }, titleSize, 1.0f, RAYWHITE);
+    // 110, no 150: con el cuarto botón (Guía) la lista centrada arranca en
+    // y=210, y el título a 150 terminaba justo en 200 -- 10px de aire, que a
+    // ojo se lee como pegado. A 110 termina en 160 y quedan 50 limpios.
+    DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (screenW - titleDim.x) / 2.0f, 110.0f }, titleSize, 1.0f, RAYWHITE);
 
     DrawButtonList(BuildPauseButtons(), ui);
 }
@@ -611,6 +620,17 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildGuideButtons() const {
 
 MenuAction MenuScreen::UpdateGuide() {
     m_guidePage = std::clamp(m_guidePage, 0, kGuidePageCount - 1);
+
+    // ESC / botón B cierran el glosario igual que el botón "Volver": es una
+    // pantalla de consulta, no un menú del que haya que salir a propósito.
+    // Quien decide A DÓNDE se vuelve es Application (menú principal o pausa,
+    // según desde dónde se abriera) -- ver m_guideReturnTo.
+    bool cancelPressed = IsKeyPressed(KEY_ESCAPE)
+        || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT));
+    if (cancelPressed) {
+        PlayClickSound();
+        return MenuAction::BackToMainMenu;
+    }
 
     MenuAction action = UpdateButtonList(BuildGuideButtons());
     if (action == MenuAction::GuideNextPage) {

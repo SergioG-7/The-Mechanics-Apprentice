@@ -27,6 +27,21 @@ Vector3 Normalize2D(Vector3 v) {
     return Vector3{ v.x * invLength, 0.0f, v.z * invLength };
 }
 
+Vector3 DirectionXZ(Vector3 from, Vector3 to) {
+    return Normalize2D(Vector3{ to.x - from.x, 0.0f, to.z - from.z });
+}
+
+Vector3 ScaleXZ(Vector3 direction, float magnitude) {
+    return Vector3{ direction.x * magnitude, 0.0f, direction.z * magnitude };
+}
+
+float HeadingDegrees(Vector3 direction) {
+    // atan2(x, z), no atan2(z, x): 0° mira a +Z, que es la orientación en la
+    // que vienen los modelos del proyecto (ver Player::Draw/Enemy::Draw).
+    if (direction.x == 0.0f && direction.z == 0.0f) return 0.0f;
+    return atan2f(direction.x, direction.z) * (180.0f / PI);
+}
+
 bool SegmentIntersectsBoxXZ(Vector3 start, Vector3 end, const BoundingBox& box) {
     float dx = end.x - start.x;
     float dz = end.z - start.z;

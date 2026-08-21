@@ -1,5 +1,6 @@
 #include "Spawner.h"
 #include "EnemyFactory.h"
+#include "../Core/Pulse.h"
 #include <algorithm>
 
 Spawner::Spawner(Vector3 position, std::string enemyType, float spawnInterval, int maxEnemies,
@@ -75,6 +76,13 @@ void Spawner::Update(float dt, std::vector<std::unique_ptr<Enemy>>& activeEnemie
     activeEnemies.push_back(std::move(enemy));
 }
 
+void Spawner::ForgetDestroyedEnemies() {
+    m_spawnedEnemies.erase(
+        std::remove_if(m_spawnedEnemies.begin(), m_spawnedEnemies.end(),
+                        [](const Enemy* e) { return e->IsPendingDestruction(); }),
+        m_spawnedEnemies.end());
+}
+
 void Spawner::ScaleSpawnInterval(float factor) {
     m_spawnInterval = std::max(kMinSpawnInterval, m_spawnInterval * factor);
 }
@@ -94,7 +102,7 @@ void Spawner::Draw() const {
     DrawCylinderWires(base, kRadius, kRadius, 0.02f, 24, color);
 
     if (IsRandom()) {
-        float pulse = 0.5f + 0.5f * sinf(static_cast<float>(GetTime()) * 2.5f);
+        float pulse = Pulse::Wave01(static_cast<float>(GetTime()), 2.5f);
         float outer = kRadius * (1.15f + 0.15f * pulse);
         DrawCylinderWires(base, outer, outer, 0.02f, 12, Fade(color, 0.4f + 0.4f * pulse));
     }
