@@ -192,10 +192,12 @@ void Application::LaunchLevelEditor() const {
     // Win32 (windows.h) choca en nombres con raylib.h (Rectangle, CloseWindow...)
     // si se incluyen juntos en el mismo .cpp, y este atajo no vale la pena esa
     // complicación. "start" lanza el proceso sin bloquear ni heredar esta consola.
-    constexpr const char* kEditorPath = "../../../level-editor-csharp/bin/Debug/net9.0-windows/LevelEditor.exe";
+
+    // CAMBIO AQUÍ: Ahora busca el editor en la misma carpeta que el juego
+    constexpr const char* kEditorPath = "LevelEditor.exe";
 
     if (!FileExists(kEditorPath)) {
-        TraceLog(LOG_WARNING, "Application: editor de niveles no encontrado en '%s' (¿esta compilado en Debug?)", kEditorPath);
+        TraceLog(LOG_WARNING, "Application: editor de niveles no encontrado en '%s'", kEditorPath);
         return;
     }
 
