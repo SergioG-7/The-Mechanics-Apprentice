@@ -9,7 +9,7 @@
 **The Mechanic's Apprentice** es un juego de acción y supervivencia 3D con vista isométrica, desarrollado desde cero utilizando un motor propio construido en C++. Este proyecto demuestra habilidades avanzadas en arquitectura de software de bajo nivel, desarrollo de herramientas personalizadas (Tooling) y diseño de sistemas escalables (Data-Driven).
 
 ### 🎮 Jugar la Demo
-* Jugar en Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (contraseña：level5)
+* Jugar en Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (contraseña: level5)
 * Ver gameplay en YouTube - [https://youtu.be/KxtVA9pftCg] 
 * Ver editor en YouTube - [https://youtu.be/jk4LX89isQ4]
 
@@ -30,7 +30,7 @@
 **The Mechanic's Apprentice** is an isometric 3D action-survival game, developed from scratch using a custom-built engine in C++. This project showcases advanced skills in low-level software architecture, custom tool development (Tooling), and scalable systems design (Data-Driven architecture).
 
 ### 🎮 Play the Demo
-* Play on Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (password：level5)
+* Play on Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (password: level5)
 * Watch gameplay on YouTube - [https://youtu.be/KxtVA9pftCg]
 * Watch editor on YouTube - [https://youtu.be/jk4LX89isQ4]
 
