@@ -1,12 +1,6 @@
 namespace LevelEditor.Core
 {
-    // Envoltorio para un ComboBox cuyo texto visible depende del idioma
-    // activo pero cuyo valor interno tiene que quedarse fijo al serializar
-    // -- ver Meta/patrones/localizacion-cjk-unity.md, "Qué NO traducir": un
-    // identificador que el motor C++ consume tal cual (EnemyFactory vía el
-    // JSON exportado) no es texto de interfaz, aunque aparezca en un combo.
-    // WinForms usa ToString() para pintar cada item de un ComboBox sin
-    // DisplayMember/ValueMember explícitos.
+    // Un item de ComboBox con un valor interno fijo y un texto visible que puede traducirse.
     public sealed class ComboBoxItem<T>
     {
         public T Value { get; }

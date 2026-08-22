@@ -36,9 +36,7 @@ Vector3 ScaleXZ(Vector3 direction, float magnitude) {
 }
 
 float HeadingDegrees(Vector3 direction) {
-    // atan2(x, z), no atan2(z, x): 0° mira a +Z, que es la orientación en la
-    // que vienen los modelos del proyecto (ver Player::Draw/Enemy::Draw).
-    if (direction.x == 0.0f && direction.z == 0.0f) return 0.0f;
+    if (direction.x == 0.0f && direction.z == 0.0f) return 0.0f; // 0° mira a +Z
     return atan2f(direction.x, direction.z) * (180.0f / PI);
 }
 
@@ -49,8 +47,7 @@ bool SegmentIntersectsBoxXZ(Vector3 start, Vector3 end, const BoundingBox& box) 
     float tMin = 0.0f;
     float tMax = 1.0f;
 
-    // Eje X: si el segmento no se mueve en X, solo puede estar dentro de la
-    // franja si el origen ya está entre min.x y max.x.
+    // Eje X.
     if (fabsf(dx) < 1e-6f) {
         if (start.x < box.min.x || start.x > box.max.x) return false;
     } else {
@@ -62,7 +59,7 @@ bool SegmentIntersectsBoxXZ(Vector3 start, Vector3 end, const BoundingBox& box) 
         if (tMin > tMax) return false;
     }
 
-    // Eje Z: mismo test, recorta el intervalo [tMin, tMax] que ya dejó el X.
+    // Eje Z.
     if (fabsf(dz) < 1e-6f) {
         if (start.z < box.min.z || start.z > box.max.z) return false;
     } else {
@@ -77,4 +74,4 @@ bool SegmentIntersectsBoxXZ(Vector3 start, Vector3 end, const BoundingBox& box) 
     return tMin <= tMax;
 }
 
-} // namespace CollisionMath
+}

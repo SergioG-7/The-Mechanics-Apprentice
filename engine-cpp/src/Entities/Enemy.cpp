@@ -16,28 +16,16 @@ Enemy::Enemy(Vector3 position, float maxHP, std::vector<Vector3> patrolRoute, fl
       m_attackDamage(attackDamage), m_scale(scale), m_behavior(behavior), m_baseTint(baseTint),
       m_turnRateDegPerSec(turnRateDegPerSec), m_visionRadius(visionRadius) {
     SetupStates();
+    m_puddleTimer.Start(kPuddleInterval); // para que un Trapper no suelte charco al nacer
 
-    // Arrancado, no en cero: si no, un Trapper soltaría su primer charco en
-    // el frame mismo en que nace, encima de su propio spawn.
-    m_puddleTimer.Start(kPuddleInterval);
-
-    // Modelo Kenney (blocky-characters, variante L / "zombie"): mismo caso
-    // que el Player, trae su atlas vía baseColorTexture y raylib lo resuelve
-    // solo. El color base del material ya nace en blanco.
     m_model = LoadModel("assets/models/enemy/character_l.glb");
 
-    // "hurt.ogg" (de una sesión anterior) no existe en disco -- LoadSound
-    // fallaba en silencio (frameCount 0) y este sonido nunca llegaba a
-    // sonar. "attach_zombie.wav" es el archivo real de reacción al daño del
-    // zombie (nombre tal cual está en assets/audio/sfx/).
     m_hurtSound = LoadSound("assets/audio/sfx/attach_zombie.wav");
     m_deathSound = LoadSound("assets/audio/sfx/dead_zombie.ogg");
     RefreshSfxVolume();
 }
 
 void Enemy::RefreshSfxVolume() {
-    // Directo, sin multiplicador propio -- ver Player::RefreshSfxVolume,
-    // mismo motivo: al 100% de SFX, SetSoundVolume tiene que recibir 1.0.
     float sfxVolume = AudioSettings::GetSfxVolume();
     if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, sfxVolume);
     if (m_deathSound.frameCount > 0) SetSoundVolume(m_deathSound, sfxVolume);
@@ -116,10 +104,7 @@ void Enemy::UpdatePatrol(float dt) {
 void Enemy::UpdateChase(float dt) {
     float distSq = CollisionMath::DistanceSquared(m_position, m_lastKnownPlayerPosition);
 
-    // A qué estado transiciona al alcanzar al jugador depende del
-    // comportamiento (ver EnemyBehavior): un Kamikaze detona, un Spitter
-    // dispara a distancia, y el resto (Melee, por defecto) ataca cuerpo a
-    // cuerpo como siempre.
+    // Qué hace al alcanzar al jugador depende de su comportamiento.
     if (m_playerVisible) {
         switch (m_behavior) {
             case EnemyBehavior::Kamikaze:
@@ -135,8 +120,7 @@ void Enemy::UpdateChase(float dt) {
                 }
                 break;
             case EnemyBehavior::Buffer:
-                // No ataca nunca: al entrar en su radio de mando se planta,
-                // mirando al jugador, y deja que su aura empuje a los demás.
+                // Se planta mirando al jugador y deja que su aura acelere al resto.
                 if (distSq <= kBufferKeepDistance * kBufferKeepDistance) {
                     FaceTowards(DirectionToLastKnownPlayer(), dt);
                     return;
@@ -145,8 +129,6 @@ void Enemy::UpdateChase(float dt) {
             case EnemyBehavior::Melee:
             case EnemyBehavior::Shielder:
             case EnemyBehavior::Trapper:
-                // Los tres cierran a melee igual; lo que los diferencia
-                // (placa frontal, goteo de lodo) no toca la FSM.
                 if (distSq <= kAttackRange * kAttackRange) {
                     m_fsm.ChangeState(EnemyState::Attack);
                     return;
@@ -155,24 +137,15 @@ void Enemy::UpdateChase(float dt) {
         }
     }
 
-    // El jugador salió de rango de visión: m_lastKnownPlayerPosition queda
-    // congelada en el último punto visto. Al llegar ahí sin recuperar
-    // visibilidad, no queda rastro que seguir -- volver a patrullar en vez
-    // de quedarse plantado (o, antes de este fix, reentrar en Attack contra
-    // una posición vacía y no volver a moverse nunca).
+    // Si pierde de vista al jugador y llega al último punto visto, vuelve a patrullar.
     constexpr float kGiveUpThreshold = 0.1f;
     if (!m_playerVisible && distSq <= kGiveUpThreshold * kGiveUpThreshold) {
         m_fsm.ChangeState(EnemyState::Patrol);
         return;
     }
 
+    // Se mueve en línea recta hacia el jugador, pero gira con el límite de su arquetipo.
     Vector3 dir = DirectionToLastKnownPlayer();
-
-    // Se PERSIGUE en línea recta pero se GIRA con el límite del arquetipo:
-    // ahí está el hueco del Shielder. Sigue viniendo a por ti, pero su placa
-    // tarda en reorientarse, así que un Dash a su espalda llega antes que
-    // ella. Si el movimiento usara el encaramiento en vez de dir, se quedaría
-    // dando vueltas contra las paredes en lugar de resultar esquivable.
     FaceTowards(dir, dt);
 
     float speed = CurrentSpeed();
@@ -182,10 +155,7 @@ void Enemy::UpdateChase(float dt) {
 void Enemy::FaceTowards(Vector3 targetDirection, float dt) {
     if (targetDirection.x == 0.0f && targetDirection.z == 0.0f) return;
 
-    // 0 = sin límite: el comportamiento de siempre para todo arquetipo que no
-    // sea el Shielder, y el que hay que preservar exactamente (un Melee que
-    // empezara a girar despacio dejaría de conectar sus golpes).
-    if (m_turnRateDegPerSec <= 0.0f) {
+    if (m_turnRateDegPerSec <= 0.0f) { // 0 = giro instantáneo
         m_facingDirection = targetDirection;
         return;
     }
@@ -193,8 +163,7 @@ void Enemy::FaceTowards(Vector3 targetDirection, float dt) {
     float currentAngle = atan2f(m_facingDirection.x, m_facingDirection.z);
     float targetAngle = atan2f(targetDirection.x, targetDirection.z);
 
-    // Diferencia normalizada a [-PI, PI]: sin esto, girar de +170° a -170°
-    // (20° reales) daría una vuelta de 340° por el lado largo.
+    // Normaliza la diferencia de ángulo para girar siempre por el camino más corto.
     float delta = targetAngle - currentAngle;
     while (delta > PI) delta -= 2.0f * PI;
     while (delta < -PI) delta += 2.0f * PI;
@@ -212,20 +181,11 @@ Vector3 Enemy::DirectionToLastKnownPlayer() const {
 }
 
 void Enemy::EnterAttack() {
-    // No resetear m_attackCooldown aquí: si el jugador oscila en el borde de
-    // kAttackRange, el FSM re-entra en Attack varias veces por segundo y un
-    // reset a 0 dispararía un golpe instantáneo cada vez, saltándose kAttackInterval.
 }
 
 Hitbox Enemy::SpawnAttackHitbox() const {
-    // Subido de 6.0f: da al jugador más distancia tras un golpe, con margen
-    // real para reaccionar con el Dash en vez de quedar pegado al enemigo.
     constexpr float kKnockbackForce = 9.0f;
-    // m_facingDirection, no DirectionToLastKnownPlayer(): el golpe sale por
-    // donde el enemigo MIRA. Para todo arquetipo de giro instantáneo son el
-    // mismo vector (UpdateAttack acaba de encararlo), pero para el Shielder
-    // significa que su ataque también se queda atrás al rodearlo, en vez de
-    // seguir apuntando al jugador con el cuerpo girado.
+    // El golpe sale en la dirección hacia la que mira el enemigo.
     return CombatSystem::BuildMeleeHitbox(m_position, m_facingDirection, m_attackDamage, kKnockbackForce);
 }
 
@@ -251,10 +211,7 @@ void Enemy::UpdateAttack(float dt) {
 }
 
 void Enemy::UpdateAttackRanged(float dt) {
-    // Mantiene las distancias: a diferencia de UpdateAttack, nunca llama a
-    // TryMoveAgainstObstacles -- solo gira hacia el jugador y dispara. No
-    // retrocede si el jugador se acerca demasiado (simplificación deliberada:
-    // un Spitter arrinconado sigue disparando en vez de huir).
+    // Mantiene las distancias: solo gira hacia el jugador y dispara, sin moverse.
     FaceTowards(DirectionToLastKnownPlayer(), dt);
 
     m_attackCooldown -= dt;
@@ -271,9 +228,7 @@ void Enemy::UpdateAttackRanged(float dt) {
         m_pendingProjectile = true;
     }
 
-    // Histéresis (rango real x1.3 para soltar el estado): sin ella, un
-    // jugador parado justo en el borde de kRangedAttackRange haría que el
-    // Spitter parpadeara entre Chase y AttackRanged cada frame.
+    // Margen extra antes de soltar el estado, para no parpadear en el borde del rango.
     constexpr float kRangedGiveUpMultiplier = 1.3f;
     float giveUpRange = kRangedAttackRange * kRangedGiveUpMultiplier;
     float distSq = CollisionMath::DistanceSquared(m_position, m_lastKnownPlayerPosition);
@@ -287,14 +242,10 @@ void Enemy::EnterExplode() {
 }
 
 void Enemy::UpdateExplode(float dt) {
-    // No se mueve durante la cuenta atrás -- por diseño, sin llamada a
-    // TryMoveAgainstObstacles.
     m_explodeTimer += dt;
     if (m_explodeTimer >= kExplodeDuration) {
         m_pendingExplosion = true;
-        // Se mata con su propio daño: reutiliza toda la ruta normal de
-        // muerte (Hurt/Dead, fade, corpse cleanup) en vez de duplicarla.
-        TakeDamage(m_maxHP, Vector3{ 0.0f, 0.0f, 0.0f });
+        TakeDamage(m_maxHP, Vector3{ 0.0f, 0.0f, 0.0f }); // se mata con su propio daño
     }
 }
 
@@ -321,9 +272,7 @@ void Enemy::UpdateDead(float dt) {
 void Enemy::Update(float dt) {
     m_damageFlashTimer.Tick(dt);
 
-    // Trapper: gotea un charco cada kPuddleInterval mientras siga vivo, sea
-    // cual sea su estado -- también patrullando, para que el nivel se vaya
-    // ensuciando aunque el jugador todavía no lo haya visto.
+    // Trapper: gotea un charco cada cierto tiempo, en cualquier estado.
     if (m_behavior == EnemyBehavior::Trapper && IsAlive()) {
         m_puddleTimer.Tick(dt);
         if (!m_puddleTimer.IsActive()) {
@@ -351,23 +300,12 @@ void Enemy::Draw() const {
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f };
     Vector3 scale = { m_scale, m_scale, m_scale };
 
-    // Código de color del arquetipo (WHITE para los que no declaran ninguno,
-    // igual que antes: no tiñe el material sobre el que trabaja el toon
-    // shader). El flash de daño pasa a RED, ya que WHITE dejaría de
-    // contrastar contra un tinte neutro. Tono sangre seca cuando cae
-    // derrotado, por encima del tinte de arquetipo.
     Color tint = m_baseTint;
     unsigned char shadowAlpha = 100;
     if (m_fsm.Is(EnemyState::Hurt)) {
         tint = RED;
     } else if (m_fsm.Is(EnemyState::Dead)) {
-        // Sin pausa: el fade-out arranca en el instante mismo de la muerte
-        // (m_deathTimer = 0) y dura kCorpseFadeDuration completo, sin un
-        // tramo previo opaco. Mientras el alpha baja, el color parpadea a
-        // velocidad constante (no acelerada, a diferencia de Explode más
-        // abajo) entre WHITE puro -- un flash tipo stun -- y el tinte de
-        // muerte de siempre; ambos frames comparten el MISMO alpha del
-        // instante, así que el parpadeo no interfiere con el fade.
+        // El cadáver se desvanece y parpadea a la vez mientras dura el fade-out.
         constexpr Color kDeadTint = Color{ 80, 20, 20, 255 };
         constexpr float kCorpseFlickerPeriod = 0.2f;
 
@@ -378,41 +316,27 @@ void Enemy::Draw() const {
         tint.a = alpha;
         shadowAlpha = (unsigned char)(alphaFloat * 100.0f);
     } else if (m_fsm.Is(EnemyState::Explode)) {
-        // Parpadeo cada vez más rápido: el período baja de 0.3s a 0.05s a
-        // medida que se acerca la detonación.
+        // Parpadeo que se acelera a medida que se acerca la detonación.
         tint = Pulse::AcceleratingBlink(m_explodeTimer, Pulse::Progress01(m_explodeTimer, kExplodeDuration), 0.3f, 0.05f)
                    ? WHITE : RED;
     }
 
-    // Hit-flash: destello breve de impacto, independiente del tinte de
-    // estado de arriba (incluida la propia muerte) -- por eso se aplica el
-    // último y sin "else", manda sobre cualquier cosa durante sus 0.1s. Solo
-    // se tocan los canales RGB: si esto reescribiera tint entero (WHITE
-    // incluye alpha 255), pisaría el alpha del fade de muerte de arriba y el
-    // cadáver "resucitaría" a opaco durante ese destello.
+    // Destello breve al recibir daño, sin tocar el alpha (para no romper el fade del cadáver).
     if (m_damageFlashTimer.IsActive()) {
         tint.r = 255;
         tint.g = 255;
         tint.b = 255;
     }
 
-    // Mientras el cadáver se desvanece (alpha < 255), el depth write se
-    // desactiva: si no, cada píxel semitransparente sigue escribiendo el
-    // depth buffer como si fuera opaco, y cualquier cosa dibujada después
-    // detrás/alrededor del cadáver (otro enemigo, una partícula) se recorta
-    // contra un cuerpo que ya casi no se ve -- el "parpadeo" reportado. El
-    // depth TEST se deja activo (rlDisableDepthMask, no rlDisableDepthTest):
-    // el cadáver sigue ocultándose correctamente detrás de un Obstacle real.
+    // Con el cadáver semitransparente, se desactiva la escritura de profundidad
+    // para que no recorte lo que se dibuje detrás.
     bool isFading = tint.a < 255;
     if (isFading) rlDisableDepthMask();
 
-    // Sombra falsa: ancla al zombie al suelo sin necesitar un shader de
-    // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
+    // Sombra falsa en el suelo.
     DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f * m_scale, 0.6f * m_scale, 0.01f, 15, Color{ 0, 0, 0, shadowAlpha });
 
-    // Outline estilo anime ("inverted hull"), igual que Player::Draw -- ver
-    // ModelUtils::DrawModelWithOutline. Negro puro con el mismo alpha que el
-    // cuerpo para que se desvanezca a la par durante el fade del cadáver.
+    // Dibuja el cuerpo con un contorno estilo anime.
     ModelUtils::DrawModelWithOutline(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
     DrawArchetypeDecoration(rotationAngle, tint);
@@ -421,13 +345,10 @@ void Enemy::Draw() const {
 }
 
 void Enemy::DrawArchetypeDecoration(float rotationAngleDegrees, Color tint) const {
-    // El aro del Buffer va en coordenadas de mundo (no gira con el cuerpo) y
-    // se apaga con el cadáver, así que sale de la matriz rotada de abajo.
+    // El aro del aura del Buffer no gira con el cuerpo y desaparece al morir.
     if (m_behavior == EnemyBehavior::Buffer) {
         if (!IsAlive()) return;
 
-        // Pulso lento: el radio y la opacidad respiran a la vez, para que se
-        // lea como un área de influencia activa y no como decoración fija.
         float pulse = Pulse::Wave01(static_cast<float>(GetTime()), 3.0f);
         float radius = kBufferAuraRadius * (0.96f + 0.04f * pulse);
         Vector3 base{ m_position.x, 0.03f, m_position.z };
@@ -438,27 +359,21 @@ void Enemy::DrawArchetypeDecoration(float rotationAngleDegrees, Color tint) cons
 
     if (m_behavior != EnemyBehavior::Shielder && m_behavior != EnemyBehavior::Trapper) return;
 
-    // Mismo truco que Gear/PowerUp: DrawCube/DrawSphere no aceptan ángulo,
-    // así que se rota la matriz de mundo con el MISMO ángulo que el cuerpo
-    // -- así la placa sigue mirando adelante y el depósito sigue a la
-    // espalda cuando el enemigo gira.
+    // Rota la matriz de mundo para que el adorno gire junto con el cuerpo.
     rlPushMatrix();
     rlTranslatef(m_position.x, m_position.y, m_position.z);
     rlRotatef(rotationAngleDegrees, 0.0f, 1.0f, 0.0f);
 
-    // Los adornos heredan el alpha del cuerpo: durante el fade del cadáver,
-    // una placa o un depósito opacos se quedarían flotando sobre un zombie
-    // que ya casi no se ve.
+    // El adorno hereda el alpha del cuerpo, para desvanecerse igual durante el fade.
     float alpha = tint.a / 255.0f;
 
     if (m_behavior == EnemyBehavior::Shielder) {
-        // Placa frontal: cubre justo el cono que BlocksAttackFrom protege,
-        // así que lo que se ve es literalmente por dónde NO entra el golpe.
+        // Placa frontal, en el mismo cono que bloquea los golpes.
         Vector3 plateCenter{ 0.0f, 0.55f * m_scale, 0.6f * m_scale };
         DrawCube(plateCenter, 1.2f * m_scale, 1.3f * m_scale, 0.16f * m_scale, tint);
         DrawCubeWires(plateCenter, 1.2f * m_scale, 1.3f * m_scale, 0.16f * m_scale, Fade(SKYBLUE, alpha));
     } else {
-        // Depósito de ácido a la espalda: de ahí salen los charcos.
+        // Depósito de ácido a la espalda, de donde salen los charcos.
         Vector3 tankCenter{ 0.0f, 0.9f * m_scale, -0.5f * m_scale };
         DrawSphere(tankCenter, 0.34f * m_scale, Fade(Color{ 70, 210, 70, 255 }, alpha));
         DrawSphereWires(tankCenter, 0.36f * m_scale, 6, 8, Fade(DARKGREEN, alpha));

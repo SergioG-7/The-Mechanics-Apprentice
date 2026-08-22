@@ -4,8 +4,6 @@
 
 ExplosiveBarrel::ExplosiveBarrel(Vector3 position, float maxHP)
     : Actor(position, maxHP, Vector3{ 0.45f, 0.6f, 0.45f }) {
-    // Mismo sonido que Enemy::m_deathSound -- "muerte de enemigo/barril"
-    // comparte un único archivo, no hay uno específico de explosión.
     m_deathSound = LoadSound("assets/audio/sfx/dead_zombie.ogg");
     RefreshSfxVolume();
 }

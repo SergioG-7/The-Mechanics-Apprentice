@@ -19,9 +19,7 @@ void Hazard::Draw() const {
     float sizeY = m_halfExtents.y * 2.0f;
     float sizeZ = m_halfExtents.z * 2.0f;
 
-    // Placa fina a ras de suelo (color óxido: se lee como peligro sin
-    // depender de una textura) más unos pinchos de adorno -- conos, no cubos,
-    // para que se distinga de un Obstacle a primer vistazo.
+    // Placa de color óxido con pinchos encima, para que se lea como peligro.
     Color plateColor{ 200, 90, 20, 255 };
     DrawCube(m_position, sizeX, sizeY, sizeZ, plateColor);
     DrawCubeWires(m_position, sizeX, sizeY, sizeZ, ORANGE);

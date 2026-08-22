@@ -6,8 +6,7 @@ void ParticleSystem::Emit(Vector3 origin, int count) {
         Particle p;
         p.position = origin;
 
-        // Estallido hacia arriba y a los lados, magnitud aleatoria por eje
-        // (GetRandomValue solo trabaja con enteros, de ahí el /100.0f).
+        // Estallido hacia arriba y a los lados, con velocidad aleatoria.
         p.velocity = Vector3{
             static_cast<float>(GetRandomValue(-200, 200)) / 100.0f,
             static_cast<float>(GetRandomValue(150, 300)) / 100.0f,

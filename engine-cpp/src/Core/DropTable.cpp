@@ -7,15 +7,11 @@
 namespace DropTable {
 
 void RollEnemyDrop(LevelData& level, Vector3 position, bool endlessMode) {
-    // El engranaje y el power-up caen en la MISMA posición sin pisarse: el
-    // engranaje se dibuja a ras de suelo y el power-up flota 0.6 por encima.
     if (endlessMode) {
         level.gears.push_back(std::make_unique<Gear>(position));
     }
 
-    // Una sola tirada de 1-100 recorrida por tramos acumulados, no cuatro
-    // tiradas independientes: así los porcentajes de arriba son literalmente
-    // la probabilidad de cada cosa y no pueden solaparse entre sí.
+    // Una sola tirada de 1-100 recorrida por tramos, para que los porcentajes no se solapen.
     int roll = GetRandomValue(1, 100);
     int threshold = kOverclockChance;
     if (roll <= threshold) {

@@ -3,8 +3,7 @@
 #include <vector>
 #include <memory>
 
-// Entity que puede recibir daño y ser empujado (knockback). Player y Enemy
-// heredan de aquí; Obstacle se queda en Entity porque es estático e indestructible.
+// Entity que puede recibir daño y ser empujado. Player y Enemy heredan de aquí.
 class Actor : public Entity {
 public:
     Actor(Vector3 position, float maxHP, Vector3 halfExtents = { 0.5f, 0.5f, 0.5f });
@@ -15,17 +14,14 @@ public:
     float GetHP() const { return m_hp; }
     float GetMaxHP() const { return m_maxHP; }
 
-    // Referencia no propietaria a los obstáculos del nivel; Application la
-    // fija una vez tras cargar el LevelData. Player/Enemy la usan en su
-    // propio movimiento antes de comprometer una nueva posición.
+    // Guarda la lista de obstáculos del nivel para comprobar colisiones al moverse.
     void SetObstacles(const std::vector<std::unique_ptr<Entity>>* obstacles) { m_obstacles = obstacles; }
 
 protected:
+    // Aplica el empuje de knockback restante, con desgaste, moviendo al actor.
     void ApplyKnockback(float dt);
 
-    // Envuelve Entity::TryMove con la lista de obstáculos del nivel; Player y
-    // Enemy la llaman para moverse deslizando por las paredes en vez de
-    // quedarse parados en seco al chocar.
+    // Mueve al actor comprobando colisión contra los obstáculos del nivel.
     void TryMoveAgainstObstacles(Vector3 delta);
 
     float m_hp;

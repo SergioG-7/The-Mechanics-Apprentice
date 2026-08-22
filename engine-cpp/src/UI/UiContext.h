@@ -1,13 +1,7 @@
 #pragma once
 #include "../Core/LocalizationManager.h"
 
-// Dependencia que casi cualquier pantalla de UI necesita para dibujar texto:
-// el gestor de idioma activo, que ahora también es dueño de la fuente (un
-// atlas horneado POR CADA tamaño exacto, ver LocalizationManager::
-// GetFontForSize/kFontSize*) -- antes había un campo `font` aparte aquí,
-// pero como la fuente correcta depende del tamaño de dibujado de cada
-// texto, cada sitio pide la suya con ui.localization.GetFontForSize(size)
-// en vez de recibir una sola fija.
+// Datos que necesita cualquier pantalla de UI para dibujar texto: el idioma activo y su fuente.
 struct UiContext {
     const LocalizationManager& localization;
 };

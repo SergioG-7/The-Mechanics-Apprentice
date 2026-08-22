@@ -2,16 +2,10 @@ using System.Drawing.Text;
 
 namespace LevelEditor.Localization
 {
-    // Resuelve la fuente que hay que aplicar a un control cuyo TEXTO (no el
-    // idioma activo) contiene caracteres no-ASCII -- mismo criterio que el
-    // motor C++ y Tactical Soccer: una etiqueta ASCII no hereda la fuente
-    // CJK solo porque el idioma activo es japonés (ver
-    // Meta/patrones/localizacion-cjk-unity.md).
+    // Resuelve qué fuente usar para un texto que contiene caracteres japoneses/chinos.
     public static class FontResolver
     {
-        // Orden de preferencia: fuentes de Windows con paquete de idioma de
-        // Asia Oriental instalado dan mejor legibilidad nativa. Ninguna
-        // instalada -> se cae a la fuente embebida del proyecto (paso 2).
+        // Fuentes de Windows con soporte de Asia Oriental, en orden de preferencia.
         private static readonly string[] CjkFamilyCandidates = { "Yu Gothic UI", "Yu Gothic", "MS Gothic", "Meiryo" };
         private static readonly string EmbeddedFontPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Fonts", "MainFont.ttf");
 
@@ -59,10 +53,7 @@ namespace LevelEditor.Localization
             return null;
         }
 
-        // Red de seguridad para una máquina sin el paquete de idioma de
-        // Asia Oriental: el mismo .ttf que ya usa el motor C++
-        // (engine-cpp/assets/fonts/MainFont.ttf), enlazado al proyecto del
-        // editor -- ver LevelEditor.csproj.
+        // Alternativa si no hay ninguna fuente CJK instalada en el sistema.
         private static Font? LoadEmbeddedFont(float emSize, FontStyle style)
         {
             if (!File.Exists(EmbeddedFontPath)) return null;

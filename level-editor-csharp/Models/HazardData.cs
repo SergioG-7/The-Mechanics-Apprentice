@@ -2,9 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace LevelEditor.Models
 {
-    // Trampa de suelo: NO bloquea el paso en el motor C++ (vive en su propia
-    // lista "hazards", nunca en "obstacles") pero daña por tick a quien se
-    // quede dentro de sus límites. Ver Hazard.h/.cpp en engine-cpp.
+    // Trampa de suelo: no bloquea el paso, pero daña por tick a quien se quede encima.
     public class HazardData
     {
         [JsonPropertyName("position")]

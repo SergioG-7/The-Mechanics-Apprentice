@@ -2,19 +2,9 @@ using LevelEditor.Models;
 
 namespace LevelEditor.Canvas
 {
-    // Conversión de coordenadas mundo↔pantalla e hit-testing geométrico del
-    // lienzo 2D del editor -- matemática pura sin estado, separada de
-    // MainForm para que la UI no cargue también con estos cálculos
-    // (auditoría de arquitectura, 2026-08-19). MainForm la usa con
-    // "using static", así que las llamadas siguen escribiéndose sin
-    // cualificar (ScreenToWorld(...), no CanvasGeometry.ScreenToWorld(...)).
+    // Convierte coordenadas entre el mundo del nivel y la pantalla del editor, y detecta clics.
     internal static class CanvasGeometry
     {
-        // 20 px por unidad de mundo sobre un lienzo de 700: cubre de -17.5 a
-        // +17.5, es decir el perímetro entero de la arena ampliada (muros en
-        // ±16, ver assets/data/*.json y Application::DrawGroundGrid). Con los
-        // 30/600 anteriores el lienzo solo llegaba a ±10 y ni siquiera se
-        // podían ver los muros, mucho menos colocar nada más allá de ellos.
         public const int CellSize = 20;
         public const int CanvasSize = 700;
         public static readonly Point CanvasCenter = new(CanvasSize / 2, CanvasSize / 2);
@@ -34,9 +24,7 @@ namespace LevelEditor.Canvas
             return new Point(screenX, screenY);
         }
 
-        // Rect en pantalla de cualquier entidad con posición + halfExtents
-        // (Obstacle-box, Door y Hazard comparten esta forma). Usado tanto
-        // para dibujar como para el hit-test de selección.
+        // Rectángulo en pantalla de una entidad con posición y tamaño (obstáculo, puerta, hazard...).
         public static Rectangle GetBoxScreenRect(Vector3Data position, Vector3Data halfExtents)
         {
             Point center = WorldToScreen(position);
@@ -45,9 +33,6 @@ namespace LevelEditor.Canvas
             return new Rectangle(center.X - halfWidthPx, center.Y - halfHeightPx, halfWidthPx * 2, halfHeightPx * 2);
         }
 
-        // ObstacleData guarda Size (dimensión completa, formato nuevo) para
-        // el tipo "box" -- este helper es el único sitio que lo convierte a
-        // halfExtents para reusar GetBoxScreenRect.
         public static Vector3Data GetObstacleBoxHalfExtents(ObstacleData obstacle) =>
             new(obstacle.Size.X * 0.5f, obstacle.Size.Y * 0.5f, obstacle.Size.Z * 0.5f);
 
@@ -57,7 +42,7 @@ namespace LevelEditor.Canvas
         public static Vector3Data GetElectricTileHalfExtents(ElectricTileData tile) =>
             new(tile.Size.X * 0.5f, tile.Size.Y * 0.5f, tile.Size.Z * 0.5f);
 
-        // Círculo en pantalla de un Obstacle tipo "cylinder": centro + radio en píxeles.
+        // Centro y radio en pantalla de un obstáculo circular.
         public static (Point Center, int RadiusPx) GetCylinderScreenCircle(ObstacleData obstacle)
         {
             Point center = WorldToScreen(obstacle.Position);
@@ -65,6 +50,7 @@ namespace LevelEditor.Canvas
             return (center, radiusPx);
         }
 
+        // Comprueba si un punto de pantalla cae dentro de un obstáculo.
         public static bool IsObstacleHit(ObstacleData obstacle, Point screenPoint)
         {
             if (obstacle.Type == "cylinder")
@@ -78,6 +64,7 @@ namespace LevelEditor.Canvas
             return GetBoxScreenRect(obstacle.Position, GetObstacleBoxHalfExtents(obstacle)).Contains(screenPoint);
         }
 
+        // Comprueba si un punto de pantalla está lo bastante cerca de un marcador para seleccionarlo.
         public static bool IsPointNearMarker(Point point, Point markerCenter)
         {
             int dx = point.X - markerCenter.X;

@@ -5,19 +5,10 @@ using static LevelEditor.Canvas.CanvasGeometry;
 
 namespace LevelEditor.Canvas
 {
-    // Todo el pintado del lienzo 2D del editor. Vivía dentro de MainForm (~290
-    // líneas de veinte métodos Draw*), que ya cargaba con la construcción de
-    // la UI, la herramienta activa, el panel de propiedades, la localización y
-    // los diálogos de archivo.
-    //
-    // Es estático y sin estado: recibe la escena y qué hay seleccionado, y
-    // pinta. Nada de lo que hay aquí puede modificar el nivel, que es
-    // justamente la garantía que se quería -- el dibujado no muta el modelo.
+    // Dibuja el nivel completo sobre el lienzo 2D del editor.
     internal static class CanvasRenderer
     {
-        // labelFont: solo para el intervalo de ciclo escrito sobre una baldosa.
-        // Se pasa desde fuera en vez de crearlo aquí para no construir (y
-        // destruir) una Font en cada repintado.
+        // Dibuja toda la escena: cuadrícula, todos los objetos del nivel y el resaltado de selección.
         public static void Draw(Graphics g, EditorScene scene, object? selected, Font labelFont)
         {
             DrawGrid(g);
@@ -64,8 +55,6 @@ namespace LevelEditor.Canvas
             {
                 if (obstacle.Type == "cylinder")
                 {
-                    // Círculo, distinto en FORMA de un Obstacle-box (rectángulo)
-                    // -- color propio (SteelBlue) para que se distinga de un vistazo.
                     var (center, radiusPx) = GetCylinderScreenCircle(obstacle);
                     g.FillEllipse(Brushes.SteelBlue, center.X - radiusPx, center.Y - radiusPx, radiusPx * 2, radiusPx * 2);
                 }
@@ -76,9 +65,6 @@ namespace LevelEditor.Canvas
             }
         }
 
-        // Zona rayada naranja: se distingue tanto de un Obstacle (rectángulo
-        // gris sólido, bloquea el paso) como de cualquier marcador circular --
-        // un hazard no bloquea, así que no puede parecerse a algo que sí lo hace.
         private static void DrawHazards(Graphics g, EditorScene scene)
         {
             using var hatchBrush = new HatchBrush(HatchStyle.WideDownwardDiagonal, Color.OrangeRed, Color.FromArgb(255, 250, 200));
@@ -92,11 +78,7 @@ namespace LevelEditor.Canvas
             }
         }
 
-        // Azul acero rayado en VERTICAL, distinto del rayado diagonal naranja
-        // del Hazard: los dos son placas de suelo que no bloquean, así que
-        // tienen que diferenciarse por patrón y color, no solo color. Las de
-        // ciclo llevan el intervalo escrito encima -- es el dato que decide si
-        // son cruzables, y no se ve de ninguna otra forma.
+        // Las baldosas de ciclo llevan escrito encima su intervalo.
         private static void DrawElectricTiles(Graphics g, EditorScene scene, Font labelFont)
         {
             using var hatchBrush = new HatchBrush(HatchStyle.LightVertical, Color.DeepSkyBlue, Color.FromArgb(30, 40, 60));
@@ -121,9 +103,7 @@ namespace LevelEditor.Canvas
             foreach (var gear in scene.Gears) DrawEntityMarker(g, Brushes.Orange, gear.Position);
         }
 
-        // Violeta con anillo exterior para los Random Spawner, magenta liso
-        // para los de arquetipo fijo -- misma distinción que hace Spawner::Draw
-        // en el motor, para que el mapa se lea igual en el editor y en juego.
+        // Los spawner aleatorios se dibujan con un anillo extra para distinguirlos de los normales.
         private static void DrawSpawners(Graphics g, EditorScene scene)
         {
             using var randomBrush = new SolidBrush(Color.FromArgb(170, 90, 255));
@@ -145,23 +125,17 @@ namespace LevelEditor.Canvas
             }
         }
 
-        // Cuadrado verde: distinto en FORMA y color de cualquier otra entidad,
-        // no solo color (Gear ya es un círculo naranja).
         private static void DrawHealthKits(Graphics g, EditorScene scene)
         {
             foreach (var healthKit in scene.HealthKits) DrawSquareMarker(g, Brushes.LimeGreen, healthKit.Position);
         }
 
-        // Firebrick, no Red puro: Enemy ya usa un círculo Red -- con el mismo
-        // tono serían indistinguibles pese a ser entidades muy distintas.
         private static void DrawBarrels(Graphics g, EditorScene scene)
         {
             foreach (var barrel in scene.Barrels) DrawEntityMarker(g, Brushes.Firebrick, barrel.Position);
         }
 
-        // Rombo: las formas de círculo y cuadrado ya estaban cogidas. El color
-        // lo pone el tipo, con los MISMOS tonos que PowerUp::TypeColor en el
-        // motor, para que se reconozca igual en el editor que en la partida.
+        // Color del rombo de un power-up según su tipo.
         public static Color PowerUpColor(string type) => type switch
         {
             "Frenzy" => Color.FromArgb(255, 130, 40),
@@ -222,9 +196,6 @@ namespace LevelEditor.Canvas
             if (selected is null) return;
             using var highlightPen = new Pen(Color.Cyan, 3.0f);
 
-            // Las entidades de marcador comparten resaltado circular; las de
-            // placa/caja, uno rectangular inflado. Se agrupan por FORMA, no por
-            // tipo, que es lo que evitaba una rama por clase.
             Vector3Data? markerAt = selected switch
             {
                 PlayerData player => player.Spawn,

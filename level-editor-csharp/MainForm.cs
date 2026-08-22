@@ -8,8 +8,7 @@ using static LevelEditor.Canvas.CanvasGeometry;
 
 namespace LevelEditor
 {
-    // Sin diseñador visual (a propósito, por decisión del proyecto): toda la
-    // UI, el dibujado del grid y el panel de propiedades se arman por código.
+    // Ventana principal del editor: arma toda la UI por código, sin diseñador visual.
     public class MainForm : Form
     {
         private enum EditorTool
@@ -31,48 +30,32 @@ namespace LevelEditor
         }
 
         // --- Estado del nivel en memoria ---
-        // Una sola escena en vez de once campos sueltos: sus listas, el
-        // hit-test, el borrado y el volcado a/desde LevelData viven en
-        // EditorScene, que no depende de WinForms (ver Core/EditorScene.cs).
         private readonly EditorScene _scene = new();
 
-        // Se crea una sola vez, no en cada repintado: la usa
-        // CanvasRenderer para el intervalo escrito sobre una baldosa de ciclo.
+        // Fuente para el intervalo escrito sobre una baldosa de ciclo.
         private readonly Font _tileLabelFont;
 
         private EditorTool _activeTool = EditorTool.PlacePlayer;
         private object? _selectedEntity;
 
-        // Todos los RadioButton de herramienta, repartidos entre el
-        // TabControl y el GroupBox de Edición (dos contenedores distintos,
-        // así que WinForms no los agrupa solo por sí mismo): SelectTool los
-        // recorre para que solo uno quede marcado a la vez sin importar en
-        // qué pestaña o grupo esté. La clave de idioma va emparejada para
-        // poder reetiquetarlos todos al cambiar de idioma (ver ApplyLanguage).
+        // Todos los RadioButton de herramienta, para poder marcar solo uno a la vez y reetiquetarlos.
         private readonly List<(RadioButton Radio, string TextKey)> _toolRadios = new();
 
-        // Botón de idioma por código ("es"/"en"/"jp"): su Text nunca cambia
-        // (cada uno se rotula en su propio idioma, ver CreateLanguageButton),
-        // pero ApplyLanguage necesita encontrarlos para resaltar el activo.
+        // Botón de idioma por código ("es"/"en"/"jp").
         private readonly Dictionary<string, Button> _languageButtons = new();
 
-        // Variante activa en el ComboBox de "Variante de enemigo": se aplica
-        // tanto a un EnemyData nuevo (PlaceEnemy) como al EnemyType de un
-        // SpawnerData nuevo (PlaceSpawner) -- un solo selector para ambos.
+        // Variante activa al colocar un enemigo o un spawner nuevo.
         private string _selectedVariant = "Default";
 
-        // Tipo activo en el ComboBox de "Tipo de power-up", aplicado al
-        // colocar uno nuevo (PlacePowerUp) -- mismo papel que _selectedVariant.
+        // Tipo activo al colocar un power-up nuevo.
         private string _selectedPowerUpType = "Overclock";
 
-        // (El nombre lógico del nivel, "levelName", vive ahora en la escena.)
-
         // Ruta del último archivo abierto/exportado (null = nivel nuevo, nunca guardado)
-        // y si hay cambios desde esa operación. Se reflejan en el título de la ventana.
+        // y si hay cambios desde esa operación.
         private string? _currentFilePath;
         private bool _isDirty;
 
-        // Entidad que se está arrastrando con el botón izquierdo (herramienta Seleccionar), o null.
+        // Entidad que se está arrastrando con el botón izquierdo, o null.
         private object? _draggingEntity;
 
         // --- Controles ---
@@ -80,9 +63,7 @@ namespace LevelEditor
         private readonly GroupBox _propertiesGroup;
         private readonly Label _statusLabel;
 
-        // Quién rellena _propertiesGroup según lo seleccionado (ver
-        // UI/PropertyPanelBuilder.cs). Se construye al final del constructor:
-        // necesita el GroupBox y el lienzo ya creados.
+        // Rellena el panel de propiedades según lo seleccionado.
         private readonly PropertyPanelBuilder _properties;
 
         // Controles cuyo texto depende del idioma activo y que ApplyLanguage
@@ -102,16 +83,8 @@ namespace LevelEditor
 
         public MainForm()
         {
-            // Alto = el del lienzo ampliado (700) más los márgenes: al pasar
-            // de 600 a 700 px de canvas, dejarlo en 700 recortaba la última
-            // fila de celdas del propio grid.
             ClientSize = new Size(CanvasSize + 240, CanvasSize + 60);
             StartPosition = FormStartPosition.CenterScreen;
-            // El panel derecho ya se salía de los 700px de alto antes de esta
-            // fase (propertiesGroup solo mide 300px de sus 260 originales) y
-            // la reorganización en pestañas lo alarga un poco más -- en vez
-            // de perseguir un número de píxeles exacto cada vez que se añade
-            // una herramienta, el formulario hace scroll si hace falta.
             AutoScroll = true;
             _tileLabelFont = new Font(Font.FontFamily, 7.0f, FontStyle.Bold);
 
@@ -132,11 +105,7 @@ namespace LevelEditor
 
             int toolsX = _canvasPanel.Right + 20;
 
-            // --- Idioma: agrupado y siempre visible arriba del todo, fuera
-            // de las pestañas -- es un ajuste de la aplicación, no una
-            // herramienta de edición de nivel. Cada botón se rotula en su
-            // propio idioma y con su propia fuente (ver CreateLanguageButton),
-            // así que se lee bien pase lo que pase con el idioma activo.
+            // --- Idioma ---
             _languageGroup = new GroupBox
             {
                 Text = LocalizationManager.GetText("group_language"),
@@ -148,16 +117,11 @@ namespace LevelEditor
             _languageGroup.Controls.Add(CreateLanguageButton("jp", "日本語", 70));
             Controls.Add(_languageGroup);
 
-            // --- Herramientas: categorizadas en pestañas para que no crezcan
-            // indefinidamente en vertical (Fase 5). Un RadioButton por pestaña
-            // se agrupa solo con los de su MISMA pestaña por defecto en
-            // WinForms -- SelectTool (más abajo) fuerza la exclusión mutua a
-            // mano entre TODAS las herramientas, tabs y grupo de Edición
-            // incluidos, para que solo una quede activa a la vez.
+            // --- Herramientas, agrupadas en pestañas ---
             var toolTabs = new TabControl
             {
                 Location = new Point(toolsX, _languageGroup.Bottom + 10),
-                Size = new Size(190, 250) // 250: la pestaña Entidades llegó a 7 herramientas (la última en y=190)
+                Size = new Size(190, 250)
             };
 
             _entitiesTab = new TabPage(LocalizationManager.GetText("tab_entities"));
@@ -183,9 +147,7 @@ namespace LevelEditor
 
             Controls.Add(toolTabs);
 
-            // --- Edición: modales que actúan sobre la selección, no
-            // "colocan" nada -- fuera de las pestañas a propósito, siempre
-            // visibles sea cual sea la categoría activa. ---
+            // --- Edición: herramientas que actúan sobre la selección ---
             _editGroup = new GroupBox
             {
                 Text = LocalizationManager.GetText("group_edit"),
@@ -209,11 +171,6 @@ namespace LevelEditor
                 Width = 160,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            // El VALOR (EnemyVariantCatalog.Names) es el identificador que consume
-            // EnemyFactory en el motor C++ (ver LevelLoader.cpp) y nunca se
-            // traduce; el TEXTO visible sí, vía ComboBoxItem (ver
-            // EnemyVariantCatalog.BuildItems) -- RefreshVariantCombo lo reetiqueta al
-            // cambiar de idioma sin tocar _selectedVariant.
             _variantCombo.Items.AddRange(EnemyVariantCatalog.BuildItems(EnemyVariantCatalog.Names));
             _variantCombo.SelectedIndex = 0;
             _variantCombo.SelectedIndexChanged += OnVariantComboChanged;
@@ -272,7 +229,7 @@ namespace LevelEditor
             {
                 Text = LocalizationManager.GetText("group_properties"),
                 Location = new Point(toolsX, _exportButton.Bottom + 20),
-                Size = new Size(190, 300), // 300, no 260: BuildEnemyProperties tiene 5 filas desde que se añadió el ComboBox de Type
+                Size = new Size(190, 300),
                 Visible = false
             };
             Controls.Add(_propertiesGroup);
@@ -281,7 +238,7 @@ namespace LevelEditor
             _statusLabel = new Label
             {
                 Location = new Point(toolsX, _propertiesGroup.Bottom + 20),
-                Size = new Size(190, 185) // 185: BuildStatusText tiene 11 líneas desde que se añadieron las baldosas
+                Size = new Size(190, 185)
             };
             Controls.Add(_statusLabel);
 
@@ -291,10 +248,7 @@ namespace LevelEditor
             ApplyLanguage();
         }
 
-        // Crea un RadioButton de herramienta, lo añade al contenedor dado
-        // (una TabPage o el GroupBox de Edición) y lo registra en
-        // _toolRadios para que SelectTool pueda desmarcar los demás sea cual
-        // sea su contenedor, y para que ApplyLanguage pueda reetiquetarlo.
+        // Crea un RadioButton de herramienta y lo añade al contenedor dado.
         private RadioButton CreateToolRadio(string textKey, int y, EditorTool tool, Control container, bool startChecked = false)
         {
             var radio = new RadioButton
@@ -310,11 +264,7 @@ namespace LevelEditor
             return radio;
         }
 
-        // Única fuente de verdad de qué herramienta está activa. Los radios
-        // están repartidos en varios contenedores (TabPages + GroupBox de
-        // Edición), así que WinForms NO los agrupa por sí solo -- de ahí que
-        // cada radio dispare esto en Click (no CheckedChanged) y aquí se
-        // desmarquen a mano todos los demás.
+        // Marca la herramienta elegida y desmarca el resto de radios.
         private void SelectTool(RadioButton chosen, EditorTool tool)
         {
             foreach (var (radio, _) in _toolRadios)
@@ -326,12 +276,7 @@ namespace LevelEditor
 
         // --- Localización ---
 
-        // Crea (o encuentra) el botón de un idioma. El texto es SIEMPRE el
-        // nombre nativo del idioma -- no pasa por LocalizationManager, se lee
-        // igual sea cual sea el idioma activo (como el selector de idioma de
-        // cualquier aplicación real, y como NativeLanguageName en el motor
-        // C++). La fuente sí se resuelve por contenido, para que 日本語 se
-        // lea bien aunque el idioma activo sea español.
+        // Crea el botón de un idioma, con su nombre siempre escrito en ese propio idioma.
         private Button CreateLanguageButton(string code, string nativeLabel, int y)
         {
             var button = new Button
@@ -367,13 +312,7 @@ namespace LevelEditor
             _selectedPowerUpType = ((ComboBoxItem<string>)_powerUpCombo.SelectedItem!).Value;
         }
 
-        // Reetiqueta el ComboBox de variante superior (fuera del panel de
-        // propiedades, así que ApplyLanguage no lo reconstruye gratis como
-        // hace con BuildEnemyProperties/BuildSpawnerProperties vía
-        // RefreshPropertiesPanel). Se desengancha el handler mientras
-        // reconstruye los Items: un Items.Clear() dispara SelectedIndexChanged
-        // con SelectedItem a null, y el cast de OnVariantComboChanged
-        // reventaría con ese estado transitorio.
+        // Reetiqueta el ComboBox de variante al cambiar de idioma.
         private void RefreshVariantCombo()
         {
             _variantCombo.SelectedIndexChanged -= OnVariantComboChanged;
@@ -384,8 +323,7 @@ namespace LevelEditor
             _variantCombo.SelectedIndexChanged += OnVariantComboChanged;
         }
 
-        // Igual que RefreshVariantCombo, con el mismo desenganche del handler
-        // mientras se reconstruyen los Items (ver el comentario de arriba).
+        // Reetiqueta el ComboBox de power-up al cambiar de idioma.
         private void RefreshPowerUpCombo()
         {
             _powerUpCombo.SelectedIndexChanged -= OnPowerUpComboChanged;
@@ -396,17 +334,10 @@ namespace LevelEditor
             _powerUpCombo.SelectedIndexChanged += OnPowerUpComboChanged;
         }
 
-        // Atajo sobre LocalizedControls con la fuente del formulario como
-        // base: la comparte con PropertyPanelBuilder, que crea sus etiquetas
-        // por su cuenta pero tiene que resolver la fuente igual.
         private void ApplyLocalizedText(Control control, string textKey) =>
             LocalizedControls.ApplyText(control, textKey, Font);
 
-        // Punto único que reetiqueta TODO lo que ya está en pantalla al
-        // cambiar de idioma (o al construir el formulario la primera vez).
-        // El panel de propiedades se reconstruye entero porque sus Label se
-        // crean sobre la marcha en BuildXxxProperties -- más simple que
-        // llevar una lista aparte de sus controles.
+        // Reetiqueta toda la interfaz al cambiar de idioma (o al arrancar el formulario).
         private void ApplyLanguage()
         {
             ApplyLocalizedText(_entitiesTab, "tab_entities");
@@ -480,10 +411,6 @@ namespace LevelEditor
                     break;
 
                 case EditorTool.PlaceEnemy:
-                    // Stats base del arquetipo elegido (ver EnemyVariantCatalog) si
-                    // existe una en enemy_variants.json; si no ("Default", o una
-                    // variante que el catálogo no reconoce), los valores de
-                    // siempre -- mismo criterio de degradar sin reventar.
                     EnemyVariantStatsData? placedVariantStats = EnemyVariantCatalog.TryGet(_selectedVariant);
                     _scene.Enemies.Add(new EnemyData
                     {
@@ -530,9 +457,6 @@ namespace LevelEditor
                     break;
 
                 case EditorTool.PlaceElectricTile:
-                    // CycleInterval 0 por defecto: se arma solo al pisarla,
-                    // que es el comportamiento más fácil de leer. Ponerle un
-                    // ciclo es una decisión consciente desde Propiedades.
                     _scene.ElectricTiles.Add(new ElectricTileData
                     {
                         Position = worldPos,
@@ -572,10 +496,7 @@ namespace LevelEditor
                     _scene.Spawners.Add(new SpawnerData
                     {
                         Position = worldPos,
-                        // "Default" no es una variante real de EnemyFactory (solo
-                        // tiene sentido para un EnemyData suelto, con sus propios
-                        // stats) -- un Spawner con ese tipo no generaría nunca
-                        // nada. Cae a "Runner" en ese caso.
+                        // "Default" no es una variante real de spawner, así que cae a "Runner".
                         EnemyType = _selectedVariant == "Default" ? "Runner" : _selectedVariant,
                         Interval = 4.0f,
                         MaxEnemies = 3
@@ -584,7 +505,6 @@ namespace LevelEditor
                     break;
 
                 case EditorTool.DefinePatrol:
-                    // Comprobamos si el objeto seleccionado actualmente es un enemigo
                     if (_selectedEntity is EnemyData selectedEnemy)
                     {
                         selectedEnemy.PatrolRoute.Add(worldPos);
@@ -607,7 +527,7 @@ namespace LevelEditor
             _canvasPanel.Invalidate();
         }
 
-        // --- Arrastrar para mover (herramienta Seleccionar, botón izquierdo) ---
+        // --- Arrastrar para mover ---
 
         private void OnCanvasMouseDown(object? sender, MouseEventArgs e)
         {
@@ -658,21 +578,13 @@ namespace LevelEditor
 
         // --- Panel de propiedades ---
 
-        // Cambia el alto del grupo y REUBICA lo que va debajo: el label de
-        // estado se colocó al construir el formulario a partir de
-        // _propertiesGroup.Bottom, así que si el grupo crece sin más (las
-        // siete filas de peso de un Random Spawner), el panel le pasa por
-        // encima. PropertyPanelBuilder lo llama por delegado: es lo único
-        // fuera del GroupBox que hay que mover cuando cambia de alto.
+        // Cambia el alto del panel de propiedades y reubica el label de estado debajo.
         private void SetPropertiesHeight(int height)
         {
             _propertiesGroup.Height = Math.Max(height, 120);
             _statusLabel.Location = new Point(_statusLabel.Location.X, _propertiesGroup.Bottom + 20);
         }
 
-        // El contenido del panel lo arma PropertyPanelBuilder (ver
-        // UI/PropertyPanelBuilder.cs); desde aquí solo se le dice qué hay
-        // seleccionado.
         private void RefreshPropertiesPanel() => _properties.Show(_selectedEntity);
 
         // --- Dibujado (delegado en CanvasRenderer) ---
@@ -682,9 +594,7 @@ namespace LevelEditor
             CanvasRenderer.Draw(e.Graphics, _scene, _selectedEntity, _tileLabelFont);
         }
 
-        // Borra la entidad de la escena y, si era la seleccionada, limpia la
-        // selección para que el panel de propiedades no siga apuntando a algo
-        // que ya no existe.
+        // Borra la entidad y limpia la selección si era la que estaba seleccionada.
         private bool DeleteEntity(object entity)
         {
             if (!_scene.Remove(entity)) return false;
@@ -748,22 +658,12 @@ namespace LevelEditor
                 return;
             }
 
-            // La escena es el único punto de traducción a/desde LevelData
-            // (la comprobación de Player de arriba es justo la precondición
-            // que documenta ToLevelData).
             LevelData level = _scene.ToLevelData();
 
             using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.Filter = LocalizationManager.GetText("dialog_json_filter");
                 saveFileDialog.Title = LocalizationManager.GetText("dialog_save_title");
-                // Basado en el nombre de nivel en memoria, no un nombre fijo
-                // ("sample_level.json"): ese nombre fijo era justo lo que
-                // llenaba engine-cpp/assets/ de niveles de prueba residuales
-                // cada vez que se exportaba sin cambiarlo a mano -- el motor
-                // C++ solo lee assets/data/level_<N>.json y
-                // assets/data/endless.json (ver Application::BuildStoryLevelPath),
-                // nunca este archivo por su nombre.
                 saveFileDialog.FileName = $"{_scene.LevelName}.json";
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
@@ -804,9 +704,7 @@ namespace LevelEditor
                    LocalizationManager.GetText("status_door", doorStatus);
         }
 
-        // Reescribe el texto Y la fuente del label de estado -- necesario
-        // porque su contenido cambia de ASCII a no-ASCII (o al revés) cada
-        // vez que cambia el idioma o el recuento de entidades se traduce.
+        // Actualiza el texto y la fuente del label de estado.
         private void RefreshStatusLabel()
         {
             string text = BuildStatusText();

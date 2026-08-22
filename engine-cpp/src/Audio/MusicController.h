@@ -2,10 +2,7 @@
 #include "raylib.h"
 #include <string>
 
-// Wrapper RAII sobre la música de fondo: Application llamaba directamente a
-// Load/Play/Stop/Update/UnloadMusicStream repartidos por medio archivo (el
-// mismo "if (frameCount > 0)" repetido en seis sitios distintos). Aquí
-// quedan agrupados con el propio Music que gobiernan.
+// Controla la música de fondo: carga, reproduce y libera el stream.
 class MusicController {
 public:
     MusicController(const std::string& path, float volume);
@@ -18,9 +15,7 @@ public:
     void Stop();
     void Update();
 
-    // Reaplica el volumen en caliente (el slider de Música en Opciones puede
-    // tocarse durante una partida en pausa, sin recargar el nivel) --
-    // SetMusicVolume es barato y válido sobre un Music ya cargado.
+    // Cambia el volumen de la música ya en reproducción.
     void SetVolume(float volume);
 
 private:

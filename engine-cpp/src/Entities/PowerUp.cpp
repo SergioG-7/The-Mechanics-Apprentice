@@ -27,14 +27,12 @@ Color PowerUp::TypeColor(PowerUpType type) {
 void PowerUp::Draw() const {
     Color color = TypeColor(m_type);
 
-    // Halo plano en el suelo: común a los tres tipos, marca dónde está el
-    // pickup aunque la pieza flotante quede tapada por una pared cercana.
+    // Halo en el suelo que marca dónde está el pickup.
     Vector3 halo{ m_position.x, 0.02f, m_position.z };
     DrawCylinder(halo, 0.6f, 0.6f, 0.02f, 20, Fade(color, 0.25f));
     DrawCylinderWires(halo, 0.6f, 0.6f, 0.02f, 20, color);
 
-    // Flotación + giro: mismo truco que Gear (rlRotatef sobre la matriz de
-    // mundo, porque DrawCube/DrawCylinder no aceptan ángulo por parámetro).
+    // Flotación y giro suaves.
     float bob = (Pulse::Wave01(static_cast<float>(GetTime()), 2.5f) - 0.5f) * 0.24f;
 
     rlPushMatrix();

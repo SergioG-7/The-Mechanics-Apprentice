@@ -9,8 +9,7 @@ void HealthKit::Draw() const {
     DrawCube(m_position, size, size, size, GREEN);
     DrawCubeWires(m_position, size, size, size, DARKGREEN);
 
-    // Cruz blanca sobre la cara superior: sin planos sueltos en raylib, se
-    // simula con dos cubos finos y planos cruzados, más simple que texturizar.
+    // Cruz blanca encima, hecha con dos cubos finos cruzados.
     constexpr float armLength = 0.5f;
     constexpr float armThickness = 0.12f;
     Vector3 top{ m_position.x, m_position.y + m_halfExtents.y + 0.01f, m_position.z };

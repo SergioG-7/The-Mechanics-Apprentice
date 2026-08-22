@@ -1,16 +1,9 @@
 namespace LevelEditor.Localization
 {
-    // Creación y reetiquetado de controles con texto localizado, resolviendo
-    // la fuente por CONTENIDO y no por idioma activo (ver
-    // Meta/patrones/localizacion-cjk-unity.md): un texto que vuelve a ser
-    // ASCII en el idioma nuevo recupera la fuente base explícitamente, en vez
-    // de quedarse con la CJK del idioma anterior puesta.
-    //
-    // Estático y con la fuente base por parámetro porque lo comparten dos
-    // sitios que no se conocen entre sí: MainForm (sus controles fijos) y
-    // PropertyPanelBuilder (los Label que crea sobre la marcha).
+    // Aplica texto traducido a un control, eligiendo la fuente adecuada según el idioma.
     public static class LocalizedControls
     {
+        // Traduce y aplica el texto a un control existente, ajustando su fuente si hace falta.
         public static void ApplyText(Control control, string textKey, Font baseFont)
         {
             string text = LocalizationManager.GetText(textKey);
@@ -20,8 +13,7 @@ namespace LevelEditor.Localization
                 : baseFont;
         }
 
-        // Para los Label que se crean ya con su texto, sin pasar por un
-        // control existente.
+        // Crea un Label nuevo ya con el texto traducido.
         public static Label CreateLabel(string textKey, Point location, Font baseFont)
         {
             string text = LocalizationManager.GetText(textKey);

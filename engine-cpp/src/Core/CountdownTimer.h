@@ -1,12 +1,8 @@
 #pragma once
 #include <algorithm>
 
-// Patrón repetido en Player, Enemy y Application: un float que cuenta hacia
-// atrás desde un valor y se considera "activo" mientras sea > 0 (hit-flash,
-// dash cooldown, screen shake, hit-stop...). No cubre los timers de la FSM
-// que cuentan HACIA ARRIBA hasta una duración fija (m_attackTimer,
-// m_hurtTimer...) -- esos tienen semántica distinta (disparan una
-// transición de estado al llegar al tope) y forzarlos aquí no aclararía nada.
+// Temporizador simple que cuenta hacia atrás y está "activo" mientras quede tiempo.
+// Se usa para cooldowns, parpadeos y efectos temporales (dash, hit-flash, screen shake...).
 class CountdownTimer {
 public:
     void Start(float duration) { m_remaining = duration; }

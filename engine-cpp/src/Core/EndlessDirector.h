@@ -3,20 +3,13 @@
 
 class Spawner;
 
-// Reglas propias del Modo Infinito, separadas de Application para que no
-// cargue con esta lógica además de la orquestación de estados: escala la
-// dificultad con el tiempo y lleva la puntuación (engranajes recogidos). El
-// drop de un Gear al morir un enemigo lo decide Application (necesita
-// conocer m_level.gears y el modo activo), EndlessDirector solo cuenta.
+// Reglas del Modo Infinito: escala la dificultad con el tiempo y lleva la puntuación.
 class EndlessDirector {
 public:
-    // Vuelve al estado inicial -- Application la llama al entrar en Modo
-    // Infinito desde el menú, nunca al recargar el mismo intento.
+    // Vuelve al estado inicial, al entrar en Modo Infinito.
     void Reset();
 
-    // Cada kDifficultyInterval segundos, reduce el spawnInterval de TODOS
-    // los spawners un kDifficultyScaleFactor (multiplicativo, no aditivo:
-    // la dificultad se acelera con el tiempo en vez de crecer lineal).
+    // Acelera el ritmo de generación de todos los spawners con el paso del tiempo.
     void Update(float dt, std::vector<Spawner>& spawners);
 
     void OnGearCollected();

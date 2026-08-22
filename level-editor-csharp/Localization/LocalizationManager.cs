@@ -2,14 +2,10 @@ using System.Text.Json;
 
 namespace LevelEditor.Localization
 {
-    // Estático, no un componente: el texto se pide desde el constructor de
-    // MainForm antes de que exista ningún control, igual que en el motor
-    // C++ (ver Meta/patrones/localizacion-cjk-unity.md en el vault de
-    // Obsidian) -- un ciclo de vida propio solo complicaría el arranque.
+    // Carga y sirve los textos traducidos del editor.
     public static class LocalizationManager
     {
-        // MainForm se suscribe para reconstruir/reetiquetar todo lo que ya
-        // está en pantalla cuando el usuario cambia de idioma en caliente.
+        // Se dispara cuando cambia el idioma, para que la UI se reetiquete.
         public static event Action? LanguageChanged;
 
         private static readonly string[] SupportedLanguages = { "es", "en", "jp" };
@@ -42,9 +38,7 @@ namespace LevelEditor.Localization
                 }
                 catch (JsonException)
                 {
-                    // Fichero mal formado: se queda vacío para ese idioma en
-                    // vez de tirar el editor abajo -- GetText hará fallback
-                    // a la propia clave para cada texto que faltase.
+                    // Si el JSON está mal, ese idioma se queda sin textos en vez de romper el editor.
                 }
             }
 
@@ -57,9 +51,7 @@ namespace LevelEditor.Localization
             LanguageChanged?.Invoke();
         }
 
-        // Clave no encontrada -> se devuelve la propia clave (nunca cadena
-        // vacía: un botón en blanco no se puede diagnosticar, una clave
-        // visible sí) y se avisa una sola vez por combinación idioma+clave.
+        // Devuelve el texto traducido de una clave. Si no existe, devuelve la propia clave.
         public static string GetText(string key)
         {
             if (Languages.TryGetValue(CurrentLanguage, out var entries) && entries.TryGetValue(key, out var value))

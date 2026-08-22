@@ -2,10 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace LevelEditor.Models
 {
-    // Baldosa eléctrica: NO bloquea el paso en el motor C++ (vive en su propia
-    // lista "electricTiles", nunca en "obstacles"). A diferencia de un Hazard,
-    // no daña por tick: avisa ~2 s y suelta UN golpe a todo lo que siga
-    // encima, incluidos los enemigos. Ver ElectricTile.h/.cpp en engine-cpp.
+    // Baldosa eléctrica: avisa un momento y luego suelta un único golpe a quien esté encima.
     public class ElectricTileData
     {
         [JsonPropertyName("position")]
@@ -17,8 +14,7 @@ namespace LevelEditor.Models
         [JsonPropertyName("damage")]
         public float Damage { get; set; } = 20.0f;
 
-        // 0 = solo se arma cuando alguien la pisa. > 0 = además se arma sola
-        // cada tantos segundos (baldosa "de ciclo").
+        // 0 = solo se arma al pisarla. Mayor que 0 = se arma sola cada tantos segundos.
         [JsonPropertyName("cycleInterval")]
         public float CycleInterval { get; set; }
     }

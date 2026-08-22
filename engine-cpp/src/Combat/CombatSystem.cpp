@@ -32,15 +32,11 @@ std::vector<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std
 
     Vector3 origin = player.GetPosition();
 
-    // Cleave: recorre TODOS los enemigos, sin cortar en el primer solape --
-    // antes paraba ahí (orden de spawn, no distancia) y el resto de
-    // enemigos dentro del área de ataque quedaban intactos.
+    // Golpea a todos los enemigos que solapen la hitbox, no solo al primero.
     for (auto& enemy : enemies) {
         if (!enemy->IsAlive() || !CollisionMath::AABBIntersects(enemy->GetBoundingBox(), hitbox->box)) continue;
 
-        // Línea de visión: un Obstacle entre el jugador y ESTE enemigo
-        // descarta el golpe solo para él -- el resto del cleave sigue
-        // aplicándose con normalidad a quien sí tenga línea libre.
+        // Un obstáculo entre el jugador y este enemigo descarta el golpe solo para él.
         bool blocked = false;
         for (const auto& obstacle : obstacles) {
             if (CollisionMath::SegmentIntersectsBoxXZ(origin, enemy->GetPosition(), obstacle->GetBoundingBox())) {
@@ -52,11 +48,10 @@ std::vector<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std
 
         MeleeHitResult result;
         result.impactPoint = enemy->GetPosition();
-        result.impactPoint.y += 1.0f; // altura de pecho, mismo offset que la barra de HP flotante del HUD
+        result.impactPoint.y += 1.0f; // altura de pecho
         result.hitEnemy = enemy.get();
 
-        // Shielder golpeado de frente: el golpe se registra (juice, cierre de
-        // la ventana de hitbox) pero no aplica daño. Rodearlo es la respuesta.
+        // Un Shielder golpeado de frente bloquea el daño, pero el golpe cuenta igual.
         if (enemy->BlocksAttackFrom(origin)) {
             result.blocked = true;
         } else {
@@ -66,10 +61,6 @@ std::vector<MeleeHitResult> CombatSystem::ResolveMeleeAttack(Player& player, std
         hits.push_back(result);
     }
 
-    // La hitbox se cierra una sola vez, tras procesar a todos -- es el mismo
-    // swing, no uno por enemigo golpeado. Si no golpeó a nadie, se deja
-    // abierta para que siga probando en los frames siguientes hasta que
-    // expire por tiempo (ver Hitbox::remainingTime).
     if (!hits.empty()) player.CloseAttackHitbox();
 
     return hits;
@@ -113,8 +104,7 @@ void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, P
         player.TakeDamage(damage, CollisionMath::ScaleXZ(dir, kAreaKnockbackForce));
     }
 
-    // Incluye al propio emisor si está en la lista (p.ej. el Kamikaze que
-    // acaba de detonar): fuego amigo real, no un caso a excluir a mano.
+    // Daña también al enemigo que provocó la explosión, si sigue en la lista.
     for (auto& enemy : enemies) {
         if (!enemy->IsAlive()) continue;
         if (!CollisionMath::IsWithinRadius(enemy->GetPosition(), center, radius)) continue;
@@ -123,9 +113,6 @@ void CombatSystem::ApplyAreaDamage(Vector3 center, float radius, float damage, P
         enemy->TakeDamage(damage, CollisionMath::ScaleXZ(dir, kAreaKnockbackForce));
     }
 
-    // Mismo criterio que con los Enemy: un barril ya explotado (incluido el
-    // propio emisor, si esta llamada viene de su propia explosión) no puede
-    // volver a recibir daño -- HasExploded() es una puerta de una sola vía.
     for (auto& barrel : barrels) {
         if (barrel->HasExploded()) continue;
         if (!CollisionMath::IsWithinRadius(barrel->GetPosition(), center, radius)) continue;
@@ -151,8 +138,7 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
             Vector3{ projectile.position.x + Projectile::kRadius, projectile.position.y + Projectile::kRadius, projectile.position.z + Projectile::kRadius }
         };
 
-        // Contra un obstáculo primero: se destruye sin atravesarlo ni dañar
-        // a lo que pueda estar cubierto detrás.
+        // Un obstáculo destruye el proyectil sin dejarlo pasar.
         bool hitObstacle = false;
         for (const auto& obstacle : obstacles) {
             if (CollisionMath::AABBIntersects(projectileBox, obstacle->GetBoundingBox())) {
@@ -161,9 +147,6 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
             }
         }
 
-        // Contra un barril, solo si no hubo obstáculo antes: aplica daño de
-        // verdad (no solo destruye el proyectil) para que un Spitter pueda
-        // encadenar la explosión de un barril cercano.
         bool hitBarrel = false;
         if (!hitObstacle) {
             for (auto& barrel : barrels) {
@@ -181,7 +164,7 @@ void CombatSystem::UpdateProjectiles(float dt, std::vector<Projectile>& projecti
         } else if (CollisionMath::AABBIntersects(projectileBox, player.GetBoundingBox())) {
             Vector3 dir = CollisionMath::Normalize2D(projectile.velocity);
             player.TakeDamage(projectile.damage, CollisionMath::ScaleXZ(dir, kProjectileKnockbackForce));
-            projectile.lifetime = 0.0f; // marca para el erase-remove de abajo
+            projectile.lifetime = 0.0f;
         }
     }
 
@@ -207,10 +190,6 @@ void CombatSystem::UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, P
     for (MudPuddle& puddle : puddles) {
         puddle.lifetime -= dt;
 
-        // Se reaplica cada frame que el jugador siga dentro: al salir, el
-        // lastre se le agota kSlowDuration después, no de golpe -- así se
-        // nota el "chapoteo" al escapar en vez de recuperar la velocidad en
-        // el mismo píxel en que sales del charco.
         if (CollisionMath::IsWithinRadius(player.GetPosition(), puddle.position, MudPuddle::kRadius)) {
             player.ApplySlow(MudPuddle::kSlowDuration, MudPuddle::kSlowMultiplier);
         }
@@ -223,10 +202,7 @@ void CombatSystem::UpdateMudPuddles(float dt, std::vector<MudPuddle>& puddles, P
 }
 
 void CombatSystem::ApplyBufferAuras(std::vector<std::unique_ptr<Enemy>>& enemies) {
-    // Se reescribe entero cada frame, empezando por limpiar: así el bonus
-    // caduca solo en cuanto el Buffer muere o el zombi sale del radio, sin
-    // que nadie tenga que acordarse de retirarlo.
-    for (auto& enemy : enemies) enemy->SetSpeedMultiplier(1.0f);
+    for (auto& enemy : enemies) enemy->SetSpeedMultiplier(1.0f); // se recalcula entero cada frame
 
     for (const auto& buffer : enemies) {
         if (buffer->GetBehavior() != EnemyBehavior::Buffer || !buffer->IsAlive()) continue;
@@ -250,9 +226,7 @@ void CombatSystem::UpdateElectricTiles(float dt, std::vector<std::unique_ptr<Ele
         BoundingBox tileBox = tile->GetBoundingBox();
         bool playerOnTile = CollisionMath::AABBIntersects(player.GetBoundingBox(), tileBox);
 
-        // Armar: cualquiera encima sirve de detonante, también un enemigo --
-        // por eso no basta con comprobar al jugador. Trigger() se ignora sola
-        // si la baldosa no está inactiva, así que llamarla cada frame es seguro.
+        // Se arma con el jugador o con cualquier enemigo encima.
         if (playerOnTile) {
             tile->Trigger();
         } else {
@@ -266,9 +240,6 @@ void CombatSystem::UpdateElectricTiles(float dt, std::vector<std::unique_ptr<Ele
 
         if (!tile->ConsumeDischarge()) continue;
 
-        // El solape se vuelve a comprobar AHORA, no se reutiliza el de arriba
-        // para el jugador: entre armarla y descargar hay 2 segundos enteros,
-        // que es justo el tiempo que se da para quitarse de encima.
         float damage = tile->GetDamage();
         Vector3 center = tile->GetPosition();
 

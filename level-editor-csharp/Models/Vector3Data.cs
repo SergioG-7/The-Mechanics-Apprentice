@@ -2,8 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace LevelEditor.Models
 {
-    // Mapea 1:1 con el struct Vector3 de raylib/C++, tal como lo espera
-    // LevelLoader.cpp: tres floats en minúsculas ("x", "y", "z").
+    // Coordenadas 3D simples, iguales al Vector3 del motor C++.
     public class Vector3Data
     {
         [JsonPropertyName("x")]

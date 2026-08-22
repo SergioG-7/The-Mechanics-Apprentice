@@ -3,24 +3,14 @@ using static LevelEditor.Canvas.CanvasGeometry;
 
 namespace LevelEditor.Core
 {
-    // El nivel que se está editando: todas sus listas y las operaciones que
-    // dependen SOLO de ellas (hit-test, borrado, reposicionado, carga y
-    // volcado a LevelData).
-    //
-    // Estaba todo dentro de MainForm, que ya cargaba con la construcción de la
-    // UI, la selección de herramienta, el panel de propiedades, la
-    // localización, los diálogos de archivo y el dibujado -- once campos de
-    // estado más su lógica, mezclados con WinForms. Aquí no se incluye ni un
-    // solo `using System.Windows.Forms`: es el modelo, y se puede razonar (o
-    // probar) sin levantar un formulario.
+    // El nivel que se está editando: todas sus listas de objetos y las operaciones sobre ellas
+    // (buscar por clic, borrar, mover, cargar y volcar a LevelData).
     public sealed class EditorScene
     {
-        // Nombre lógico del nivel (campo "levelName" del JSON). Se conserva al
-        // abrir uno existente para no perderlo al reexportar.
+        // Nombre del nivel.
         public string LevelName { get; set; } = "arena_editor";
 
-        // Nullable, como en el JSON: un nivel a medio construir puede no tener
-        // jugador todavía (exportar lo exige, editar no).
+        // Un nivel a medio construir puede no tener jugador todavía.
         public PlayerData? Player { get; set; }
         public DoorData? Door { get; set; }
 
@@ -57,9 +47,7 @@ namespace LevelEditor.Core
             target.AddRange(source);
         }
 
-        // El llamante garantiza Player != null (MainForm lo comprueba antes de
-        // exportar y avisa si falta): LevelData.Player no es nullable porque
-        // LevelLoader.cpp exige la clave "player" para construir la partida.
+        // Convierte la escena en un LevelData listo para exportar.
         public LevelData ToLevelData() => new()
         {
             LevelName = LevelName,
@@ -76,9 +64,7 @@ namespace LevelEditor.Core
             Door = Door
         };
 
-        // Orden INVERSO al de dibujado (lo último pintado, arriba del todo, se
-        // prueba primero): Player, Enemies, Spawners, Barrels, PowerUps,
-        // HealthKits, Gears, Hazards, ElectricTiles, Door, Obstacles.
+        // Devuelve el objeto que hay bajo ese punto de pantalla, o null si no hay nada.
         public object? FindAt(Point screenPoint)
         {
             if (Player is not null && IsPointNearMarker(screenPoint, WorldToScreen(Player.Spawn)))
@@ -106,9 +92,6 @@ namespace LevelEditor.Core
             return null;
         }
 
-        // Los dos helpers de abajo recorren de atrás hacia delante por el mismo
-        // motivo que FindAt: lo colocado más tarde se dibuja encima, así que
-        // gana el hit-test.
         private static object? FindMarker<T>(List<T> items, Func<T, Vector3Data> position, Point point)
         {
             for (int i = items.Count - 1; i >= 0; i--)
@@ -125,8 +108,7 @@ namespace LevelEditor.Core
             return null;
         }
 
-        // true si de verdad se borró algo. Player y Door son singulares (se
-        // anulan); el resto sale de su lista.
+        // Borra el objeto dado de la escena. Devuelve true si se ha borrado algo.
         public bool Remove(object entity)
         {
             if (ReferenceEquals(entity, Player)) { Player = null; return true; }
@@ -165,8 +147,7 @@ namespace LevelEditor.Core
             }
         }
 
-        // Quita el punto de patrulla más cercano al cursor (dentro del radio de
-        // un marcador). true si quitó alguno.
+        // Quita el punto de patrulla más cercano al cursor. Devuelve true si ha quitado alguno.
         public static bool RemoveNearestPatrolPoint(EnemyData enemy, Point screenPoint)
         {
             int bestIndex = -1;

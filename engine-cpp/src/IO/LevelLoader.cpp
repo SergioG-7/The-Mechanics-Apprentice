@@ -10,10 +10,8 @@ using json = nlohmann::json;
 
 namespace {
 
+// Lee un Vector3 del JSON; si falta alguna componente, la deja a 0.
 Vector3 ParseVector3(const json& node) {
-    // .value(), no .at(): un vector al que le falte una componente (JSON
-    // editado a mano) cae a 0 en ese eje en vez de lanzar. Serializado por el
-    // editor C# nunca pasa -- Vector3Data siempre escribe las tres.
     return Vector3{
         node.value("x", 0.0f),
         node.value("y", 0.0f),
@@ -21,21 +19,13 @@ Vector3 ParseVector3(const json& node) {
     };
 }
 
-// Vector3 de una clave OPCIONAL del nodo. Si la clave falta o no es un
-// objeto, devuelve fallback en vez de lanzar. Es el punto único por el que
-// pasan todas las posiciones/tamaños del nivel, así que ninguna entrada mal
-// formada puede tirar abajo la carga entera.
+// Lee un Vector3 de una clave opcional; si falta, devuelve el valor por defecto.
 Vector3 ParseVector3Field(const json& node, const char* key, Vector3 fallback) {
     if (!node.contains(key) || !node.at(key).is_object()) return fallback;
     return ParseVector3(node.at(key));
 }
 
-// Recorre un array opcional del nivel aplicando parse a cada elemento, con
-// try/catch POR ELEMENTO. Antes, un solo campo mal escrito en una entrada
-// hacía saltar el catch global de LoadFromFile y el nivel ENTERO volvía
-// vacío -- Application lo interpretaba como "nivel no disponible" y rebotaba
-// al menú, sin pista de qué entrada de qué lista era la culpable. Ahora se
-// salta esa entrada con un aviso que la identifica y el resto del nivel carga.
+// Recorre un array del nivel aplicando parse a cada elemento; si uno falla, se salta con un aviso.
 template <typename ParseFn>
 void ParseArray(const json& root, const char* key, ParseFn parse) {
     if (!root.contains(key) || !root.at(key).is_array()) return;
@@ -51,12 +41,7 @@ void ParseArray(const json& root, const char* key, ParseFn parse) {
     }
 }
 
-// "box" (por defecto si falta "type", para niveles de antes de esta fase) o
-// "cylinder". Un obstáculo box acepta "size" (dimensión completa, el formato
-// nuevo) o, si falta, el "halfExtents" directo de antes -- y si no hay
-// ninguno de los dos, 1.0/1.0/1.0 tal como pide el diseño. Ambos tipos
-// terminan en la MISMA lista (LevelData::obstacles) porque los dos son
-// Entity con AABB; ver el comentario en LevelData.
+// Construye un obstáculo de tipo "box" o "cylinder" a partir del JSON.
 std::unique_ptr<Entity> ParseObstacle(const json& n) {
     Vector3 position = ParseVector3Field(n, "position", Vector3{ 0.0f, 0.0f, 0.0f });
     std::string type = n.value("type", std::string("box"));
@@ -74,21 +59,10 @@ std::unique_ptr<Entity> ParseObstacle(const json& n) {
     if (n.contains("halfExtents")) {
         return std::make_unique<Obstacle>(position, ParseVector3(n.at("halfExtents")));
     }
-    return std::make_unique<Obstacle>(position, Vector3{ 0.5f, 0.5f, 0.5f }); // "size" 1,1,1 sin declarar
+    return std::make_unique<Obstacle>(position, Vector3{ 0.5f, 0.5f, 0.5f });
 }
 
-// Construye el Enemy directamente con los stats propios de su entrada en el
-// JSON del nivel, sin pasar por EnemyFactory. Camino usado tanto por
-// type == "Default" como por un type que no coincide con ningún arquetipo de
-// enemy_variants.json (variante desconocida: mejor un enemigo con sus stats
-// tal cual que perderlo o abortar la carga entera del nivel).
-//
-// Los stats usan .value(...) con default, no .at(...): un campo suelto que
-// falte en UNA entrada (typo, JSON editado a mano) no debe tirar abajo la
-// carga del nivel ENTERO -- antes de este cambio, cualquier .at() ausente
-// aquí lanzaba, el catch de LoadFromFile lo atrapaba, y TODO el nivel volvía
-// vacío (Application lo interpretaba como "nivel no disponible" y volvía al
-// menú, sin pista de qué campo faltaba en qué enemigo).
+// Construye un Enemy con los stats propios de su entrada en el JSON, sin pasar por EnemyFactory.
 std::unique_ptr<Enemy> BuildEnemyFromOwnStats(const json& n, std::vector<Vector3> patrolRoute) {
     return std::make_unique<Enemy>(
         ParseVector3Field(n, "spawn", Vector3{ 0.0f, 0.0f, 0.0f }),
@@ -114,10 +88,7 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
         json root;
         file >> root;
 
-        // El jugador es el ÚNICO campo obligatorio: sin él no hay partida que
-        // construir, así que su ausencia sí debe abortar la carga (Application
-        // lo detecta por level.player == nullptr y vuelve al menú). Sus stats,
-        // en cambio, tienen defaults como todo lo demás.
+        // El jugador es el único campo obligatorio del nivel.
         const json& playerNode = root.at("player");
         level.player = std::make_unique<Player>(
             ParseVector3Field(playerNode, "spawn", Vector3{ 0.0f, 0.0f, 0.0f }),
@@ -137,24 +108,17 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
         });
 
         ParseArray(root, "enemies", [&level](const json& n) {
-            // Opcional (no .at): un enemigo estático sin patrolRoute es
-            // válido, y antes su ausencia tiraba abajo el nivel entero.
             std::vector<Vector3> patrolRoute;
             if (n.contains("patrolRoute") && n.at("patrolRoute").is_array()) {
                 for (const json& p : n.at("patrolRoute")) patrolRoute.push_back(ParseVector3(p));
             }
 
-            // "type" es opcional por compatibilidad con niveles exportados
-            // antes de la Fase 3 (sin el campo, se comportaban todos como
-            // "Default": stats propios, sin pasar por EnemyFactory).
             std::string type = n.value("type", std::string("Default"));
 
             std::unique_ptr<Enemy> enemy;
             if (type == "Default") {
                 enemy = BuildEnemyFromOwnStats(n, std::move(patrolRoute));
             } else {
-                // Copia (no move) de patrolRoute: si el type no resuelve en el
-                // factory, hace falta intacta para el fallback de abajo.
                 enemy = EnemyFactory::CreateEnemy(type, ParseVector3Field(n, "spawn", Vector3{ 0.0f, 0.0f, 0.0f }), patrolRoute);
                 if (!enemy) {
                     TraceLog(LOG_WARNING,
@@ -174,13 +138,10 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
             spawner.interval = n.value("interval", 4.0f);
             spawner.maxEnemies = n.value("maxEnemies", 3);
 
-            // "weights": { "Runner": 5, "Tank": 1, ... } -- opcional. Si está,
-            // el spawner sortea arquetipo en cada spawn; si no, se comporta
-            // como siempre (enemyType fijo), que es lo que hace que los
-            // niveles ya existentes no cambien.
+            // "weights" opcional: si está, el spawner sortea arquetipo en cada spawn.
             if (n.contains("weights") && n.at("weights").is_object()) {
                 for (const auto& [name, weight] : n.at("weights").items()) {
-                    if (!weight.is_number_integer()) continue; // un peso no numérico se ignora, no rompe el spawner
+                    if (!weight.is_number_integer()) continue;
                     spawner.weightedTypes.push_back(WeightedEnemyType{ name, weight.get<int>() });
                 }
             }
@@ -214,10 +175,6 @@ LevelData LevelLoader::LoadFromFile(const std::string& jsonPath) {
                 PowerUp::ParseType(n.value("type", std::string("Overclock")))));
         });
 
-        // !is_null() a propósito: System.Text.Json puede serializar una
-        // propiedad C# nula como `"door": null` en vez de omitir la clave.
-        // contains() por sí solo daría true y el parseo de abajo trabajaría
-        // sobre un null en vez de sobre un objeto.
         if (root.contains("door") && root.at("door").is_object()) {
             const json& doorNode = root.at("door");
             level.door = std::make_unique<Door>(

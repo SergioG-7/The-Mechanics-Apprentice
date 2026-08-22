@@ -3,15 +3,13 @@
 #include "rlgl.h"
 
 Gear::Gear(Vector3 position)
-    : Entity(position, Vector3{ 0.3f, 0.3f, 0.3f }) {} // más pequeño que Player/Enemy/Obstacle por defecto
+    : Entity(position, Vector3{ 0.3f, 0.3f, 0.3f }) {}
 
 void Gear::Draw() const {
     constexpr float kRotationSpeedDegPerSec = 90.0f;
-    constexpr int kSlices = 6; // silueta de tuerca hexagonal, encaja con el tema mecánico
+    constexpr int kSlices = 6; // silueta hexagonal de tuerca
 
-    // rlPushMatrix/rlRotatef en vez de un ángulo por parámetro: DrawCylinder
-    // no tiene overload con rotación, así que se rota la matriz de mundo
-    // igual que raylib hace internamente en sus propias funciones Draw*.
+    // Rota la matriz de mundo para girar el engranaje mientras gira.
     rlPushMatrix();
     rlTranslatef(m_position.x, m_position.y, m_position.z);
     rlRotatef((float)GetTime() * kRotationSpeedDegPerSec, 0.0f, 1.0f, 0.0f);

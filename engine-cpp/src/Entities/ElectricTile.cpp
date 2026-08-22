@@ -9,15 +9,10 @@ ElectricTile::ElectricTile(Vector3 position, Vector3 size, float damage, float c
 void ElectricTile::EnterState(ElectricTileState state) {
     m_state = state;
     m_stateTimer = 0.0f;
-    // El flag se levanta AL ENTRAR en Descarga, no durante: así el golpe es
-    // uno solo por ciclo por mucho que dure la animación del arco.
     if (state == ElectricTileState::Discharge) m_pendingDischarge = true;
 }
 
 void ElectricTile::Trigger() {
-    // Solo desde Inactiva Y pasada la recuperación: si no, quedarse encima
-    // la rearmaría en el mismo frame en que termina de descargar y sería un
-    // Hazard por tick con otro nombre.
     if (m_state != ElectricTileState::Idle) return;
     if (m_stateTimer < kRecoveryDuration) return;
     EnterState(ElectricTileState::Warning);
@@ -28,8 +23,6 @@ void ElectricTile::Update(float dt) {
 
     switch (m_state) {
         case ElectricTileState::Idle:
-            // Baldosa de ciclo: se arma sola. El >= kRecoveryDuration de
-            // Trigger no aplica aquí porque el propio ciclo ya es más largo.
             if (m_cycleInterval > 0.0f && m_stateTimer >= m_cycleInterval) {
                 EnterState(ElectricTileState::Warning);
             }
@@ -61,15 +54,12 @@ void ElectricTile::Draw() const {
 
     switch (m_state) {
         case ElectricTileState::Idle:
-            // Apagada y fría: se distingue de un Hazard (naranja óxido, daña
-            // siempre) justo en que no parece una amenaza activa.
             plate = Color{ 45, 55, 75, 255 };
             border = Color{ 90, 110, 150, 255 };
             break;
 
         case ElectricTileState::Warning: {
-            // Parpadeo que se acelera con la cuenta atrás, igual que el
-            // Kamikaze antes de detonar: el ritmo ES la barra de progreso.
+            // Parpadeo que se acelera con la cuenta atrás.
             bool on = Pulse::AcceleratingBlink(m_stateTimer, Pulse::Progress01(m_stateTimer, kWarningDuration), 0.32f, 0.06f);
             plate = on ? Color{ 240, 200, 60, 255 } : Color{ 120, 95, 30, 255 };
             border = YELLOW;
@@ -88,9 +78,7 @@ void ElectricTile::Draw() const {
 
     if (m_state != ElectricTileState::Discharge) return;
 
-    // Arco eléctrico: una zigzag entre esquinas opuestas, más un pilar de luz
-    // corto. Suficiente para que se lea "esto acaba de soltar la descarga"
-    // sin necesitar partículas ni un shader propio.
+    // Arco eléctrico en zigzag entre esquinas opuestas, más un pilar de luz.
     constexpr int kArcSegments = 6;
     float topY = m_position.y + m_halfExtents.y + 0.02f;
     Vector3 previous{ m_position.x - m_halfExtents.x, topY, m_position.z - m_halfExtents.z };

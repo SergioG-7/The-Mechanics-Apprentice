@@ -3,9 +3,7 @@
 #include <vector>
 #include <memory>
 
-// Base para todo lo que el LevelLoader puede instanciar y que ocupa espacio
-// en el mundo: Player, Enemy, Obstacle. Solo maneja posición y colisión —
-// HP y daño viven un nivel más abajo, en Actor, porque Obstacle no los necesita.
+// Base de todo lo que ocupa espacio en el mundo: Player, Enemy, Obstacle. Solo maneja posición y colisión.
 class Entity {
 public:
     explicit Entity(Vector3 position, Vector3 halfExtents = { 0.5f, 0.5f, 0.5f });
@@ -18,12 +16,7 @@ public:
     virtual BoundingBox GetBoundingBox() const;
 
 protected:
-    // Intenta desplazar la entidad por delta (X y Z se resuelven por
-    // separado a propósito: si un eje choca contra un Obstacle y el otro no,
-    // el movimiento en el eje libre se sigue aplicando -> "desliza" a lo
-    // largo del obstáculo en vez de quedarse parado en seco). La llaman
-    // Player/Enemy a través de Actor::TryMoveAgainstObstacles(); Obstacle
-    // nunca la usa.
+    // Intenta mover la entidad, deslizando a lo largo de los obstáculos en vez de bloquearse en seco.
     void TryMove(Vector3 delta, const std::vector<std::unique_ptr<Entity>>& obstacles);
 
     Vector3 m_position{};

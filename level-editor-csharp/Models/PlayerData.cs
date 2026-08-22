@@ -7,7 +7,6 @@ namespace LevelEditor.Models
         [JsonPropertyName("spawn")]
         public Vector3Data Spawn { get; set; } = new();
 
-        // float, no int: coincide con Actor::m_hp en el motor C++ (también float).
         [JsonPropertyName("maxHP")]
         public float MaxHP { get; set; } = 100.0f;
 

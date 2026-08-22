@@ -4,19 +4,13 @@ using LevelEditor.Models;
 
 namespace LevelEditor.Core
 {
-    // Serialización de LevelData a/desde disco, incluida la migración de
-    // obstáculos en formato legado -- separado de MainForm para que el
-    // control de UI (diálogos, MessageBox, listas en memoria) no cargue
-    // también con el pipeline de datos (auditoría de arquitectura, 2026-08-19).
+    // Carga y guarda niveles en disco como JSON.
     public static class LevelFileService
     {
         private static readonly JsonSerializerOptions SaveOptions = new()
         {
             WriteIndented = true,
-            // Si Door es null, se omite la clave "door" del JSON en vez de
-            // escribir "door": null -- LevelLoader.cpp distingue "ausente"
-            // (nivel sin puerta) de "presente pero null" (que le haría
-            // fallar el parseo al intentar leer position/halfExtents).
+            // Omite del JSON las claves con valor null en vez de escribirlas.
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
@@ -36,10 +30,7 @@ namespace LevelEditor.Core
             File.WriteAllText(path, json);
         }
 
-        // Un nivel de antes de la fase de estructuras de entorno trae
-        // "halfExtents" en vez de "size" y no declara "type" -- se resuelve
-        // una vez al cargar y nunca se vuelve a escribir LegacyHalfExtents
-        // (ver ObstacleData).
+        // Convierte los obstáculos con formato antiguo ("halfExtents") al formato actual.
         private static void MigrateLegacyObstacles(List<ObstacleData> obstacles)
         {
             foreach (ObstacleData obstacle in obstacles)

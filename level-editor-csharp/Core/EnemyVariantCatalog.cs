@@ -3,10 +3,7 @@ using LevelEditor.Localization;
 
 namespace LevelEditor.Core
 {
-    // Stats base de un arquetipo, tal como los define EnemyFactory en el
-    // motor C++ (assets/data/enemy_variants.json). "Default" nunca aparece
-    // aquí a propósito -- no pasa por EnemyFactory, usa los stats propios
-    // del EnemyData tal cual (ver el comentario de EnemyData.Type).
+    // Stats base de un arquetipo de enemigo.
     public sealed class EnemyVariantStatsData
     {
         [JsonPropertyName("maxHP")] public float MaxHP { get; set; }
@@ -15,27 +12,14 @@ namespace LevelEditor.Core
         [JsonPropertyName("visionRadius")] public float VisionRadius { get; set; }
     }
 
-    // Lectura del mismo enemy_variants.json que consume el motor C++
-    // (enlazado, no copiado a mano -- ver LevelEditor.csproj) para que el
-    // ComboBox de variante pueda rellenar HP/Velocidad/Rango/Daño con los
-    // valores reales del arquetipo en vez de dejarlos todos con el mismo
-    // valor por defecto sin importar qué variante se elija.
+    // Lee las stats de cada arquetipo de enemigo desde el JSON de datos del motor.
     public static class EnemyVariantCatalog
     {
-        // Arquetipos disponibles para el ComboBox de variante y para el tipo
-        // de enemigo de un Spawner. "Default" es el único que NO pasa por
-        // EnemyFactory en el motor C++: usa los stats propios del EnemyData.
-        // Son identificadores consumidos tal cual por el motor (no se
-        // traducen NUNCA como valor) -- lo que se traduce es solo su
-        // representación en el ComboBox, ver BuildItems.
+        // Arquetipos disponibles para elegir en el ComboBox.
         public static readonly string[] Names =
             { "Default", "Tank", "Runner", "Spitter", "Kamikaze", "Shielder", "Buffer", "Trapper" };
 
-        // Envuelve cada código de variante en un ComboBoxItem cuyo texto
-        // visible sale de "variant_{code}" (variant_Default, variant_Tank...)
-        // en el idioma activo, pero cuyo Value se queda en el código en
-        // inglés que espera EnemyFactory -- así el ComboBox se relocaliza sin
-        // arrastrar el valor serializado.
+        // Construye los items del ComboBox con el nombre traducido de cada arquetipo.
         public static ComboBoxItem<string>[] BuildItems(IEnumerable<string> codes) =>
             codes.Select(code => new ComboBoxItem<string>(code, LocalizationManager.GetText($"variant_{code}"))).ToArray();
 
@@ -63,10 +47,7 @@ namespace LevelEditor.Core
             }
             catch (System.Text.Json.JsonException)
             {
-                // Se queda vacío: TryGet devuelve null para cualquier
-                // variante y el editor no toca las stats -- mismo criterio
-                // de degradar sin reventar que el resto de la carga de
-                // datos del editor (ver LocalizationManager.LoadLanguageFile).
+                // Si el JSON está mal, se queda vacío en vez de romper el editor.
             }
         }
 

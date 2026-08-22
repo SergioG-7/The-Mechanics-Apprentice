@@ -19,9 +19,7 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, const Hud
 
     DrawModeHeader(ui, hud);
 
-    // --- Barra de HP del Player, con etiqueta encima -- antes la barra no
-    // llevaba número, solo color, y en el playtest pidieron que "Vida" fuera
-    // uno de los textos grandes del HUD. ---
+    // --- Barra de HP del jugador ---
     constexpr int barX = 10, barY = 60, barWidth = 200, barHeight = 20;
     constexpr float kHudTextSize = LocalizationManager::kFontSizeHud;
     const Font& hudFont = ui.localization.GetFontForSize(kHudTextSize);
@@ -35,8 +33,7 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, const Hud
     DrawRectangle(barX, barY, static_cast<int>(barWidth * hpRatio), barHeight, RED);
     DrawRectangleLines(barX, barY, barWidth, barHeight, BLACK);
 
-    // --- Engranajes: en Infinito, puntuación de esta partida junto al récord
-    // guardado (marcador dual); en Historia, recolectados / total del nivel. ---
+    // --- Engranajes: puntuación y récord en Infinito, recolectados/total en Historia ---
     const char* gearsLabel = ui.localization.GetText("hud_gears");
     std::string gearsText = (hud.appState == AppState::EndlessMode)
         ? TextFormat("%s: %d   %s: %d", gearsLabel, hud.endlessScore,
@@ -44,10 +41,7 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, const Hud
         : TextFormat("%s: %d / %d", gearsLabel, hud.totalGears - static_cast<int>(level.gears.size()), hud.totalGears);
     DrawTextEx(hudFont, gearsText.c_str(), Vector2{ static_cast<float>(barX), static_cast<float>(barY + barHeight + 10) }, kHudTextSize, 1.0f, ORANGE);
 
-    // --- Power-ups activos: una línea por efecto, apiladas bajo el contador
-    // de engranajes. Se pintan con el MISMO color que el pickup y el aura del
-    // Player (PowerUp::TypeColor), para que las tres señales se lean como una
-    // sola. Solo el escudo no muestra segundos: dura hasta absorber un golpe. ---
+    // --- Power-ups activos, una línea por efecto ---
     float effectY = static_cast<float>(barY + barHeight + 10) + kHudTextSize + 6.0f;
     auto drawEffectRow = [&](const char* labelKey, PowerUpType type, float remaining, bool showSeconds) {
         std::string text = showSeconds
@@ -67,13 +61,13 @@ void HudRenderer::DrawHud(const UiContext& ui, const LevelData& level, const Hud
         drawEffectRow("powerup_shield", PowerUpType::Shield, 0.0f, false);
     }
 
-    // --- Barra de HP flotante sobre cada Enemy dañado ---
+    // --- Barra de HP flotante sobre cada enemigo dañado ---
     for (auto& enemy : level.enemies) {
-        if (!enemy->IsAlive()) continue;               // un zombie derrotado no necesita barra
-        if (enemy->GetHP() >= enemy->GetMaxHP()) continue; // solo tras el primer golpe, para no saturar
+        if (!enemy->IsAlive()) continue;
+        if (enemy->GetHP() >= enemy->GetMaxHP()) continue; // solo tras el primer golpe
 
         Vector3 worldPos = enemy->GetPosition();
-        worldPos.y += 1.0f; // encima del cubo, no sobre su centro
+        worldPos.y += 1.0f;
         Vector2 screenPos = GetWorldToScreen(worldPos, camera);
 
         constexpr int enemyBarWidth = 40, enemyBarHeight = 6;

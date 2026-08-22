@@ -4,33 +4,16 @@ using LevelEditor.Models;
 
 namespace LevelEditor.UI
 {
-    // El panel de propiedades de la entidad seleccionada: qué campos enseña
-    // cada tipo de entidad y qué escriben esos campos en el modelo.
-    //
-    // Vivía dentro de MainForm (~450 líneas repartidas en once
-    // BuildXxxProperties), que ya cargaba con la construcción de la UI, la
-    // herramienta activa, la localización, los diálogos de archivo y el
-    // hit-test. Aquí no se toca nada que esté fuera del GroupBox recibido:
-    // marcar el nivel como sucio, repintar el lienzo y recolocar lo que va
-    // debajo cuando el panel cambia de alto entran por delegados, así que
-    // este archivo no sabe que existe un MainForm.
+    // Construye y actualiza el panel de propiedades de la entidad seleccionada.
     internal sealed class PropertyPanelBuilder
     {
         private readonly GroupBox _group;
-
-        // Fuente base de la que parten las etiquetas: la del formulario, para
-        // poder VOLVER a ella cuando un texto deja de ser CJK al cambiar de
-        // idioma (ver LocalizedControls).
         private readonly Font _baseFont;
-
         private readonly Action _markDirty;
         private readonly Action _invalidateCanvas;
         private readonly Action<int> _setHeight;
 
-        // Entidad que se está mostrando. Se guarda porque dos controles (la
-        // variante de un enemigo y la casilla "Aleatorio" de un spawner)
-        // cambian QUÉ filas hay que pintar, y reconstruyen el panel entero
-        // desde dentro con Rebuild().
+        // Entidad que se está mostrando actualmente en el panel.
         private object? _entity;
 
         public PropertyPanelBuilder(GroupBox group, Font baseFont, Action markDirty, Action invalidateCanvas, Action<int> setHeight)
@@ -42,8 +25,7 @@ namespace LevelEditor.UI
             _setHeight = setHeight;
         }
 
-        // Único punto de entrada: muestra las propiedades de `entity`
-        // (null, o una entidad sin campos editables, deja el panel oculto).
+        // Muestra las propiedades de la entidad dada, u oculta el panel si no hay ninguna.
         public void Show(object? entity)
         {
             _entity = entity;
@@ -53,22 +35,11 @@ namespace LevelEditor.UI
         private Label CreateLabel(string textKey, Point location) =>
             LocalizedControls.CreateLabel(textKey, location, _baseFont);
 
-        // Una fila del panel: su etiqueta traducida y el campo numérico que
-        // escribe en el modelo. Los veinte campos solo se diferencian en
-        // fila, rango, decimales, paso y qué asignan, así que se arman todos
-        // por aquí.
-        //
-        // repaint: para lo que cambia la HUELLA EN PLANTA de la entidad
-        // (ancho/largo, radio, el intervalo que va escrito sobre una baldosa)
-        // y por tanto obliga a repintar el lienzo. El alto (Y) no se ve desde
-        // arriba, así que no lo pide.
+        // Añade una fila del panel: su etiqueta traducida y el campo numérico que edita el modelo.
         private void AddRow(string textKey, int row, decimal min, decimal max, int decimals, decimal step,
                             float value, Action<float> apply, bool repaint = false)
         {
-            // El valor se recorta al rango del control: un JSON externo puede
-            // traer un enemigo sin "maxHP" (llega como 0, y el mínimo es 1) y
-            // NumericUpDown lanza ArgumentOutOfRangeException al asignarlo,
-            // lo que se llevaría el editor por delante al seleccionarlo.
+            // El valor se recorta al rango permitido para no reventar con datos fuera de rango.
             var input = new NumericUpDown
             {
                 Location = new Point(10, InputY(row)), Width = 160,
@@ -89,10 +60,9 @@ namespace LevelEditor.UI
         private static int LabelY(int row) => 25 + row * 55;
         private static int InputY(int row) => 45 + row * 55;
 
-        // Alto del panel para el caso normal (3 filas). El Random Spawner lo
-        // estira con _setHeight porque sus siete filas de peso no caben aquí.
         private const int DefaultPropertiesHeight = 300;
 
+        // Reconstruye el panel de propiedades según el tipo de entidad seleccionada.
         private void Rebuild()
         {
             _group.Controls.Clear();
@@ -146,8 +116,7 @@ namespace LevelEditor.UI
                     break;
 
                 default:
-                    // Gear seleccionado (sin propiedades editables todavía,
-                    // solo posición), o nada seleccionado.
+                    // Entidad sin propiedades editables, o nada seleccionado.
                     _group.Visible = false;
                     break;
             }
@@ -162,10 +131,6 @@ namespace LevelEditor.UI
 
         private void BuildEnemyProperties(EnemyData enemy)
         {
-            // Fila 0: Type. Determina si el motor construye este enemigo con
-            // los stats de abajo tal cual ("Default") o los ignora y usa
-            // EnemyFactory con los del arquetipo (ver LevelLoader.cpp) -- por
-            // eso conviene dejar claro con el propio combo cuál manda.
             var typeCombo = new ComboBox
             {
                 Location = new Point(10, InputY(0)), Width = 160,
@@ -178,12 +143,7 @@ namespace LevelEditor.UI
             {
                 enemy.Type = ((ComboBoxItem<string>)typeCombo.SelectedItem!).Value;
 
-                // Cambiar de variante actualiza HP/Velocidad/Rango/Daño a los
-                // base del arquetipo nuevo -- si no, "Tank" se quedaría con
-                // los números de lo que hubiera antes (o los del primer
-                // enemigo colocado en la sesión), que es justo lo reportado
-                // en el playtest. "Default" (sin entrada en el catálogo) deja
-                // los valores tal cual, para poder ajustarlos a mano.
+                // Cambiar de variante actualiza HP/Velocidad/Rango/Daño a los valores base del arquetipo.
                 EnemyVariantStatsData? stats = EnemyVariantCatalog.TryGet(enemy.Type);
                 if (stats != null)
                 {
@@ -205,19 +165,14 @@ namespace LevelEditor.UI
             AddRow("prop_damage", 4, 1,    500,  0, 1,    enemy.AttackDamage, v => enemy.AttackDamage = v);
         }
 
-        // Tabla de pesos por defecto al marcar "Aleatorio": todos los
-        // arquetipos presentes, la chusma rápida como base y el Buffer casi
-        // testimonial (el motor además solo deja 2 vivos a la vez, ver
-        // Spawner::kMaxLiveBuffers). Es un punto de partida razonable para no
-        // obligar a teclear siete números desde cero.
+        // Pesos de partida al marcar "Aleatorio", para no tener que teclear los siete a mano.
         private static Dictionary<string, int> DefaultSpawnerWeights() => new()
         {
             { "Runner", 5 }, { "Spitter", 3 }, { "Kamikaze", 3 },
             { "Tank", 2 }, { "Shielder", 2 }, { "Trapper", 2 }, { "Buffer", 1 },
         };
 
-        // "Default" nunca aparece en un spawner: siempre necesita una variante
-        // real de EnemyFactory (ver el mismo criterio en OnCanvasMouseClick).
+        // Un spawner nunca genera enemigos de tipo "Default", solo variantes reales.
         private static string[] SpawnerVariants() => EnemyVariantCatalog.Names.Where(n => n != "Default").ToArray();
 
         private void BuildSpawnerProperties(SpawnerData spawner)
@@ -233,10 +188,7 @@ namespace LevelEditor.UI
             if (typeCombo.SelectedIndex < 0) typeCombo.SelectedIndex = 0;
             typeCombo.SelectedIndexChanged += (s, e) => { spawner.EnemyType = ((ComboBoxItem<string>)typeCombo.SelectedItem!).Value; _markDirty(); };
 
-            // Random Spawner. Marcar la casilla rellena la tabla de pesos por
-            // defecto; desmarcarla la borra entera (Weights = null), y el
-            // serializador omite la clave, así que el JSON vuelve a ser el de
-            // un spawner clásico sin dejar restos.
+            // Marcar la casilla activa el spawner aleatorio con pesos por defecto; desmarcarla lo desactiva.
             var randomCheck = new CheckBox
             {
                 Location = new Point(10, LabelY(3)),
@@ -264,10 +216,7 @@ namespace LevelEditor.UI
                 return;
             }
 
-            // Filas de peso COMPACTAS (etiqueta y campo en la misma línea, 26px
-            // de alto): con el paso normal de 55px las siete no cabrían ni de
-            // lejos en el panel lateral. Los pesos son relativos, no
-            // porcentajes: el motor los normaliza contra su propio total.
+            // Filas compactas para que quepan los siete pesos en el panel lateral.
             const int compactRowHeight = 26;
             int weightsTop = LabelY(3) + 32;
 
@@ -299,27 +248,22 @@ namespace LevelEditor.UI
             _setHeight(weightsTop + spawnerVariants.Length * compactRowHeight + 12);
         }
 
-        // Obstacle tipo "box": Ancho/Alto/Largo editables sobre Size
-        // (dimensión completa -- el motor C++ hace halfExtents = size * 0.5).
+        // Propiedades de un obstáculo tipo bloque: ancho, alto y largo.
         private void BuildObstacleBoxProperties(ObstacleData obstacle)
         {
-            // Ancho y Largo mueven la huella en planta, así que repintan el
-            // lienzo; el Alto (Y) no se ve desde arriba.
             AddRow("prop_width",  0, 0.2m, 20, 2, 0.2m, obstacle.Size.X, v => obstacle.Size.X = v, repaint: true);
             AddRow("prop_height", 1, 0.2m, 20, 2, 0.2m, obstacle.Size.Y, v => obstacle.Size.Y = v);
             AddRow("prop_length", 2, 0.2m, 20, 2, 0.2m, obstacle.Size.Z, v => obstacle.Size.Z = v, repaint: true);
         }
 
-        // Obstacle tipo "cylinder": Radio (afecta al círculo del canvas) y Alto.
+        // Propiedades de un obstáculo tipo pilar: radio y alto.
         private void BuildCylinderProperties(ObstacleData obstacle)
         {
             AddRow("prop_radius", 0, 0.2m, 10, 2, 0.1m, obstacle.Radius, v => obstacle.Radius = v, repaint: true);
             AddRow("prop_height", 1, 0.2m, 20, 2, 0.2m, obstacle.Height, v => obstacle.Height = v);
         }
 
-        // Hazard: Ancho/Largo de la zona (X/Z de Size; el grosor Y se queda
-        // fijo y no es editable, es solo una placa fina a ras de suelo) y el
-        // daño por tick que aplica CombatSystem::ApplyHazardDamage.
+        // Propiedades de una trampa: ancho, largo y daño por tick.
         private void BuildHazardProperties(HazardData hazard)
         {
             AddRow("prop_width",         0, 0.5m, 20,  2, 0.5m, hazard.Size.X,        v => hazard.Size.X = v, repaint: true);
@@ -327,23 +271,16 @@ namespace LevelEditor.UI
             AddRow("prop_damagepertick", 2, 1,    100, 0, 1,    hazard.DamagePerTick, v => hazard.DamagePerTick = v);
         }
 
-        // Baldosa eléctrica: tamaño de la placa, daño de la descarga y cada
-        // cuánto se arma sola. CycleInterval = 0 significa "solo al pisarla",
-        // así que el NumericUpDown baja hasta 0 a propósito.
+        // Propiedades de una baldosa eléctrica: tamaño, daño y cada cuánto se arma sola.
         private void BuildElectricTileProperties(ElectricTileData tile)
         {
             AddRow("prop_width",  0, 0.5m, 20,  2, 0.5m, tile.Size.X,       v => tile.Size.X = v, repaint: true);
             AddRow("prop_length", 1, 0.5m, 20,  2, 0.5m, tile.Size.Z,       v => tile.Size.Z = v, repaint: true);
             AddRow("prop_damage", 2, 1,    200, 0, 1,    tile.Damage,       v => tile.Damage = v);
-            // El intervalo se escribe sobre la baldosa en el lienzo (ver
-            // CanvasRenderer), así que cambiarlo obliga a repintar.
             AddRow("prop_cycle",  3, 0,    60,  1, 0.5m, tile.CycleInterval, v => tile.CycleInterval = v, repaint: true);
         }
 
-        // Power-Up: solo el tipo de efecto. La duración y la magnitud las
-        // fija el motor (Player::kPowerUpDuration y compañía), no el nivel:
-        // dos escudos que absorbieran distinto según dónde estén colocados
-        // serían imposibles de leer en pantalla.
+        // Propiedades de un power-up: solo su tipo de efecto.
         private void BuildPowerUpProperties(PowerUpData powerUp)
         {
             var typeCombo = new ComboBox
@@ -365,8 +302,7 @@ namespace LevelEditor.UI
             _group.Controls.Add(typeCombo);
         }
 
-        // Compartido por Door (Obstacle-box ya usa Size, ver
-        // BuildObstacleBoxProperties): posición + halfExtents directo.
+        // Propiedades de una puerta: ancho y largo en halfExtents.
         private void BuildHalfExtentsProperties(Vector3Data halfExtents)
         {
             AddRow("prop_halfextents_x", 0, 0.1m, 10, 2, 0.1m, halfExtents.X, v => halfExtents.X = v, repaint: true);

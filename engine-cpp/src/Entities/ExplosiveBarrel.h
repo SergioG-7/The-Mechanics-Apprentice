@@ -1,13 +1,7 @@
 #pragma once
 #include "Actor.h"
 
-// Objeto interactivo con HP: recibe daño del Player (ver
-// CombatSystem::ResolveMeleeAttackOnBarrels) y, al llegar a 0, se marca
-// "explotado". Application es quien, al ver HasExploded(), aplica el área
-// (CombatSystem::ApplyAreaDamage, la misma que usa Enemy para el Kamikaze),
-// dispara las chispas y lo retira del nivel -- el barril en sí no conoce ni
-// al Player ni a los demás enemigos, igual que Enemy no conoce el resto del
-// nivel más allá de su propia hitbox.
+// Barril explosivo: recibe daño y, al quedarse a 0 HP, explota causando daño en área.
 class ExplosiveBarrel : public Actor {
 public:
     explicit ExplosiveBarrel(Vector3 position, float maxHP = 30.0f);
@@ -19,18 +13,10 @@ public:
 
     bool HasExploded() const { return m_exploded; }
 
-    // true EXACTAMENTE una vez por barril, en la primera llamada tras
-    // explotar -- patrón "consumir", igual que Enemy::ConsumeExplosionTrigger.
-    //
-    // Existe porque HasExploded() por sí solo no distinguía "ha explotado" de
-    // "ya se le ha aplicado el área": en una cadena, la explosión de un barril
-    // podía marcar a otro que el bucle YA había dejado atrás en el vector, y
-    // el erase-remove del final del frame se lo llevaba sin haber aplicado
-    // nunca su AoE -- una explosión que se veía venir y no hacía nada.
+    // Devuelve true solo la primera vez que se llama tras explotar.
     bool ConsumeExplosion();
 
-    // Reaplica AudioSettings::GetSfxVolume() al Sound ya cargado -- ver
-    // Player::RefreshSfxVolume, mismo motivo.
+    // Actualiza el volumen del sonido de explosión según los ajustes de audio.
     void RefreshSfxVolume();
 
     static constexpr float kExplosionRadius = 3.5f;

@@ -8,9 +8,7 @@ using json = nlohmann::json;
 namespace {
 constexpr const char* kVariantsPath = "assets/data/enemy_variants.json";
 
-// Variante desconocida (typo, JSON viejo) cae a Melee y avisa -- igual que
-// el resto de este archivo trata cualquier dato de variante que no cuadra:
-// nunca revienta la carga, solo degrada con un warning.
+// Convierte el texto del JSON en un EnemyBehavior; si no reconoce el nombre, usa Melee.
 EnemyBehavior ParseBehavior(const std::string& name) {
     if (name == "melee") return EnemyBehavior::Melee;
     if (name == "kamikaze") return EnemyBehavior::Kamikaze;
@@ -23,8 +21,7 @@ EnemyBehavior ParseBehavior(const std::string& name) {
     return EnemyBehavior::Melee;
 }
 
-// "tint": [r, g, b] con componentes 0-255. Ausente o mal formado = WHITE
-// (sin teñir), mismo criterio de degradar sin reventar que ParseBehavior.
+// Lee el color de tinte del JSON ("tint": [r, g, b]). Si falta, usa blanco.
 Color ParseTint(const json& node) {
     if (!node.contains("tint")) return WHITE;
 
@@ -64,8 +61,6 @@ const std::unordered_map<std::string, EnemyFactory::EnemyVariant>& EnemyFactory:
                 variant.scale = node.at("scale").get<float>();
                 variant.attackDamage = node.at("attackDamage").get<float>();
                 variant.visionRadius = node.at("visionRadius").get<float>();
-                // Opcional: las variantes ya existentes (Tank/Runner) no lo
-                // llevan y siguen siendo Melee sin tocarlas.
                 variant.behavior = ParseBehavior(node.value("behavior", std::string("melee")));
                 variant.tint = ParseTint(node);
                 variant.turnRateDegPerSec = node.value("turnRateDegPerSec", 0.0f);

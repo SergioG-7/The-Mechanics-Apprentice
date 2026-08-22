@@ -37,10 +37,7 @@ namespace LevelEditor.Models
         [JsonPropertyName("electricTiles")]
         public List<ElectricTileData> ElectricTiles { get; set; } = new();
 
-        // Nullable: un nivel puede no tener puerta todavía. El serializador
-        // se configura para OMITIR la clave si es null (ver MainForm.cs),
-        // porque LevelLoader.cpp distingue "la clave no existe" de
-        // "la clave existe con valor null" -- lo segundo rompería el parseo.
+        // Nullable: un nivel puede no tener puerta todavía.
         [JsonPropertyName("door")]
         public DoorData? Door { get; set; }
     }

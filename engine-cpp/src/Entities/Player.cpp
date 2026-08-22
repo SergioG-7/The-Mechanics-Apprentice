@@ -10,12 +10,6 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
     : Actor(position, maxHP), m_moveSpeed(speed), m_attackDamage(attackDamage) {
     SetupStates();
 
-    // Modelo Kenney (blocky-characters, variante G): trae su propio atlas
-    // vía pbrMetallicRoughness.baseColorTexture, que raylib sí resuelve solo
-    // (a diferencia del workflow specular-glossiness de los modelos
-    // Sketchfab anteriores). No hace falta inyectar textura a mano ni tocar
-    // el color base del material -- ya nace en blanco, así el toon shader
-    // recibe el atlas sin teñir.
     m_model = LoadModel("assets/models/player/character_g.glb");
 
     m_weaponModel = LoadModel("assets/models/player/arma/scene.gltf");
@@ -23,10 +17,6 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
         m_weaponModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     }
 
-    // Nombres reales en disco -- "attack.ogg"/"hurt.ogg" (de una sesión
-    // anterior) ya no existen ahí, así que LoadSound fallaba en silencio
-    // (frameCount 0, guardado por el "if" de abajo) y estos dos sonidos
-    // nunca llegaban a sonar.
     m_attackSound = LoadSound("assets/audio/sfx/attack_player.ogg");
     m_hurtSound = LoadSound("assets/audio/sfx/hurt_player.wav");
     m_dashSound = LoadSound("assets/audio/sfx/dash_player.wav");
@@ -34,9 +24,6 @@ Player::Player(Vector3 position, float maxHP, float speed, float attackDamage)
 }
 
 void Player::RefreshSfxVolume() {
-    // Directo, sin multiplicador propio de por medio: si la UI manda 1.0
-    // (SFX al 100%), SetSoundVolume tiene que recibir 1.0, no una fracción
-    // atenuada por un "balance" interno que el slider no puede compensar.
     float sfxVolume = AudioSettings::GetSfxVolume();
     if (m_attackSound.frameCount > 0) SetSoundVolume(m_attackSound, sfxVolume);
     if (m_hurtSound.frameCount > 0) SetSoundVolume(m_hurtSound, sfxVolume);
@@ -90,11 +77,7 @@ Vector3 Player::ReadMovementInput() const {
     if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  dir.x -= 1.0f;
     if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) dir.x += 1.0f;
 
-    // Mando: se fusiona con el teclado, no lo sustituye (jugar con los dos a
-    // la vez no se rompe -- solo se suma). Deadzone para no arrastrar drift
-    // de un stick mal centrado como si fuera input real. La magnitud
-    // combinada puede superar 1 si se usan ambos a la vez, pero da igual:
-    // UpdateRun normaliza el resultado, solo le importa la dirección.
+    // Input del mando, sumado al del teclado, con zona muerta para evitar drift.
     if (IsGamepadAvailable(0)) {
         constexpr float kDeadzone = 0.25f;
         float axisX = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
@@ -122,10 +105,6 @@ bool Player::TryStartAttack() {
         || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
     if (!attackPressed || m_attackCooldownTimer.IsActive()) return false;
 
-    // El cooldown NO arranca aquí sino al terminar el swing (ver
-    // UpdateAttack): es un tiempo de recuperación ENTRE golpes. Arrancándolo
-    // al entrar, los 0.35s de animación se comerían casi todo el 0.4s y ni
-    // el cooldown frenaría el spam ni Frenzy se notaría al reducirlo.
     m_fsm.ChangeState(PlayerState::Attack);
     return true;
 }
@@ -144,8 +123,6 @@ void Player::ApplySlow(float duration, float multiplier) {
 }
 
 void Player::UpdateIdle(float) {
-    // Atacar sin moverse: antes solo se podía desde Run, así que golpear
-    // desde parado obligaba a dar un paso primero.
     if (TryStartAttack()) return;
 
     Vector3 input = ReadMovementInput();
@@ -167,9 +144,6 @@ void Player::UpdateRun(float dt) {
     bool dashPressed = IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)
         || (gamepadReady && (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_1)
                               || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)));
-    // !IsActive(): el cooldown se fijaba pero nunca se comprobaba -- se podía
-    // encadenar un dash tras otro tan rápido como el jugador pulsase la
-    // tecla, sin ningún respiro real entre ellos.
     if (dashPressed && !m_dashCooldownTimer.IsActive()) {
         m_dashCooldownTimer.Start(kDashCooldownDuration);
         m_fsm.ChangeState(PlayerState::Dash);
@@ -212,10 +186,7 @@ void Player::EnterAttack() {
 }
 
 Hitbox Player::SpawnAttackHitbox() const {
-    // Fuerza de knockback real (antes el vector iba sin escalar, magnitud
-    // ~1.0 -- apenas empujaba). kKnockbackForce en unidades/seg de impulso
-    // inicial; Actor::ApplyKnockback ya lo frena con drag.
-    constexpr float kKnockbackForce = 6.0f;
+    constexpr float kKnockbackForce = 6.0f; // fuerza inicial del empuje al golpear
     return CombatSystem::BuildMeleeHitbox(m_position, m_facingDirection, m_attackDamage, kKnockbackForce);
 }
 
@@ -227,11 +198,7 @@ void Player::UpdateAttack(float dt) {
         if (m_activeHitbox.remainingTime <= 0.0f) m_hitboxWindowOpen = false;
     }
 
-    // Se puede seguir andando mientras dura el swing, a velocidad reducida:
-    // antes el ataque clavaba al jugador en el sitio los 0.35s enteros. La
-    // dirección de encaramiento NO se toca -- la hitbox ya se calculó al
-    // entrar (EnterAttack), así que girar aquí movería el golpe a mitad de
-    // animación sin que la caja lo siguiera.
+    // Se puede seguir andando (más despacio) mientras dura el golpe, sin girar la hitbox ya calculada.
     Vector3 input = ReadMovementInput();
     if (input.x != 0.0f || input.z != 0.0f) {
         Vector3 dir = CollisionMath::Normalize2D(input);
@@ -240,8 +207,6 @@ void Player::UpdateAttack(float dt) {
     }
 
     if (m_attackTimer >= kAttackDuration) {
-        // Se lee CurrentAttackCooldown() ahora, no al empezar el swing: si
-        // Frenzy expiró a mitad del golpe, la recuperación ya es la normal.
         m_attackCooldownTimer.Start(CurrentAttackCooldown());
         m_fsm.ChangeState((input.x != 0.0f || input.z != 0.0f) ? PlayerState::Run : PlayerState::Idle);
     }
@@ -268,11 +233,6 @@ void Player::Update(float dt) {
     m_slowTimer.Tick(dt);
     ApplyKnockback(dt);
     m_fsm.Update(dt);
-
-    // El límite del mapa ya no es un clamp aquí -- son muros de Obstacle
-    // reales alrededor del perímetro de cada nivel (ver assets/data/*.json),
-    // así que la colisión normal contra obstáculos (TryMoveAgainstObstacles,
-    // más arriba en cada Update* de estado) ya se encarga.
 }
 
 void Player::Draw() const {
@@ -281,45 +241,33 @@ void Player::Draw() const {
     Vector3 rotationAxis = { 0.0f, 1.0f, 0.0f }; // Queremos que gire sobre el eje Y (el suelo)
     Vector3 scale = { 1.0f, 1.0f, 1.0f };        
 
-    // WHITE en normal para no teñir el atlas de Kenney (el toon shader ya
-    // procesa sus colores tal cual); el flash de daño pasa a RED, ya que
-    // WHITE dejaría de contrastar contra un tinte neutro.
     Color tint = m_fsm.Is(PlayerState::Hurt) ? RED : WHITE;
 
-    // Tinte de efecto temporal por encima del de estado: el lodo apaga a
-    // verde y el Overclock enciende a amarillo (y gana si coinciden, que es
-    // justo lo que el jugador necesita ver: el acelerón sigue activo).
+    // El tinte de un efecto activo (lodo, Overclock) sustituye al del estado.
     if (m_slowTimer.IsActive())      tint = Color{ 150, 230, 150, 255 };
     if (m_overclockTimer.IsActive()) tint = PowerUp::TypeColor(PowerUpType::Overclock);
 
-    // Hit-flash: destello breve por encima del tinte de estado -- ver el
-    // mismo mecanismo en Enemy::Draw.
+    // Destello breve al recibir daño, por encima de cualquier otro tinte.
     if (m_damageFlashTimer.IsActive()) {
         tint = WHITE;
     }
 
-    // Sombra falsa: ancla al personaje al suelo sin necesitar un shader de
-    // sombras real. Y a 0.01f para evitar z-fighting con el suelo.
+    // Sombra falsa en el suelo.
     DrawCylinder(Vector3{ m_position.x, 0.01f, m_position.z }, 0.6f, 0.6f, 0.01f, 15, Color{ 0, 0, 0, 100 });
 
-    // Aros de estado a radios distintos para que dos efectos simultáneos se
-    // vean los dos, en vez de dibujarse uno encima del otro.
+    // Un aro por efecto activo, a radios distintos para que no se tapen entre sí.
     if (m_overclockTimer.IsActive()) DrawStatusRing(0.9f, PowerUp::TypeColor(PowerUpType::Overclock));
     if (m_frenzyTimer.IsActive())    DrawStatusRing(1.1f, PowerUp::TypeColor(PowerUpType::Frenzy));
     if (m_slowTimer.IsActive())      DrawStatusRing(1.3f, Color{ 80, 200, 60, 255 });
 
-    // Outline estilo anime ("inverted hull") -- ver ModelUtils::DrawModelWithOutline.
-    // Negro puro (sin depender de la iluminación del shader: negro × cualquier
-    // color = negro) y con el mismo alpha que el cuerpo, para que no quede un
-    // borde sólido si el cuerpo se desvanece.
+    // Dibuja el cuerpo con un contorno estilo anime.
     ModelUtils::DrawModelWithOutline(m_model, m_position, rotationAxis, rotationAngle, scale, tint);
 
     if (m_fsm.Is(PlayerState::Attack)) {
         DrawWeapon(rotationAngle);
     }
 
-    // Escudo: burbuja de alambre alrededor del cuerpo. Se dibuja el último,
-    // por encima del modelo, para que se lea como una capa que lo envuelve.
+    // Burbuja de escudo, encima del modelo.
     if (m_shieldActive) {
         Color shieldColor = PowerUp::TypeColor(PowerUpType::Shield);
         DrawSphereWires(Vector3{ m_position.x, m_position.y + 0.6f, m_position.z }, 1.0f, 8, 10, shieldColor);
@@ -336,9 +284,7 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
     float cosA = cosf(rotationRadians);
     float sinA = sinf(rotationRadians);
 
-    // m_weaponOffset es local a la mano del personaje; se rota con el mismo
-    // ángulo que el cuerpo para que el arma acompañe hacia donde mira. No
-    // hay rigging: es un attachment por código, no un hueso real.
+    // Rota la posición del arma con el mismo ángulo que el cuerpo, para que lo acompañe.
     Vector3 worldOffset{
         m_weaponOffset.x * cosA + m_weaponOffset.z * sinA,
         m_weaponOffset.y,
@@ -357,9 +303,7 @@ void Player::DrawWeapon(float rotationAngleDegrees) const {
 }
 
 void Player::TakeDamage(float amount, Vector3 knockbackDir) {
-    // Escudo (batería): absorbe el golpe entero -- ni HP, ni empuje, ni
-    // estado Hurt. Solo el destello de impacto, para que se vea que ha
-    // conectado algo y que el escudo se acaba de gastar.
+    // El escudo absorbe el golpe entero: sin daño, sin empuje, solo un destello.
     if (m_shieldActive) {
         m_shieldActive = false;
         m_damageFlashTimer.Start(kDamageFlashDuration);

@@ -9,11 +9,7 @@
 using json = nlohmann::json;
 
 namespace {
-// Todos los tamaños exactos que el juego dibuja en algún sitio -- ver la
-// auditoría documentada junto a cada constante en LocalizationManager.h.
-// Un solo array construido a partir de esas constantes (no literales
-// repetidos aquí) para que hornear (este archivo) y dibujar (MenuScreen.cpp/
-// HudRenderer.cpp/Application.cpp) no puedan desincronizarse por accidente.
+// Todos los tamaños de texto que dibuja el juego.
 constexpr float kAllFontSizes[] = {
     LocalizationManager::kFontSizeSliderLabel,
     LocalizationManager::kFontSizeControlsRow,
@@ -63,9 +59,7 @@ void LocalizationManager::LoadAll(const std::string& initialLanguage) {
         LoadLanguageFile(code);
     }
 
-    // Unión de todo el texto de los tres idiomas: es la fuente de la que
-    // Application saca los codepoints que necesita la fuente (ver
-    // GetAllTextForCodepoints).
+    // Junta todo el texto de los tres idiomas, para saber qué glifos necesita la fuente.
     m_allText.clear();
     for (const auto& [code, data] : m_languages) {
         for (const auto& [key, value] : data.entries) {
@@ -74,16 +68,8 @@ void LocalizationManager::LoadAll(const std::string& initialLanguage) {
         }
     }
 
-    // ASCII imprimible completo (32-126): dígitos, ':', '%' y demás
-    // puntuación que el texto compone en tiempo de ejecución (TextFormat
-    // del volumen, del contador de engranajes, etc.) no aparecen
-    // literalmente en ninguna traducción, así que la unión de arriba no
-    // los cubre. Sin esto, GetGlyphIndex no encuentra el codepoint y cae
-    // a su fallback -- que a su vez solo es '?' si '?' está cargado; si
-    // tampoco lo está, cae al glifo 0 (el primero insertado, orden no
-    // determinista de unordered_map), que es el bug observado ("音量R
-    // RRR": ':', '%' y los dígitos ausentes dibujando todos el mismo
-    // glifo arbitrario).
+    // Añade también el ASCII imprimible completo: dígitos, ':', '%' y demás
+    // símbolos que el texto compone en tiempo de ejecución y no aparecen en ninguna traducción.
     for (char c = 32; c <= 126; ++c) {
         m_allText += c;
     }
@@ -99,27 +85,14 @@ void LocalizationManager::LoadFonts() {
         int intSize = static_cast<int>(size);
         Font font;
         LoadFontAtSize(font, intSize, codepoints, codepointCount);
-        m_fonts.emplace(intSize, font); // kAllFontSizes no tiene tamaños repetidos, así que emplace nunca pisa uno ya cargado
+        m_fonts.emplace(intSize, font);
     }
 
     UnloadCodepoints(codepoints);
 }
 
 void LocalizationManager::LoadFontAtSize(Font& outFont, int size, int* codepoints, int codepointCount) {
-    // MainFont.ttf (copiada de Tactical Soccer, Assets/Resources/MainFont.ttf).
-    // Cobertura CJK verificada con fontTools antes de adoptarla (16732
-    // glifos, cubre los 129 codepoints japoneses que usa este proyecto).
-    //
-    // El horneado a DOS tamaños (28/64px) de la sesión anterior seguía
-    // perdiendo trazos finos porque solo era una aproximación: un botón a
-    // 24px seguía usando el atlas de 28px (downscale ~14%), un título a
-    // 90px seguía usando el de 64px (upscale ~40%) -- raylib no usa filtro
-    // bilineal (textura de un Font recién cargado = nearest-neighbor por
-    // defecto), así que CUALQUIER desajuste entre tamaño horneado y tamaño
-    // dibujado salta píxeles de los trazos finos. La cura real no era mejor
-    // fuente ni más tamaños intermedios, sino horneado 1:1: un atlas por
-    // cada tamaño EXACTO que el juego dibuja (ver kAllFontSizes/LoadFonts),
-    // así que GetFontForSize nunca tiene que escalar nada.
+    // Hornea un atlas al tamaño exacto pedido, para que el texto se vea nítido a cualquier tamaño.
     outFont = LoadFontEx("assets/fonts/MainFont.ttf", size, codepoints, codepointCount);
     if (!IsFontValid(outFont)) {
         TraceLog(LOG_WARNING, "LocalizationManager: no se pudo cargar assets/fonts/MainFont.ttf a %dpx, usando la fuente por defecto", size);
@@ -135,21 +108,11 @@ void LocalizationManager::UnloadFonts() {
 }
 
 const Font& LocalizationManager::GetFontForSize(float drawSize) const {
-    // Redondeo, no truncado: 27.6f tiene que caer en el atlas de 28, no en
-    // el de 27 (que ni siquiera existe) ni perder medio píxel de precisión
-    // contra el tamaño que de verdad se le pasa a DrawTextEx.
     int size = static_cast<int>(std::lround(drawSize));
     auto it = m_fonts.find(size);
     if (it != m_fonts.end()) return it->second;
 
-    // No debería pasar nunca: todo DrawTextEx/MeasureTextEx del proyecto usa
-    // una de las constantes kFontSize* de LocalizationManager.h, que son
-    // justo las que arriba pueblan m_fonts. Si aun así llega un tamaño no
-    // horneado (un DrawTextEx nuevo con un literal suelto en vez de una de
-    // esas constantes), se cae al atlas más cercano en vez de crashear o
-    // dejar el texto sin dibujar -- pero ya no será pixel-perfect, de ahí el
-    // aviso.
-    TraceLog(LOG_WARNING, "LocalizationManager: tamaño de fuente %dpx no horneado (falta registrarlo en kFontSize*), usando el atlas más cercano", size);
+    TraceLog(LOG_WARNING, "LocalizationManager: tamaño de fuente %dpx no horneado, usando el atlas más cercano", size);
     return ClosestFont(size);
 }
 

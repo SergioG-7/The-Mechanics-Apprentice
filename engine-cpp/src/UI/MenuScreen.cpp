@@ -1,6 +1,6 @@
 #include "MenuScreen.h"
 #include "../Core/AudioSettings.h"
-#include "../Entities/PowerUp.h" // PowerUp::TypeColor: los iconos del glosario usan el MISMO color que el pickup real
+#include "../Entities/PowerUp.h" // los iconos del glosario usan el mismo color que el pickup real
 #include <algorithm>
 
 namespace {
@@ -9,7 +9,7 @@ constexpr float kButtonWidth = 300.0f;
 constexpr float kButtonHeight = 60.0f;
 constexpr float kButtonGap = 20.0f;
 
-constexpr float kEditorButtonWidth = 260.0f; // suficiente para "Editor de Niveles" (el más largo de los 3 idiomas) a 24px
+constexpr float kEditorButtonWidth = 260.0f;
 constexpr float kEditorButtonHeight = 40.0f;
 constexpr float kEditorButtonMargin = 20.0f;
 
@@ -37,8 +37,6 @@ float MenuScreen::StackedListStartY(int count) {
     float totalHeight = count * kButtonHeight + (count - 1) * kButtonGap;
     float centered = (screenH - totalHeight) / 2.0f;
 
-    // El tope gana sobre el centrado, nunca al revés: una lista larga baja
-    // hasta despegarse del título aunque eso la descentre. Ver kMenuContentTop.
     return std::max(centered, kMenuContentTop);
 }
 
@@ -50,12 +48,6 @@ Rectangle MenuScreen::StackedButton(int index, int count) {
 }
 
 Rectangle MenuScreen::BgmVolumeSliderBounds() {
-    // Fija, no relativa a screenH/2: el título "OPCIONES" también se dibuja
-    // a una Y fija (80.0f, ver DrawOptions) con tamaño 50 -- anclar aquí al
-    // título en vez de al centro de la pantalla es lo que garantiza que no
-    // se pisen sea cual sea la resolución. 200.0f deja ~60px de aire bajo el
-    // título (que termina sobre los 140) antes de la etiqueta de esta barra
-    // (que se dibuja en bounds.y - 30, ver DrawVolumeSlider).
     float screenW = static_cast<float>(GetScreenWidth());
     return Rectangle{ (screenW - kButtonWidth) / 2.0f, 200.0f, kButtonWidth, 30.0f };
 }
@@ -72,11 +64,6 @@ Rectangle MenuScreen::BackButtonBounds() {
 }
 
 namespace {
-// 150.0f, no centrado a pantalla completa como StackedButton: con
-// kLevelSelectVirtualRows filas virtuales fijas (5 niveles + 1 fila de
-// paginación), el centrado puro dejaría el primer botón pegado al título
-// (y=80). Ancla en su lugar justo debajo del título, mismo margen que ya
-// usa MainMenu entre su título y su primer botón.
 constexpr float kLevelSelectStartY = 150.0f;
 constexpr float kLevelNavGap = 20.0f;
 } // namespace
@@ -86,11 +73,7 @@ Rectangle MenuScreen::EditorButtonBounds() {
 }
 
 Rectangle MenuScreen::LevelSelectNavButtonBounds(bool isNext) {
-    // Fila compartida (la última de las virtuales), partida en dos mitades
-    // -- Anterior a la izquierda, Siguiente a la derecha, con un hueco entre
-    // ambas. Si solo una de las dos existe esta página, se queda en su lado
-    // natural en vez de recentrarse: más simple, y no hay confusión posible
-    // sobre cuál es cuál.
+    // Fila compartida: Anterior a la izquierda, Siguiente a la derecha.
     float screenW = static_cast<float>(GetScreenWidth());
     float x = (screenW - kButtonWidth) / 2.0f;
     float y = kLevelSelectStartY + (kLevelSelectVirtualRows - 1) * (kButtonHeight + kButtonGap);
@@ -104,16 +87,7 @@ bool MenuScreen::IsButtonClicked(Rectangle bounds) {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildMainMenuButtons() const {
-    // El botón del editor de niveles NO está aquí -- vive fuera del flujo
-    // vertical apilado, anclado a la esquina superior izquierda (ver
-    // EditorButtonBounds/DrawMainMenu/UpdateMainMenu).
-    //
-    // 6 filas desde que existe "Guía". El centrado vertical puro ya no cabe
-    // bajo el título con tantas: de eso se encarga StackedListStartY, que
-    // ancla la lista en kMenuContentTop en cuanto el centrado se metería
-    // dentro del título. Añadir una séptima seguirá funcionando (la lista
-    // crece hacia abajo), pero habrá que comprobar que la última no se salga
-    // por debajo: 6 filas terminan en y=630 de 720.
+    // El botón del editor de niveles no está aquí: se ancla aparte, en la esquina superior izquierda.
     constexpr int kRows = 6;
     return {
         { StackedButton(0, kRows), "menu_story", MenuAction::OpenLevelSelect, false },
@@ -126,8 +100,8 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildMainMenuButtons() const {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildLevelSelectButtons(int maxUnlockedLevel) const {
-    int unlockedCount = std::max(1, maxUnlockedLevel); // nunca menos de 1: el nivel 1 siempre está desbloqueado
-    int totalPages = (unlockedCount + kLevelsPerPage - 1) / kLevelsPerPage; // división entera hacia arriba
+    int unlockedCount = std::max(1, maxUnlockedLevel);
+    int totalPages = (unlockedCount + kLevelsPerPage - 1) / kLevelsPerPage;
     int page = std::clamp(m_levelSelectPage, 0, totalPages - 1);
 
     int pageStart = page * kLevelsPerPage + 1;
@@ -137,13 +111,6 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildLevelSelectButtons(int maxU
     bool hasPrev = page > 0;
     bool hasNext = page < totalPages - 1;
 
-    // Vertical, apilados uno debajo del otro como el resto del menú. La fila
-    // (0..4) de cada botón de nivel usa el número VIRTUAL de filas fijo
-    // (kLevelSelectVirtualRows), no levelsThisPage -- así la posición no
-    // cambia entre páginas aunque una tenga menos niveles que otra. Página
-    // Anterior/Siguiente solo si de verdad hay a dónde ir -- no se muestran
-    // deshabilitados, directamente no existen. Volver en su posición fija
-    // de siempre, igual que en Controles/Estadísticas.
     std::vector<MenuButton> buttons;
     buttons.reserve(static_cast<size_t>(levelsThisPage) + 3);
 
@@ -175,10 +142,6 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildOptionsButtons() const {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildPauseButtons() const {
-    // 4 filas desde que la Guía también se abre en pausa. StackedListStartY
-    // sigue centrando (4 filas caben de sobra: 480px de 720), pero es lo que
-    // garantiza que si mañana se añade una quinta no se meta bajo el título
-    // "PAUSA", que se dibuja a y=150 y llega hasta los 200.
     constexpr int kRows = 4;
     return {
         { StackedButton(0, kRows), "pause_resume", MenuAction::ResumeGame, false },
@@ -198,8 +161,7 @@ MenuAction MenuScreen::UpdateButtonList(const std::vector<MenuButton>& buttons) 
         m_selectedIndex = 0;
     }
 
-    // Ratón: pasar por encima de un botón lo selecciona también, para que
-    // ratón y mando/teclado no se desincronicen visualmente.
+    // Pasar el ratón por encima de un botón también lo selecciona.
     Vector2 mouse = GetMousePosition();
     for (int i = 0; i < count; i++) {
         if (CheckCollisionPointRec(mouse, buttons[static_cast<size_t>(i)].bounds)) {
@@ -221,7 +183,7 @@ MenuAction MenuScreen::UpdateButtonList(const std::vector<MenuButton>& buttons) 
         || (gamepadReady && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_UP))
         || (axisUp && m_navCooldown <= 0.0f);
 
-    constexpr float kNavRepeatDelay = 0.2f; // solo se usa para el eje analógico, ver arriba
+    constexpr float kNavRepeatDelay = 0.2f; // cooldown del eje analógico
     if (moveDown) { m_selectedIndex = (m_selectedIndex + 1) % count; m_navCooldown = kNavRepeatDelay; }
     if (moveUp)   { m_selectedIndex = (m_selectedIndex - 1 + count) % count; m_navCooldown = kNavRepeatDelay; }
 
@@ -251,12 +213,7 @@ void MenuScreen::DrawButtonList(const std::vector<MenuButton>& buttons, const Ui
         std::string label = ui.localization.GetText(button.labelKey);
         if (button.isLanguageButton) {
             label += ": ";
-            // "language_name" es el nombre nativo que cada idioma declara de
-            // sí mismo en su propio JSON (ver assets/lang/*.json) -- se lee
-            // siempre del idioma ACTIVO, así que nunca hace falta indexar
-            // por código: un botón "Idioma: Español" en español, "Language:
-            // English" en inglés, "言語: 日本語" en japonés.
-            label += ui.localization.GetText("language_name");
+            label += ui.localization.GetText("language_name"); // nombre nativo del idioma activo
         }
         if (button.levelNumber > 0) {
             label += " ";
@@ -282,10 +239,7 @@ void MenuScreen::DrawButton(Rectangle bounds, const char* label, bool selected, 
 // --- Menú principal ---
 
 MenuAction MenuScreen::UpdateMainMenu() {
-    // Fuera de UpdateButtonList a propósito: el botón del editor no es parte
-    // de la navegación por teclado/mando de la lista apilada (ver
-    // EditorButtonBounds), así que su clic se comprueba aparte, antes de la
-    // lista normal.
+    // El botón del editor se comprueba aparte, fuera de la navegación normal de la lista.
     if (IsButtonClicked(EditorButtonBounds())) {
         PlayClickSound();
         return MenuAction::OpenLevelEditor;
@@ -301,9 +255,6 @@ void MenuScreen::DrawMainMenu(const UiContext& ui) const {
 
     DrawButtonList(BuildMainMenuButtons(), ui);
 
-    // Independiente de la lista apilada (ver EditorButtonBounds): nunca
-    // aparece "seleccionado" (false fijo), solo resaltado al pasar el ratón
-    // por encima (DrawButton ya comprueba el hover por su cuenta).
     DrawButton(EditorButtonBounds(), ui.localization.GetText("menu_editor"), false, ui);
 }
 
@@ -360,16 +311,11 @@ void MenuScreen::DrawPause(const UiContext& ui) const {
     int screenW = GetScreenWidth();
     int screenH = GetScreenHeight();
 
-    // Mismo overlay que DrawCenteredOverlay (fin de partida): oscurece la
-    // escena congelada detrás sin ocultarla del todo.
     DrawRectangle(0, 0, screenW, screenH, Color{ 0, 0, 0, 150 });
 
     const char* title = ui.localization.GetText("pause_title");
     constexpr float titleSize = LocalizationManager::kFontSizeTitle;
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
-    // 110, no 150: con el cuarto botón (Guía) la lista centrada arranca en
-    // y=210, y el título a 150 terminaba justo en 200 -- 10px de aire, que a
-    // ojo se lee como pegado. A 110 termina en 160 y quedan 50 limpios.
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (screenW - titleDim.x) / 2.0f, 110.0f }, titleSize, 1.0f, RAYWHITE);
 
     DrawButtonList(BuildPauseButtons(), ui);
@@ -461,7 +407,7 @@ namespace {
 constexpr float kGuideFirstRowY = 190.0f;
 constexpr float kGuideRowHeight = 52.0f;
 constexpr float kGuideIconSize = 34.0f;
-constexpr int kGuideMaxRows = 7; // la página más larga (Mecánicas y Enemigos tienen 7)
+constexpr int kGuideMaxRows = 7; // la página más larga
 } // namespace
 
 const std::vector<MenuScreen::GuideEntry>& MenuScreen::GuidePage(int page) {
@@ -505,15 +451,11 @@ const char* MenuScreen::GuidePageTitleKey(int page) {
 }
 
 void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
-    // Mismos colores que la entidad real en 3D, en 2D y sin cámara: lo que
-    // importa es que el jugador asocie color+silueta, no un render fiel.
     float cx = bounds.x + bounds.width / 2.0f;
     float cy = bounds.y + bounds.height / 2.0f;
     float r = bounds.width / 2.0f;
 
     auto drawEnemyIcon = [&](Color body) {
-        // Silueta común de zombie: cuerpo redondeado y "hombros" rectos, para
-        // que las siete variantes se lean como el mismo bicho teñido distinto.
         DrawRectangleRounded(Rectangle{ bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f }, 0.35f, 6, body);
         DrawRectangleRoundedLines(Rectangle{ bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f }, 0.35f, 6, BLACK);
     };
@@ -539,12 +481,7 @@ void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
             break;
         case GuideIcon::Spikes:
             DrawRectangleRec(bounds, Color{ 200, 90, 20, 255 });
-            // DrawPoly de 3 lados en vez de DrawTriangle: raylib culea las
-            // caras traseras, así que un DrawTriangle con el winding al revés
-            // simplemente no se dibuja. DrawPoly emite el suyo correcto solo.
-            // rotation -90 lo hace apuntar hacia arriba (en pantalla, Y crece
-            // hacia abajo, así que "arriba" es -90, no +90).
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3; i++) { // triángulos apuntando hacia arriba
                 float sx = bounds.x + 8.0f + i * (bounds.width - 16.0f) / 2.0f;
                 DrawPoly(Vector2{ sx, cy }, 3, r * 0.45f, -90.0f, LIGHTGRAY);
             }
@@ -552,8 +489,6 @@ void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
         case GuideIcon::ElectricTile:
             DrawRectangleRec(bounds, Color{ 45, 55, 75, 255 });
             DrawRectangleLinesEx(bounds, 2.0f, YELLOW);
-            // Rayo en zeta con líneas gruesas -- mismo motivo que arriba para
-            // no usar triángulos a mano.
             DrawLineEx(Vector2{ cx + r * 0.35f, cy - r * 0.7f }, Vector2{ cx - r * 0.25f, cy }, 3.0f, SKYBLUE);
             DrawLineEx(Vector2{ cx - r * 0.25f, cy }, Vector2{ cx + r * 0.25f, cy }, 3.0f, SKYBLUE);
             DrawLineEx(Vector2{ cx + r * 0.25f, cy }, Vector2{ cx - r * 0.35f, cy + r * 0.7f }, 3.0f, SKYBLUE);
@@ -569,8 +504,7 @@ void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
         case GuideIcon::EnemyKamikaze: drawEnemyIcon(Color{ 255, 110, 100, 255 }); break;
         case GuideIcon::EnemyShielder:
             drawEnemyIcon(Color{ 120, 165, 235, 255 });
-            // La placa por delante, que es lo que hay que reconocer en partida.
-            DrawRectangleRec(Rectangle{ bounds.x, cy - r * 0.75f, 6.0f, r * 1.5f }, SKYBLUE);
+            DrawRectangleRec(Rectangle{ bounds.x, cy - r * 0.75f, 6.0f, r * 1.5f }, SKYBLUE); // placa frontal
             break;
         case GuideIcon::EnemyBuffer:
             drawEnemyIcon(Color{ 255, 210, 80, 255 });
@@ -582,7 +516,6 @@ void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
             break;
 
         case GuideIcon::PowerOverclock:
-            // Cono/flecha hacia arriba, igual que el pickup en 3D.
             DrawPoly(Vector2{ cx, cy }, 3, r, -90.0f, PowerUp::TypeColor(PowerUpType::Overclock));
             break;
         case GuideIcon::PowerFrenzy:
@@ -597,10 +530,6 @@ void MenuScreen::DrawGuideIcon(GuideIcon icon, Rectangle bounds) {
 }
 
 std::vector<MenuScreen::MenuButton> MenuScreen::BuildGuideButtons() const {
-    // Misma fila compartida de Anterior/Siguiente que el selector de nivel,
-    // pero anclada bajo la última fila de contenido en vez de a una rejilla
-    // de filas virtuales: aquí el número de filas SÍ cambia por página
-    // (Power-ups solo tiene 3), y aun así los botones no deben moverse.
     float screenW = static_cast<float>(GetScreenWidth());
     float x = (screenW - kButtonWidth) / 2.0f;
     float navY = kGuideFirstRowY + kGuideMaxRows * kGuideRowHeight + 12.0f;
@@ -621,10 +550,7 @@ std::vector<MenuScreen::MenuButton> MenuScreen::BuildGuideButtons() const {
 MenuAction MenuScreen::UpdateGuide() {
     m_guidePage = std::clamp(m_guidePage, 0, kGuidePageCount - 1);
 
-    // ESC / botón B cierran el glosario igual que el botón "Volver": es una
-    // pantalla de consulta, no un menú del que haya que salir a propósito.
-    // Quien decide A DÓNDE se vuelve es Application (menú principal o pausa,
-    // según desde dónde se abriera) -- ver m_guideReturnTo.
+    // ESC o el botón B cierran el glosario, igual que el botón "Volver".
     bool cancelPressed = IsKeyPressed(KEY_ESCAPE)
         || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT));
     if (cancelPressed) {
@@ -650,9 +576,6 @@ void MenuScreen::DrawGuide(const UiContext& ui) const {
     Vector2 titleDim = MeasureTextEx(ui.localization.GetFontForSize(titleSize), title, titleSize, 1.0f);
     DrawTextEx(ui.localization.GetFontForSize(titleSize), title, Vector2{ (GetScreenWidth() - titleDim.x) / 2.0f, 80.0f }, titleSize, 1.0f, RAYWHITE);
 
-    // Categoría de la página, entre el título (termina en 130) y la primera
-    // fila (190): centrada a 145 con 24px, así que ocupa 145-169. Sin pisar
-    // ninguna de las dos.
     int page = std::clamp(m_guidePage, 0, kGuidePageCount - 1);
     constexpr float categorySize = LocalizationManager::kFontSizeBody;
     const Font& categoryFont = ui.localization.GetFontForSize(categorySize);
@@ -678,8 +601,6 @@ void MenuScreen::DrawGuide(const UiContext& ui) const {
         DrawGuideIcon(entries[i].icon,
                        Rectangle{ iconX, rowY + (kGuideRowHeight - kGuideIconSize) / 2.0f - 6.0f, kGuideIconSize, kGuideIconSize });
 
-        // Nombre y descripción centrados verticalmente cada uno respecto a su
-        // propio alto, que no es el mismo (24 vs 22).
         DrawTextEx(nameFont, ui.localization.GetText(entries[i].nameKey),
                    Vector2{ nameX, rowY + (kGuideIconSize - nameSize) / 2.0f - 6.0f }, nameSize, 1.0f, GOLD);
         DrawTextEx(descFont, ui.localization.GetText(entries[i].descriptionKey),
@@ -692,15 +613,10 @@ void MenuScreen::DrawGuide(const UiContext& ui) const {
 // --- Selector de nivel (Modo Historia) ---
 
 MenuAction MenuScreen::UpdateLevelSelect(int maxUnlockedLevel) {
-    // Clamp de página ANTES de construir/leer botones: si maxUnlockedLevel
-    // pudiera bajar entre visitas (no ocurre hoy, pero es barato cubrirlo),
-    // una página ya no válida no debe quedarse fuera de rango.
     int unlockedCount = std::max(1, maxUnlockedLevel);
     int totalPages = (unlockedCount + kLevelsPerPage - 1) / kLevelsPerPage;
     m_levelSelectPage = std::clamp(m_levelSelectPage, 0, totalPages - 1);
 
-    // Página Anterior/Siguiente son estado puramente de MenuScreen -- se
-    // consumen aquí mismo y nunca llegan a Application como acción real.
     MenuAction action = UpdateButtonList(BuildLevelSelectButtons(maxUnlockedLevel));
     if (action == MenuAction::LevelSelectNextPage) {
         m_levelSelectPage++;

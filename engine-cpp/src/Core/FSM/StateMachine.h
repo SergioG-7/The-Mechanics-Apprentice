@@ -2,10 +2,8 @@
 #include <functional>
 #include <unordered_map>
 
-// FSM genérica y reutilizable: cualquier enum class puede usarla registrando
-// callbacks de Enter/Update/Exit por estado. Player y Enemy la instancian
-// cada uno con su propio enum (PlayerState, EnemyState) — la FSM no sabe
-// nada de game design, solo orquesta transiciones.
+// Máquina de estados genérica: cualquier enum puede usarla registrando
+// callbacks de Enter/Update/Exit por estado. Player y Enemy la usan cada uno con su propio enum.
 template <typename StateEnum>
 class StateMachine {
 public:

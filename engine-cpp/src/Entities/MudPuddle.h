@@ -1,11 +1,7 @@
 #pragma once
 #include "raylib.h"
 
-// Charco de lodo ácido que deja un Trapper por donde pasa. Struct plano, no
-// Entity: igual que Projectile, no tiene dueño propio (nace cuando
-// Enemy::ConsumePendingPuddle devuelve una posición y muere al agotarse su
-// lifetime) y no bloquea el paso -- solo ralentiza al Player que lo pisa.
-// Ver CombatSystem::UpdateMudPuddles.
+// Charco de lodo que deja el enemigo Trapper por donde pasa. Ralentiza al jugador que lo pisa.
 struct MudPuddle {
     Vector3 position{};
     float lifetime = kLifetime;

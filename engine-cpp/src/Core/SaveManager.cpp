@@ -11,11 +11,7 @@ SaveManager::SaveManager() {
 
 void SaveManager::Load() {
     std::ifstream file(kSavePath);
-    if (!file.is_open()) {
-        // Primera ejecución, o el archivo se borró a mano: se queda con los
-        // valores por defecto de SaveData, no es un error.
-        return;
-    }
+    if (!file.is_open()) return; // primera ejecución: se queda con los valores por defecto
 
     try {
         json root;

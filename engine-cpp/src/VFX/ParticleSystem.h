@@ -2,9 +2,7 @@
 #include "raylib.h"
 #include <vector>
 
-// Chispas de impacto: partículas efímeras con caída simple por gravedad, sin
-// colisión contra el escenario. Application la posee, la actualiza y la
-// dibuja cada frame igual que al resto de entidades del nivel.
+// Chispas de impacto: partículas que caen por gravedad y desaparecen solas.
 class ParticleSystem {
 public:
     void Emit(Vector3 origin, int count);
