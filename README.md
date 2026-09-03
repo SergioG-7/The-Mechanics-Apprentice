@@ -9,9 +9,9 @@
 **The Mechanic's Apprentice** es un juego de acción y supervivencia 3D con vista isométrica, desarrollado desde cero utilizando un motor propio construido en C++. Este proyecto demuestra habilidades avanzadas en arquitectura de software de bajo nivel, desarrollo de herramientas personalizadas (Tooling) y diseño de sistemas escalables (Data-Driven).
 
 ### 🎮 Jugar la Demo
-* Jugar en Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (contraseña: level5)
-* Ver gameplay en YouTube - [https://youtu.be/KxtVA9pftCg] 
-* Ver editor en YouTube - [https://youtu.be/jk4LX89isQ4]
+* Jugar en Itch.io (PC Windows) - <https://sergiog-7.itch.io/the-mechanics-apprentice> (contraseña: level5)
+* Ver gameplay en YouTube - <https://youtu.be/KxtVA9pftCg>
+* Ver editor en YouTube - <https://youtu.be/jk4LX89isQ4>
 
 ### 🛠️ Tecnologías y Herramientas
 * **Motor Core:** C++17, Raylib, CMake
@@ -30,10 +30,9 @@
 **The Mechanic's Apprentice** is an isometric 3D action-survival game, developed from scratch using a custom-built engine in C++. This project showcases advanced skills in low-level software architecture, custom tool development (Tooling), and scalable systems design (Data-Driven architecture).
 
 ### 🎮 Play the Demo
-* Play on Itch.io (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (password: level5)
-* Watch gameplay on YouTube - [https://youtu.be/KxtVA9pftCg]
-* Watch editor on YouTube - [https://youtu.be/jk4LX89isQ4]
-
+* Play on Itch.io (PC Windows) - <https://sergiog-7.itch.io/the-mechanics-apprentice> (password: level5)
+* Watch gameplay on YouTube - <https://youtu.be/KxtVA9pftCg>
+* Watch editor on YouTube - <https://youtu.be/jk4LX89isQ4>
 
 ### 🛠️ Technologies & Tools
 * **Core Engine:** C++17, Raylib, CMake
@@ -52,9 +51,9 @@
 **The Mechanic's Apprentice（メカニックの見習い）**は、C++で構築されたカスタムエンジンを使用してゼロから開発された、アイソメトリック3Dアクションサバイバルゲームです。このプロジェクトは、低レベルのソフトウェアアーキテクチャ、独自ツールの開発、およびデータドリブン設計における高度なスキルを示しています。
 
 ### 🎮 デモをプレイする
-* Itch.ioでプレイ (PC Windows) - [https://sergiog-7.itch.io/the-mechanics-apprentice] (パスワード：level5)
-* YouTubeでゲームプレイを見る - [https://youtu.be/KxtVA9pftCg]
-* YouTubeでエディタを見る - [https://youtu.be/jk4LX89isQ4]
+* Itch.ioでプレイ (PC Windows) - <https://sergiog-7.itch.io/the-mechanics-apprentice> (パスワード：level5)
+* YouTubeでゲームプレイを見る - <https://youtu.be/KxtVA9pftCg>
+* YouTubeでエディタを見る - <https://youtu.be/jk4LX89isQ4>
 
 ### 🛠️ 使用技術とツール
 * **コアエンジン:** C++17, Raylib, CMake

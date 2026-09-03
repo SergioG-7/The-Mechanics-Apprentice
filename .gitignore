@@ -1,7 +1,11 @@
-# Ignorar la carpeta oculta de Visual Studio (Caché, Copilot, estado de ventanas)
+# Ignorar la carpeta oculta de Visual Studio (Cachï¿½, Copilot, estado de ventanas)
 .vs/
 
-# Ignorar archivos de base de datos y cachés
+# ConfiguraciÃ³n local de Claude Code
+.claude/
+.mcp.json
+
+# Ignorar archivos de base de datos y cachï¿½s
 *.sqlite
 *.db
 *.VC.db
@@ -15,7 +19,7 @@ DocumentLayout.json
 DocumentLayout.backup.json
 workspaceFileList.bin
 
-# Directorios de compilación (opcional pero recomendado)
+# Directorios de compilaciï¿½n (opcional pero recomendado)
 out/
 build/
 bin/

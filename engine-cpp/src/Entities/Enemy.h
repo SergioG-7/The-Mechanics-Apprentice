@@ -8,10 +8,7 @@
 
 enum class EnemyState { Patrol, Chase, Attack, AttackRanged, Explode, Hurt, Dead };
 
-// Comportamiento de combate del enemigo: cómo ataca al alcanzar al jugador.
-//   Shielder: bloquea los golpes que recibe de frente.
-//   Buffer:   no ataca, acelera a los enemigos cercanos.
-//   Trapper:  melee normal, pero deja charcos de lodo al pasar.
+// Comportamiento de combate del enemigo al alcanzar al jugador (Shielder bloquea de frente, Buffer solo acelera aliados, Trapper deja charcos de lodo).
 enum class EnemyBehavior { Melee, Kamikaze, Spitter, Shielder, Buffer, Trapper };
 
 class Enemy : public Actor {

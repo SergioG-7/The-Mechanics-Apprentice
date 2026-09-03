@@ -465,9 +465,7 @@ void Application::UpdateActiveMatch(float dt) {
         CollectPickups();
     }
 
-    // --- Condiciones de fin de partida ---
-    // Se comprueba primero la muerte: morir en el mismo frame en que se pisa
-    // la puerta cuenta como Game Over, no como victoria.
+    // Se comprueba primero la muerte: morir al pisar la puerta cuenta como Game Over, no victoria.
     if (!m_level.player->IsAlive()) {
         TraceLog(LOG_INFO, "Application: GAME OVER");
         m_matchState = GameState::GameOver;
